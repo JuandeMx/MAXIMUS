@@ -1,0 +1,21 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Logs
+*.log
+/var/log/MaximusVpsMx/
+
+# Configuration and Database (Local copies)
+cloudflare.conf
+users.db
+.last_ip
+
+# OS generated files
+.DS_Store
+Thumbs.db
+.env
