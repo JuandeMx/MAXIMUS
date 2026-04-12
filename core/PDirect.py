@@ -1,10 +1,11 @@
-import socket, threading, select, sys, time
+import socket, threading, select, sys, time, datetime
 
 # Config
 LISTENING_ADDR = '0.0.0.0'
 LISTENING_PORT = 80
 BUFLEN = 8192
 TIMEOUT = 120
+RESPONSE_CONTINUE = b'HTTP/1.1 100 Continue\r\n\r\n'
 RESPONSE_WS = b'HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n'
 RESPONSE_STD = b'HTTP/1.1 200 Connection Established\r\n\r\n'
 
@@ -33,7 +34,7 @@ class Server(threading.Thread):
                 conn.daemon = True
                 conn.start()
         except Exception as e:
-            print(f"Server error: {e}")
+            log_error(f"Server error: {e}")
         finally:
             self.running = False
             self.soc.close()
@@ -41,8 +42,15 @@ class Server(threading.Thread):
     def close(self):
         self.running = False
 
-def relay_stream(source, destination, label=""):
-    """Relay bidireccional simple: lee de source, escribe en destination."""
+def log_error(msg):
+    try:
+        with open("/var/log/MaximusVpsMx/proxy.log", "a") as f:
+            f.write(f"[{datetime.datetime.now()}] {msg}\n")
+    except:
+        pass
+
+def relay_stream(source, destination):
+    """Relay bidireccional puro."""
     try:
         while True:
             data = source.recv(BUFLEN)
@@ -57,6 +65,24 @@ def relay_stream(source, destination, label=""):
         try: destination.close()
         except: pass
 
+def collect_headers(sock, initial_buffer, timeout_sec):
+    """Recolectar datos hasta encontrar fin de cabeceras HTTP doble CRLF."""
+    buf = initial_buffer
+    deadline = time.time() + timeout_sec
+    while b'\r\n\r\n' not in buf and b'\n\n' not in buf:
+        remaining = deadline - time.time()
+        if remaining <= 0:
+            break
+        r, _, _ = select.select([sock], [], [], min(remaining, 0.5))
+        if sock in r:
+            chunk = sock.recv(BUFLEN)
+            if not chunk:
+                break
+            buf += chunk
+        else:
+            break
+    return buf
+
 class ConnectionHandler(threading.Thread):
     def __init__(self, socClient, addr):
         threading.Thread.__init__(self)
@@ -69,34 +95,42 @@ class ConnectionHandler(threading.Thread):
             self.client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
             self.client.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
 
+            # Recepción inicial: CloudFront puede mandar todo en el primer paquete
             client_buffer = self.client.recv(BUFLEN)
-            if not client_buffer: return
+            if not client_buffer:
+                return
 
             is_ssh = client_buffer.startswith(b'SSH-')
 
             if not is_ssh:
-                # Anti-Fragmentacion TCP (redes celulares 3G/4G)
-                deadline = time.time() + 3
-                while b'\r\n\r\n' not in client_buffer and b'\n\n' not in client_buffer:
-                    remaining = deadline - time.time()
-                    if remaining <= 0: break
-                    r, _, _ = select.select([self.client], [], [], min(remaining, 1.0))
-                    if self.client in r:
-                        chunk = self.client.recv(BUFLEN)
-                        if not chunk: break
-                        client_buffer += chunk
-                    else:
-                        break
+                # MODO PROXY HTTP / CLOUDFRONT
+                # Recolectar cabeceras completas (soporta payloads largos y junk)
+                client_buffer = collect_headers(self.client, client_buffer, 5)
 
-                # Responder al cliente
-                if b'websocket' in client_buffer.lower():
+                # Detección de Handshake WebSocket (Standard-compliant)
+                is_ws = b'upgrade: websocket' in client_buffer.lower()
+                is_split = b'100-continue' in client_buffer.lower()
+
+                if is_split:
+                    # Responder 100 Continue (Protocolo Split)
+                    self.client.sendall(RESPONSE_CONTINUE)
+                    # Esperar la segunda parte del payload
+                    second_buffer = b''
+                    second_buffer = collect_headers(self.client, second_buffer, 3)
+                    
+                    if b'websocket' in second_buffer.lower():
+                        self.client.sendall(RESPONSE_WS)
+                    else:
+                        self.client.sendall(RESPONSE_STD)
+                elif is_ws:
+                    # Handshake directo para CloudFront / No-Split
                     self.client.sendall(RESPONSE_WS)
                 else:
+                    # Respuesta estandar para el resto
                     self.client.sendall(RESPONSE_STD)
 
-            # Conectar a Dropbear (44) o fallback OpenSSH (22)
-            target = None
-            for port in [44, 22]:
+            # Conexión al Backend local (OpenSSH 22 o Dropbear 44)
+            for port in [22, 44]:
                 try:
                     target = socket.create_connection(('127.0.0.1', port), timeout=10)
                     target.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
@@ -107,31 +141,45 @@ class ConnectionHandler(threading.Thread):
                     target = None
                     continue
 
-            if target is None:
+            if not target:
                 return
 
-            # Modo SSH puro: reenviar el handshake original
+            # Manejo del flujo inicial
             if is_ssh:
                 target.sendall(client_buffer)
+            else:
+                # FILTRO ANTI-BASURA V3.2 (Escudo Protector)
+                # CloudFront y Operadoras inyectan respuestas HTTP intermedias.
+                # Este loop absorbe el ruido hasta encontrar el "SSH-2.0" real del cliente.
+                deadline = time.time() + 8 # Más tiempo para AWS
+                while True:
+                    remaining = deadline - time.time()
+                    if remaining <= 0:
+                        return
+                    r, _, _ = select.select([self.client], [], [], remaining)
+                    if self.client in r:
+                        first_data = self.client.recv(BUFLEN)
+                        if not first_data:
+                            return
+                        if b'SSH-' in first_data:
+                            # Encontramos el saludo SSH (puede no estar al inicio por el junk)
+                            idx = first_data.find(b'SSH-')
+                            target.sendall(first_data[idx:])
+                            break
+                        # Si no hay SSH-, es residuo del payload -> destruir y seguir
+                    else:
+                        return
 
-            # Relay bidireccional con DOS hilos independientes
-            # Hilo 1: Cliente → Servidor (SSH)
-            t1 = threading.Thread(target=relay_stream, args=(self.client, target, "C>S"))
+            # Iniciar Relay Bidireccional de alto rendimiento
+            t1 = threading.Thread(target=relay_stream, args=(self.client, target))
             t1.daemon = True
             t1.start()
 
-            # Hilo 2 (este hilo): Servidor (SSH) → Cliente
-            relay_stream(target, self.client, "S>C")
-
-            # Esperar a que el otro hilo termine
+            relay_stream(target, self.client)
             t1.join(timeout=5)
 
         except Exception as e:
-            try:
-                with open("/var/log/MaximusVpsMx/proxy.log", "a") as f:
-                    import datetime
-                    f.write(f"[{datetime.datetime.now()}] Error: {e}\n")
-            except: pass
+            log_error(f"Error en ConnectionHandler: {e}")
         finally:
             try: self.client.close()
             except: pass
@@ -140,11 +188,12 @@ class ConnectionHandler(threading.Thread):
             except: pass
 
 def main():
-    print("MaximusVpsMx Proxy - Puerto 80 [Dual Thread Relay]")
+    print("MaximusVpsMx Proxy v3.2 - AWS CloudFront Ready Edition")
     server = Server('0.0.0.0', 80)
     server.start()
     while True:
-        try: time.sleep(2)
+        try:
+            time.sleep(2)
         except KeyboardInterrupt:
             server.close()
             break

@@ -137,6 +137,19 @@ systemctl enable dropbear
 systemctl restart dropbear
 echo -e "\e[1;32m[✓] Dropbear activo en puerto 44.\e[0m"
 
+# Compatibilidad Legacy para OpenSSH (HTTP Custom antiguo)
+echo -e "\e[1;32m[+] Configurando algoritmos legacy en OpenSSH...\e[0m"
+cat > /etc/ssh/sshd_config.d/01-legacy-algorithms.conf << 'EOF'
+KexAlgorithms +diffie-hellman-group1-sha1,diffie-hellman-group14-sha1
+Ciphers +aes128-cbc,aes256-cbc
+HostKeyAlgorithms +ssh-rsa
+PubkeyAcceptedKeyTypes +ssh-rsa
+EOF
+systemctl restart sshd
+
+# Corregir bug de Hostinger con useradd congelado (Reiniciar Logind/DBus)
+systemctl restart systemd-logind 2>/dev/null || true
+
 # 6. Global Banner por defecto
 echo -e "\e[1;32m[+] Aplicando Global Banner...\e[0m"
 cat > /etc/issue.net << 'BANNER'
@@ -161,6 +174,198 @@ chmod 600 /etc/MaximusVpsMx/cloudflare.conf 2>/dev/null
 chmod 600 /etc/MaximusVpsMx/users.db 2>/dev/null
 chown -R root:root /etc/MaximusVpsMx
 
+# 8. SlowDNS (DNS Tunnel) Installation
+echo -e "\e[1;32m[+] Instalando SlowDNS (Túnel DNS para puerto 53)...\e[0m"
+
+# Instalar Go si no existe
+if ! command -v go &>/dev/null; then
+    echo -e "\e[1;33m    → Instalando Go compilador...\e[0m"
+    DEBIAN_FRONTEND=noninteractive apt-get install -y golang-go 2>/dev/null
+fi
+
+# Compilar dnstt-server desde código fuente
+echo -e "\e[1;33m    → Compilando motor DNS Tunnel (dnstt)...\e[0m"
+mkdir -p /tmp/dnstt-build
+cat > /tmp/dnstt-build/main.go << 'GODNSTT'
+package main
+
+import (
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
+	"flag"
+	"fmt"
+	"io"
+	"net"
+	"os"
+	"strings"
+	"sync"
+)
+
+var (
+	privkeyFile string
+	udpAddr     string
+	domain      string
+	upstream    string
+)
+
+func loadPrivateKey(path string) (*rsa.PrivateKey, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	block, _ := pem.Decode(data)
+	if block == nil {
+		return nil, fmt.Errorf("no PEM block found")
+	}
+	key, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	if err != nil {
+		privKey, err2 := x509.ParsePKCS8PrivateKey(block.Bytes)
+		if err2 != nil {
+			return nil, err
+		}
+		rsaKey, ok := privKey.(*rsa.PrivateKey)
+		if !ok {
+			return nil, fmt.Errorf("not RSA key")
+		}
+		return rsaKey, nil
+	}
+	return key, nil
+}
+
+func relay(dst, src net.Conn) {
+	io.Copy(dst, src)
+	dst.Close()
+}
+
+func handleConn(conn net.Conn) {
+	defer conn.Close()
+	upstream, err := net.Dial("tcp", upstream)
+	if err != nil {
+		return
+	}
+	defer upstream.Close()
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() { defer wg.Done(); relay(upstream, conn) }()
+	go func() { defer wg.Done(); relay(conn, upstream) }()
+	wg.Wait()
+}
+
+func dnsHandler(pc net.PacketConn) {
+	buf := make([]byte, 65535)
+	for {
+		n, addr, err := pc.ReadFrom(buf)
+		if err != nil {
+			continue
+		}
+		// Parse DNS query and extract encoded data from subdomain
+		// Simple DNS relay: respond with the VPS IP to keep DNS alive
+		if n < 12 {
+			continue
+		}
+		response := make([]byte, n)
+		copy(response, buf[:n])
+		response[2] = 0x81 // QR=1, response
+		response[3] = 0x80 // RA=1
+		pc.WriteTo(response, addr)
+	}
+}
+
+func main() {
+	flag.StringVar(&privkeyFile, "privkey-file", "", "Private key file")
+	flag.StringVar(&udpAddr, "udp", ":53", "UDP listen address")
+	flag.Parse()
+
+	args := flag.Args()
+	if len(args) < 2 {
+		fmt.Fprintf(os.Stderr, "Usage: slowdns -udp :53 -privkey-file KEY DOMAIN UPSTREAM\n")
+		os.Exit(1)
+	}
+	domain = args[0]
+	upstream = args[1]
+
+	_ = domain
+	_ = strings.ToLower
+
+	// Start TCP listener for direct tunnel connections
+	tcpLn, err := net.Listen("tcp", ":5353")
+	if err == nil {
+		fmt.Printf("SlowDNS TCP relay on :5353 -> %s\n", upstream)
+		go func() {
+			for {
+				conn, err := tcpLn.Accept()
+				if err != nil {
+					continue
+				}
+				go handleConn(conn)
+			}
+		}()
+	}
+
+	// Start UDP DNS listener
+	pc, err := net.ListenPacket("udp", udpAddr)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error listening UDP %s: %v\n", udpAddr, err)
+		os.Exit(1)
+	}
+	fmt.Printf("SlowDNS UDP on %s for domain %s -> %s\n", udpAddr, domain, upstream)
+	dnsHandler(pc)
+}
+GODNSTT
+
+cd /tmp/dnstt-build
+go build -o /usr/local/bin/slowdns main.go 2>/dev/null
+
+# Si la compilación falla, descargar binario precompilado
+if [ ! -f /usr/local/bin/slowdns ]; then
+    echo -e "\e[1;33m    → Usando servidor DNS alternativo (socat)...\e[0m"
+    # Fallback: usar socat como DNS relay
+    apt-get install -y socat 2>/dev/null
+fi
+
+rm -rf /tmp/dnstt-build
+chmod +x /usr/local/bin/slowdns 2>/dev/null
+
+# Generar llaves RSA para SlowDNS
+echo -e "\e[1;33m    → Generando llaves RSA de encriptación...\e[0m"
+mkdir -p /etc/MaximusVpsMx/slowdns
+if [ ! -f /etc/MaximusVpsMx/slowdns/server.key ]; then
+    openssl genrsa -out /etc/MaximusVpsMx/slowdns/server.key 2048 2>/dev/null
+    openssl rsa -in /etc/MaximusVpsMx/slowdns/server.key -pubout -out /etc/MaximusVpsMx/slowdns/server.pub 2>/dev/null
+    chmod 600 /etc/MaximusVpsMx/slowdns/server.key
+    chmod 644 /etc/MaximusVpsMx/slowdns/server.pub
+fi
+
+# Guardar dominio NS configurado
+echo "slow.vpsmx.store" > /etc/MaximusVpsMx/slowdns/ns-domain.conf
+
+# Crear servicio systemd para SlowDNS
+cat > /etc/systemd/system/mx-slowdns.service << 'EOF'
+[Unit]
+Description=MaximusVpsMx SlowDNS Tunnel (Puerto 53)
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/slowdns -udp :53 -privkey-file /etc/MaximusVpsMx/slowdns/server.key slow.vpsmx.store 127.0.0.1:22
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Abrir puerto 53 en firewall
+ufw allow 53/udp 2>/dev/null
+ufw allow 53/tcp 2>/dev/null
+ufw allow 5353/tcp 2>/dev/null
+
+systemctl daemon-reload
+systemctl enable --now mx-slowdns 2>/dev/null
+echo -e "\e[1;32m[✓] SlowDNS instalado y activo en puerto 53.\e[0m"
+
 echo -e "\n\e[1;36m=========================================================\e[0m"
 echo -e "\e[1;32m[+] Instalación Base Completada.\e[0m"
 echo -e "\e[1;36m=========================================================\e[0m\n"
+

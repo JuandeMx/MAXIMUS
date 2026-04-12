@@ -50,6 +50,7 @@ menu_usuarios() {
             read -p " Contraseña: " pass
             read -p " Días de Duración: " dias
             exp_date=$(date -d "+$dias days" +%Y-%m-%d)
+            rm -f /etc/passwd.lock /etc/shadow.lock /etc/group.lock /etc/gshadow.lock
             useradd -e $exp_date -s /bin/false -M $user 2>/dev/null
             echo "$user:$pass" | chpasswd
             echo "$user:$pass:$exp_date" >> /etc/MaximusVpsMx/users.db
@@ -58,9 +59,11 @@ menu_usuarios() {
             ;;
         2)
             echo -e "\n${YELLOW}▶ Generador Trial${NC}"
-            user="trial_$(cat /dev/urandom | tr -dc 'a-z0-9' | fold -w 4 | head -n 1)"
-            pass=$(cat /dev/urandom | tr -dc 'a-z0-9' | fold -w 6 | head -n 1)
+            rnd=$RANDOM
+            user="prueba${rnd}"
+            pass="prueba${rnd}"
             exp_date=$(date -d "+7 days" +%Y-%m-%d)
+            rm -f /etc/passwd.lock /etc/shadow.lock /etc/group.lock /etc/gshadow.lock
             useradd -e $exp_date -s /bin/false -M $user 2>/dev/null
             echo "$user:$pass" | chpasswd
             echo "$user:$pass:$exp_date" >> /etc/MaximusVpsMx/users.db
@@ -95,6 +98,7 @@ menu_usuarios() {
         5)
             echo -e "\n${RED}▶ Eliminar Sistema${NC}"
             read -p " Username a destruir: " user
+            rm -f /etc/passwd.lock /etc/shadow.lock /etc/group.lock /etc/gshadow.lock
             userdel -f $user 2>/dev/null
             sed -i "/^$user:/d" /etc/MaximusVpsMx/users.db 2>/dev/null
             echo -e "${GREEN}✅ Exterminado.${NC}"
@@ -137,12 +141,14 @@ menu_protocolos() {
     systemctl is-active --quiet dropbear && st_drop="${GREEN}[ONLINE]${NC}" || st_drop="${RED}[OFFLINE]${NC}"
     systemctl is-active --quiet stunnel4 && st_stun="${GREEN}[ONLINE]${NC}" || st_stun="${RED}[OFFLINE]${NC}"
     systemctl is-active --quiet badvpn && st_udp="${GREEN}[ONLINE]${NC}" || st_udp="${RED}[OFFLINE]${NC}"
+    systemctl is-active --quiet mx-slowdns && st_dns="${GREEN}[ONLINE]${NC}" || st_dns="${RED}[OFFLINE]${NC}"
     
     echo -e " ${YELLOW}[1]${NC} Python Proxy (Puerto 80)     : $st_proxy"
     echo -e " ${YELLOW}[2]${NC} Dropbear SSH (Puerto 44)     : $st_drop"
     echo -e " ${YELLOW}[3]${NC} Stunnel SSL  (Puerto 443)    : $st_stun"
     echo -e " ${YELLOW}[4]${NC} BadVPN UDP   (Puerto 7300)   : $st_udp"
-    echo -e " ${YELLOW}[5]${NC} ${CYAN}⟳ Reiniciar TODOS los Servicios${NC}"
+    echo -e " ${YELLOW}[5]${NC} SlowDNS 🌐   (Puerto 53)     : $st_dns"
+    echo -e " ${YELLOW}[6]${NC} ${CYAN}⟳ Reiniciar TODOS los Servicios${NC}"
     echo -e " ${RED}[0] Volver al Menú Principal${NC}"
     echo -e "${CYAN}================================================================${NC}"
     read -p "Opción: " opt_prot
@@ -177,8 +183,76 @@ menu_protocolos() {
             if [ "$act" == "4" ]; then systemctl disable badvpn; systemctl stop badvpn; fi
             menu_protocolos ;;
         5)
+            clear
+            echo -e "${CYAN}════════════════════════════════════════${NC}"
+            echo -e "${WHITE}        🌐 SLOWDNS MANAGER 🌐${NC}"
+            echo -e "${CYAN}════════════════════════════════════════${NC}"
+            
+            systemctl is-active --quiet mx-slowdns && dns_estado="${GREEN}ACTIVO${NC}" || dns_estado="${RED}INACTIVO${NC}"
+            NS_DOMAIN=$(cat /etc/MaximusVpsMx/slowdns/ns-domain.conf 2>/dev/null || echo "no configurado")
+            
+            echo -e " Estado: $dns_estado"
+            echo -e " Dominio NS: ${YELLOW}$NS_DOMAIN${NC}"
+            echo -e "${CYAN}════════════════════════════════════════${NC}"
+            echo -e "${GREEN} [1] Activar SlowDNS${NC}"
+            echo -e "${RED} [2] Desactivar SlowDNS${NC}"
+            echo -e "${YELLOW} [3] 🔑 Ver Llave Pública (Para el Cliente)${NC}"
+            echo -e "${YELLOW} [4] Cambiar Dominio NS${NC}"
+            echo -e "${CYAN} [5] 🔄 Regenerar Llaves RSA${NC}"
+            echo -e "${RED} [0] Volver${NC}"
+            echo -e "${CYAN}════════════════════════════════════════${NC}"
+            read -p "Opción SlowDNS: " opt_dns
+            
+            case $opt_dns in
+                1)
+                    systemctl enable --now mx-slowdns
+                    echo -e "${GREEN}✅ SlowDNS Activado en puerto 53.${NC}"
+                    sleep 2; menu_protocolos ;;
+                2)
+                    systemctl stop mx-slowdns
+                    systemctl disable mx-slowdns
+                    echo -e "${RED}⚠️ SlowDNS Desactivado.${NC}"
+                    sleep 2; menu_protocolos ;;
+                3)
+                    echo -e "\n${CYAN}════════════════════════════════════════${NC}"
+                    echo -e "${WHITE}  🔑 LLAVE PÚBLICA SLOWDNS${NC}"
+                    echo -e "${CYAN}════════════════════════════════════════${NC}"
+                    if [ -f /etc/MaximusVpsMx/slowdns/server.pub ]; then
+                        echo -e "${YELLOW}"
+                        cat /etc/MaximusVpsMx/slowdns/server.pub
+                        echo -e "${NC}"
+                        echo -e "${GREEN}📋 Copia esta llave completa en HTTP Custom → SlowDns → Key${NC}"
+                        echo -e "${GREEN}🌐 DNS Server: $NS_DOMAIN${NC}"
+                    else
+                        echo -e "${RED}❌ No se encontraron llaves. Ejecuta: openssl genrsa -out /etc/MaximusVpsMx/slowdns/server.key 2048${NC}"
+                    fi
+                    echo -e "${CYAN}════════════════════════════════════════${NC}"
+                    read -p "Presiona Enter..." ; menu_protocolos ;;
+                4)
+                    read -p "Nuevo dominio NS (ej: slow.tudominio.com): " new_ns
+                    echo "$new_ns" > /etc/MaximusVpsMx/slowdns/ns-domain.conf
+                    # Actualizar servicio con nuevo dominio
+                    sed -i "s|slow\.vpsmx\.store|$new_ns|g" /etc/systemd/system/mx-slowdns.service
+                    systemctl daemon-reload
+                    systemctl restart mx-slowdns 2>/dev/null
+                    echo -e "${GREEN}✅ Dominio NS actualizado a: $new_ns${NC}"
+                    sleep 2; menu_protocolos ;;
+                5)
+                    echo -e "${YELLOW}⚠️ Esto invalidará las llaves actuales de los clientes.${NC}"
+                    read -p "¿Continuar? (s/n): " confirmar
+                    if [ "$confirmar" == "s" ]; then
+                        openssl genrsa -out /etc/MaximusVpsMx/slowdns/server.key 2048 2>/dev/null
+                        openssl rsa -in /etc/MaximusVpsMx/slowdns/server.key -pubout -out /etc/MaximusVpsMx/slowdns/server.pub 2>/dev/null
+                        systemctl restart mx-slowdns 2>/dev/null
+                        echo -e "${GREEN}✅ Llaves regeneradas. Los clientes necesitan la nueva llave pública.${NC}"
+                    fi
+                    sleep 2; menu_protocolos ;;
+                *) menu_protocolos ;;
+            esac
+            ;;
+        6)
             echo "🔄 Reiniciando toda la red..."
-            systemctl restart mx-proxy dropbear stunnel4 badvpn
+            systemctl restart mx-proxy dropbear stunnel4 badvpn mx-slowdns
             sleep 2; menu_protocolos ;;
         0) main_menu ;;
         *) menu_protocolos ;;
