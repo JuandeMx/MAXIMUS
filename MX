@@ -20,10 +20,40 @@ NC='\033[0m'
 # Telemetría Global
 get_telemetry() {
     IP=$(wget -qO- ipv4.icanhazip.com 2>/dev/null)
+    [ -z "$IP" ] && IP="127.0.0.1"
     OS=$(grep -w PRETTY_NAME /etc/os-release | cut -d= -f2 | tr -d '"')
-    RAM_USE=$(free -m | awk 'NR==2{printf "%.1f", $3*100/$2}')
-    CPU_USE=$(top -bn1 | grep load | awk '{printf "%.2f", $(NF-2)}')
-    ACTIVE_PORTS=$(netstat -tuln | grep LISTEN | awk '{print $4}' | awk -F":" '{print $NF}' | sort -nu | xargs)
+    [ -z "$OS" ] && OS="Ubuntu 20.04"
+    
+    FECHA=$(date +"%d-%m-%Y")
+    HORA=$(date +"%H:%M:%S")
+
+    # Disco
+    DISC_TOTAL=$(df -h / | awk 'NR==2 {print $2}')
+    DISC_USO=$(df -h / | awk 'NR==2 {print $3}')
+    DISC_FREE=$(df -h / | awk 'NR==2 {print $4}')
+    DISC_DISP=$(df -h / | awk 'NR==2 {print $4}')
+
+    # CPU
+    CORES=$(nproc)
+    CPU_USE=$(top -bn1 | grep load | awk '{printf "%.2f%%", $(NF-2) * 10}')
+    [ -z "$CPU_USE" ] && CPU_USE="0.00%"
+
+    # RAM
+    RAM_TOTAL=$(free -m | awk 'NR==2 {printf "%.2fGB", $2/1024}')
+    RAM_USO=$(free -m | awk 'NR==2 {printf "%.2fGB", $3/1024}')
+    RAM_FREE=$(free -m | awk 'NR==2 {printf "%.2fMB", $4}')
+    RAM_BUFF=$(awk '/Buffers:/ {printf("%.2fMB", $2/1024)}' /proc/meminfo)
+    RAM_CACHE=$(awk '/^Cached:/ {printf("%.2fMB", $2/1024)}' /proc/meminfo)
+
+    # Cuentas SSH
+    if [ -f /etc/MaximusVpsMx/users.db ]; then
+        TOTAL=$(wc -l < /etc/MaximusVpsMx/users.db)
+        ACTIVA=$(grep -v "^#" /etc/MaximusVpsMx/users.db | wc -l)
+        EXPIRADA=0
+        BLOQUEADA=0
+    else
+        TOTAL=0; ACTIVA=0; EXPIRADA=0; BLOQUEADA=0
+    fi
 }
 
 # --- SUBMENÚ DE USUARIOS ---
@@ -425,31 +455,66 @@ CFEOF
 main_menu() {
     get_telemetry
     clear
-    echo -e "${GREEN}>>==========================================================<<${NC}"
-    echo -e "${GREEN} ███▄ ▄███▓ ▄▄▄      ▒██   ██▒ ██▓ ███▄ ▄███▓ █    ██   ██████ ${NC}"
-    echo -e "${GREEN}▓██▒▀█▀ ██▒▒████▄    ▒▒ █ █ ▒░▓██▒▓██▒▀█▀ ██▒ ██  ▓██▒▒██    ▒ ${NC}"
-    echo -e "${WHITE}▓██    ▓██░▒██  ▀█▄  ░░  █   ░▒██▒▓██    ▓██░▓██  ▒██░░ ▓██▄   ${NC}"
-    echo -e "${WHITE}▒██    ▒██ ░██▄▄▄▄██  ░ █ █ ▒ ░██░▒██    ▒██ ▓▓█  ░██░  ▒   ██▒${NC}"
-    echo -e "${RED}▒██▒   ░██▒ ▓█   ▓██▒▒██▒ ▒██▒░██░▒██▒   ░██▒▒▒█████▓ ▒██████▒▒${NC}"
-    echo -e "${RED}░ ▒░   ░  ░ ▒▒   ▓▒█░▒▒ ░ ░▓ ░░▓  ░ ▒░   ░  ░░▒▓▒ ▒ ▒ ▒ ▒▓▒ ▒ ░${NC}"
-    echo -e "${GREEN}>>==========================================================<<${NC}"
-    echo -e "${WHITE}              🇲🇽  V P S M X  🇲🇽              ${NC}"
-    echo -e "${GREEN}>>==========================================================<<${NC}"
-    echo -e "${YELLOW} OS:${NC} $OS   ${YELLOW}IP:${NC} $IP"
-    echo -e "${YELLOW} RAM:${NC} $RAM_USE%  ${YELLOW}CPU:${NC} $CPU_USE%"
-    echo -e "${YELLOW} PUERTOS ACTIVOS:${NC} $ACTIVE_PORTS"
-    echo -e "${GREEN}>>==========================================================<<${NC}"
-    echo -e "${GREEN} [1] 👤 Usuarios y Sesiones${NC}"
-    echo -e "${GREEN} [2] 🔌 Opciones de Protocolo (Proxy, SSL, UDP)${NC}"
-    echo -e "${GREEN} [3] ⚙️  Sistema, Backups y Seguridad${NC}"
-    echo -e "${RED} [0] Salir de MaximusVpsMx${NC}"
-    echo -e "${GREEN}>>==========================================================<<${NC}"
-    read -p "Selecciona una Opción Urbana: " main_opt
+    echo -e " ${GREEN}< $OS NOZETA 2 >${NC}"
+    echo -e "${RED}=========================================${NC}"
+    echo -e "${YELLOW}          SSH PRIVATE${NC}"
+    echo -e "${RED}=========================================${NC}"
+    printf "${CYAN}S.O:    ${WHITE}%-22s ${CYAN}Fecha: ${WHITE}%-15s${NC}\n" "$OS" "$FECHA"
+    printf "${CYAN}IP:     ${WHITE}%-22s ${CYAN}Hora:  ${WHITE}%-15s${NC}\n" "$IP" "$HORA"
+    echo -e "${RED}==========${CYAN}Disc${RED}==========  ==========${CYAN}CPU${RED}===========${NC}"
+    printf "${CYAN}Total:  ${WHITE}%-8s  ${CYAN}Dispo: ${WHITE}%-7s  ${CYAN}Cores: ${WHITE}%-10s${NC}\n" "$DISC_TOTAL" "$DISC_DISP" "$CORES"
+    printf "${CYAN}En Uso: ${WHITE}%-8s  ${CYAN}Libre: ${WHITE}%-7s  ${CYAN}En Uso: ${WHITE}%-9s${NC}\n" "$DISC_USO" "$DISC_FREE" "$CPU_USE"
+    echo -e "${RED}==========${CYAN}Ram${RED}===========${NC}"
+    printf "${CYAN}Total:  ${WHITE}%-8s  ${CYAN}En Uso: ${WHITE}%-6s  ${CYAN}Libre: ${WHITE}%-8s${NC}\n" "$RAM_TOTAL" "$RAM_USO" "$RAM_FREE"
+    printf "${CYAN}Buffer: ${WHITE}%-8s  ${CYAN}Cache:  ${WHITE}%-6s${NC}\n" "$RAM_BUFF" "$RAM_CACHE"
+    echo -e "${RED}=========================================${NC}"
+    printf "  ${CYAN}ACTIVA: ${WHITE}%-4s ${RED}EXPIRADA: ${WHITE}%-3s  ${CYAN}BLOQUEADA: ${WHITE}%-3s  ${CYAN}TOTAL: ${WHITE}%-3s${NC}\n" "$ACTIVA" "$EXPIRADA" "$BLOQUEADA" "$TOTAL"
+    echo -e "${RED}=========================================${NC}"
+    echo -e "${CYAN}[1]> ${WHITE}ADMINISTRAR CUENTAS (SSH/DROPBEAR)${NC}"
+    echo -e "${RED}-----------------------------------------${NC}"
+    echo -e "${CYAN}[2]> ${WHITE}CONFIGURACION DE PROTOCOLOS${NC}"
+    echo -e "${CYAN}[3]> ${WHITE}HERRAMIENTAS EXTRAS${NC}"
+    echo -e "${RED}-----------------------------------------${NC}"
+    echo -e "${CYAN}[4]> ${WHITE}CONFIGURACION DEL SCRIPT${NC}"
+    echo -e "${CYAN}[5]> ${WHITE}IDIOMA / LANGUAGE${NC}"
+    echo -e "${RED}-----------------------------------------${NC}"
+    echo -e "${CYAN}[6]> ${RED}[!] DESINSTALAR PANEL${NC}"
+    echo -e "${RED}=========================================${NC}"
+    echo -e "${WHITE}[0] SALIR DEL VPS  [7] SALIR DEL SCRIPT  [8] REINICIAR VPS${NC}"
+    echo -e "${RED}=========================================${NC}"
+    
+    # Imprimiendo el prompt sin salto de linea
+    echo -ne "${YELLOW}Ingresa una Opcion: ${NC}"
+    read main_opt
 
     case $main_opt in
         1) menu_usuarios ;;
         2) menu_protocolos ;;
         3) menu_sistema ;;
+        4) echo -e "\n${YELLOW}▶ Próximamente: Configuración del Script${NC}"; sleep 2; main_menu ;;
+        5) echo -e "\n${YELLOW}▶ Idioma Actual: Español${NC}"; sleep 2; main_menu ;;
+        6) 
+            echo -e "\n${RED}================ ¡¡PELIGRO!! ================${NC}"
+            read -p "¿Estás 100% seguro de destruir MaximusVpsMx? [S/N]: " desc
+            if [[ "$desc" == "S" || "$desc" == "s" ]]; then
+                echo -e "${RED}🔥 INICIANDO PURGA MASIVA...${NC}"
+                systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns 2>/dev/null
+                killall -9 stunnel4 dropbear python3 badvpn-udpgw 2>/dev/null
+                rm -rf /etc/MaximusVpsMx
+                rm -f /usr/local/bin/MX
+                rm -f /etc/systemd/system/mx-proxy.service
+                rm -f /etc/systemd/system/badvpn.service
+                rm -f /etc/systemd/system/mx-slowdns.service
+                apt-get purge stunnel4 dropbear -y 2>/dev/null
+                systemctl daemon-reload
+                echo -e "${GREEN}✅ VUELO COMPLETADO. El servidor vuelve a ser de fábrica.${NC}"
+                exit
+            else
+                main_menu
+            fi
+            ;;
+        7) clear; exit ;;
+        8) echo -e "${YELLOW}🔄 Reiniciando VPS...${NC}"; reboot ;;
         0) clear; exit ;;
         *) main_menu ;;
     esac
