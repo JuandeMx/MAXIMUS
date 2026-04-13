@@ -5,9 +5,12 @@ LISTENING_ADDR = '0.0.0.0'
 LISTENING_PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 80
 BUFLEN = 8192
 TIMEOUT = 120
-RESPONSE_CONTINUE = b'HTTP/1.1 100 Continue\r\n\r\n'
-RESPONSE_WS = b'HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n'
-RESPONSE_STD = b'HTTP/1.1 200 OK\r\n\r\n'
+
+# Mensajes de Respuesta (Edición Suprema)
+BANNER_SUPREMO = b'Server: AXOLOT-SUPREMACY\r\n'
+RESPONSE_CONTINUE = b'HTTP/1.1 100 Continue\r\n' + BANNER_SUPREMO + b'\r\n'
+RESPONSE_WS = b'HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n' + BANNER_SUPREMO + b'\r\n'
+RESPONSE_STD = b'HTTP/1.1 200 OK\r\n' + BANNER_SUPREMO + b'\r\n'
 
 class Server(threading.Thread):
     def __init__(self, host, port):
@@ -50,18 +53,15 @@ def log_error(msg):
         pass
 
 def collect_headers(sock, initial_buffer, timeout_sec):
-    """Recolectar datos hasta encontrar fin de cabeceras HTTP doble CRLF."""
     buf = initial_buffer
     deadline = time.time() + timeout_sec
     while b'\r\n\r\n' not in buf and b'\n\n' not in buf:
         remaining = deadline - time.time()
-        if remaining <= 0:
-            break
+        if remaining <= 0: break
         r, _, _ = select.select([sock], [], [], min(remaining, 0.5))
         if sock in r:
             chunk = sock.recv(BUFLEN)
-            if not chunk:
-                break
+            if not chunk: break
             buf += chunk
         else:
             break
@@ -79,17 +79,22 @@ class ConnectionHandler(threading.Thread):
             self.client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
             self.client.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
 
-            # Recepción inicial: CloudFront puede mandar todo en el primer paquete
-            client_buffer = self.client.recv(BUFLEN)
-            if not client_buffer:
-                return
-
+            # --- MOTOR HÍBRIDO v4.0 (Peeking) ---
+            # Esperamos un breve momento para ver si el cliente habla (Payload)
+            client_buffer = b''
+            r, _, _ = select.select([self.client], [], [], 0.5)
+            
+            if r:
+                client_buffer = self.client.recv(BUFLEN)
+            
+            # Decidimos el modo basado en lo que recibimos o en el silencio
             is_ssh = client_buffer.startswith(b'SSH-')
+            is_payload = (not is_ssh) and (len(client_buffer) > 0)
+            is_silent = len(client_buffer) == 0
 
-            if not is_ssh:
-                # MODO PROXY HTTP / CLOUDFRONT / WEBSOCKET
+            if is_payload:
+                # MODO PROXY (HTTP / CLOUDFRONT / WEBSOCKET)
                 client_buffer = collect_headers(self.client, client_buffer, 5)
-
                 is_ws = b'upgrade: websocket' in client_buffer.lower()
                 is_split = b'100-continue' in client_buffer.lower()
 
@@ -105,8 +110,11 @@ class ConnectionHandler(threading.Thread):
                     self.client.sendall(RESPONSE_WS)
                 else:
                     self.client.sendall(RESPONSE_STD)
+                
+                # Sincronización pequeña para separar cabeceras del flujo SSH
+                time.sleep(0.1)
 
-            # Conexión al Backend local
+            # Conexión al Backend local (OpenSSH 22 o Dropbear paramétrico)
             drop_port = 44
             try:
                 import os
@@ -129,11 +137,10 @@ class ConnectionHandler(threading.Thread):
             if not target:
                 return
 
-            # Manejo del flujo inicial (Injectar datos residuales)
+            # Manejo del flujo inicial
             if is_ssh:
                 target.sendall(client_buffer)
-            else:
-                leftover = b''
+            elif is_payload:
                 header_end = -1
                 if b'\r\n\r\n' in client_buffer:
                     header_end = client_buffer.find(b'\r\n\r\n') + 4
@@ -142,20 +149,16 @@ class ConnectionHandler(threading.Thread):
                 
                 if header_end != -1:
                     leftover = client_buffer[header_end:]
-                if leftover:
-                    target.sendall(leftover)
+                    if leftover: target.sendall(leftover)
 
-            # --- RELAY BIDIRECCIONAL BASADO EN SELECT (MÁXIMA ESTABILIDAD) ---
+            # --- RELAY BIDIRECCIONAL SELECT ENGINE ---
             sockets = [self.client, target]
             while True:
                 r, _, e = select.select(sockets, [], sockets, 60)
                 if e: break
                 for sock in r:
                     data = sock.recv(BUFLEN)
-                    if not data:
-                        return # Cierre normal
-                    
-                    # Determinar destino
+                    if not data: return
                     out = target if sock is self.client else self.client
                     out.sendall(data)
 
@@ -169,7 +172,7 @@ class ConnectionHandler(threading.Thread):
             except: pass
 
 def main():
-    print(f"MaximusVpsMx Proxy v3.5 - High Stability Select Engine\nListening on {LISTENING_PORT}")
+    print(f"MaximusVpsMx Proxy v4.0 - AXOLOT SUPREMACY Edition\nListening on {LISTENING_PORT}")
     server = Server('0.0.0.0', LISTENING_PORT)
     server.start()
     while True:
