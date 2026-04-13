@@ -252,50 +252,60 @@ menu_usuarios() {
 # --- PURGA NUCLEAR DEL SISTEMA ---
 purgar_sistema_total() {
     clear
-    echo -e "${RED}☢️ INICIANDO PURGA NUCLEAR DEL SISTEMA...${NC}"
-    echo -e "${YELLOW}Esto eliminará absolutamente todos los módulos y datos.${NC}"
+    echo -e "${RED}☢️ INICIANDO PURGA NUCLEAR REFORZADA v4.4.2...${NC}"
+    echo -e "${YELLOW}Limpieza total de servicios, binarios y reglas de red.${NC}"
     sleep 2
 
-    # 1. Detener todos los servicios conocidos
-    echo -e "${CYAN}[+] Deteniendo servicios...${NC}"
-    local services=("stunnel4" "dropbear" "mx-proxy" "badvpn" "mx-slowdns" "udp-custom" "hysteria" "ws-epro" "udp-custom" "ssh" "sshd")
+    # 1. Detener y Deshabilitar Servicios Systemd
+    echo -e "${CYAN}[+] Fulminando servicios systemd...${NC}"
+    local services=("stunnel4" "dropbear" "mx-proxy" "badvpn" "mx-slowdns" "udp-custom" "hysteria" "ws-epro" "sshd" "ssh")
     for srv in "${services[@]}"; do
         systemctl stop "$srv" 2>/dev/null
         systemctl disable "$srv" 2>/dev/null
     done
 
-    # 2. Matar procesos remanentes por nombre de binario
-    echo -e "${CYAN}[+] Asegurando cierre de procesos...${NC}"
+    # 2. Matar procesos por socket (Puertos críticos)
+    echo -e "${CYAN}[+] Cerrando sockets ocupados...${NC}"
+    local ports=("443/udp" "7300/udp" "36712/udp" "80/tcp" "443/tcp" "8080/tcp")
+    for p in "${ports[@]}"; do
+        fuser -k -n "$p" 2>/dev/null
+    done
+
+    # 3. Matar procesos por nombre (Fuerza bruta)
+    echo -e "${CYAN}[+] Matando procesos remanentes...${NC}"
     local binaries=("stunnel4" "dropbear" "python3" "badvpn-udpgw" "udp-custom" "hysteria" "slowdns")
     for bin in "${binaries[@]}"; do
+        pkill -9 "$bin" 2>/dev/null
         killall -9 "$bin" 2>/dev/null
     done
 
-    # 3. Limpiar Firewall UFW (Puertos conocidos)
-    echo -e "${CYAN}[+] Limpiando reglas del Firewall...${NC}"
-    # Puertos TCP
-    local tcp_ports=(22 44 80 443 8080 8443)
-    for p in "${tcp_ports[@]}"; do
-        ufw delete allow "$p/tcp" 2>/dev/null
-    done
-    # Puertos UDP
-    local udp_ports=(443 7300 36712 53)
-    for p in "${udp_ports[@]}"; do
-        ufw delete allow "$p/udp" 2>/dev/null
-    done
+    # 4. Eliminar Binarios de Rutas Globales
+    echo -e "${CYAN}[+] Eliminando binarios del sistema...${NC}"
+    rm -f /usr/local/bin/badvpn-udpgw 2>/dev/null
+    rm -f /usr/bin/badvpn-udpgw 2>/dev/null
+    rm -f /usr/bin/hysteria 2>/dev/null
+    rm -f /usr/local/bin/udp-custom 2>/dev/null
+    rm -f /usr/local/bin/MX 2>/dev/null
 
-    # 4. Eliminar directorios y archivos de configuración
-    echo -e "${CYAN}[+] Eliminando archivos y directorios...${NC}"
+    # 5. Limpiar Firewall UFW
+    echo -e "${CYAN}[+] Limpiando reglas de Firewall...${NC}"
+    local tcp_ports=(22 44 80 443 8080 8443)
+    for p in "${tcp_ports[@]}"; do ufw delete allow "$p/tcp" 2>/dev/null; done
+    local udp_ports=(443 7300 36712 53)
+    for p in "${udp_ports[@]}"; do ufw delete allow "$p/udp" 2>/dev/null; done
+
+    # 6. Borrar Carpetas de Configuración y Logs
+    echo -e "${CYAN}[+] Borrando rastros de configuración...${NC}"
     rm -rf /etc/MaximusVpsMx
     rm -rf /etc/hysteria
     rm -rf /root/udp
     rm -rf /etc/stunnel
     rm -rf /var/log/MaximusVpsMx
-    rm -f /usr/local/bin/MX
+    rm -rf /etc/slowdns
     rm -f /etc/issue.net
 
-    # 5. Eliminar archivos de servicio systemd
-    echo -e "${CYAN}[+] Eliminando archivos de sistema...${NC}"
+    # 7. Eliminar Archivos de Servicio
+    echo -e "${CYAN}[+] Eliminando definiciones de servicio...${NC}"
     rm -f /etc/systemd/system/mx-proxy.service 2>/dev/null
     rm -f /etc/systemd/system/badvpn.service 2>/dev/null
     rm -f /etc/systemd/system/mx-slowdns.service 2>/dev/null
@@ -303,14 +313,15 @@ purgar_sistema_total() {
     rm -f /etc/systemd/system/hysteria.service 2>/dev/null
     rm -f /etc/systemd/system/ws-epro.service 2>/dev/null
 
-    # 6. Limpieza de paquetes APT (opcional pero recomendada)
-    echo -e "${CYAN}[+] Purgando paquetes del sistema...${NC}"
+    # 8. Purga APT
+    echo -e "${CYAN}[+] Purgando paquetes APT...${NC}"
     DEBIAN_FRONTEND=noninteractive apt-get purge stunnel4 dropbear badvpn -y 2>/dev/null
     apt-get autoremove -y 2>/dev/null
 
-    # 7. Finalizar
+    # 9. Recargar y Finalizar
     systemctl daemon-reload
-    echo -e "${GREEN}✅ SISTEMA LIMPIADO COMPLETAMENTE.${NC}"
+    systemctl reset-failed 2>/dev/null
+    echo -e "${GREEN}✅ SISTEMA PURGADO AL 100%.${NC}"
     sleep 2
 }
 
