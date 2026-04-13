@@ -160,10 +160,14 @@ class ConnectionHandler(threading.Thread):
             else:
                 # Revisar si el saludo SSH quedó atrapado en el buffer tras el HTTP
                 leftover = b''
+                header_end = -1
                 if b'\r\n\r\n' in client_buffer:
-                    leftover = client_buffer.split(b'\r\n\r\n', 1)[1]
+                    header_end = client_buffer.find(b'\r\n\r\n') + 4
                 elif b'\n\n' in client_buffer:
-                    leftover = client_buffer.split(b'\n\n', 1)[1]
+                    header_end = client_buffer.find(b'\n\n') + 2
+                
+                if header_end != -1:
+                    leftover = client_buffer[header_end:]
 
                 # Modo Transparente: Si hay leftover, se envía. Si no, se entra a relay.
                 if leftover:
