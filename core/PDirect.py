@@ -114,6 +114,7 @@ class ConnectionHandler(threading.Thread):
                 if is_split:
                     # Responder 100 Continue (Protocolo Split)
                     self.client.sendall(RESPONSE_CONTINUE)
+                    time.sleep(0.1)
                     # Esperar la segunda parte del payload
                     second_buffer = b''
                     second_buffer = collect_headers(self.client, second_buffer, 3)
@@ -128,6 +129,9 @@ class ConnectionHandler(threading.Thread):
                 else:
                     # Respuesta estandar para el resto
                     self.client.sendall(RESPONSE_STD)
+                
+                # Sincronización: Forzar envío del paquete HTTP antes de activar el tunel SSH
+                time.sleep(0.1)
 
             # Conexión al Backend local (OpenSSH 22 o Dropbear paramétrico)
             drop_port = 44
