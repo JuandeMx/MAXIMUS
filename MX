@@ -264,26 +264,50 @@ gestor_servicio() {
                fi
                ;;
             3)
-               echo -e "\n${RED}⚠️ Esto eliminará $title completamente (incluyendo logs).${NC}"
-               read -p " ¿Estás seguro? (s/n): " conf_del
-               if [[ "$conf_del" == "s" || "$conf_del" == "S" ]]; then
-                   echo -e "${YELLOW}[+] Purgando servicio $title...${NC}"
-                   systemctl stop "$srv" 2>/dev/null
-                   systemctl disable "$srv" 2>/dev/null
-                   rm -f "/etc/systemd/system/${srv}.service" 2>/dev/null
-                   
-                   # Limpieza profunda según el servicio
-                   case $srv in
-                       stunnel4) apt-get purge stunnel4 -y 2>/dev/null; rm -rf /etc/stunnel ;;
-                       dropbear) apt-get purge dropbear -y 2>/dev/null; rm -rf /etc/default/dropbear ;;
-                       mx-proxy) rm -rf /var/log/MaximusVpsMx/proxy.log ;;
-                       mx-slowdns) rm -rf /var/log/MaximusVpsMx/slowdns.log ;;
-                   esac
-                   
-                   systemctl daemon-reload
-                   echo -e "${GREEN}✅ $title eliminado totalmente del sistema.${NC}"
-               fi
-               sleep 2 ;;
+                echo -e "\n${RED}⚠️ Esto eliminará $title completamente (incluyendo logs).${NC}"
+                read -p " ¿Estás seguro? (s/n): " conf_del
+                if [[ "$conf_del" == "s" || "$conf_del" == "S" ]]; then
+                    echo -e "${YELLOW}[+] Purgando servicio $title...${NC}"
+                    systemctl stop "$srv" 2>/dev/null
+                    systemctl disable "$srv" 2>/dev/null
+                    
+                    # Identificar puerto para limpieza de firewall
+                    local port_to_kill=""
+                    case $srv in
+                        stunnel4) port_to_kill=443 ;;
+                        dropbear) port_to_kill=44 ;;
+                        mx-proxy) port_to_kill=80 ;;
+                        badvpn) port_to_kill=7300 ;;
+                    esac
+
+                    # Matar procesos remanentes por la fuerza
+                    echo -e "${YELLOW}[+] Asegurando cierre de puertos...${NC}"
+                    [ ! -z "$port_to_kill" ] && fuser -k "$port_to_kill/tcp" "$port_to_kill/udp" 2>/dev/null
+                    
+                    # Eliminar archivos
+                    rm -f "/etc/systemd/system/${srv}.service" 2>/dev/null
+                    rm -f "/etc/systemd/system/${srv}.service.d/override.conf" 2>/dev/null
+                    
+                    # Limpieza profunda según el servicio
+                    case $srv in
+                        stunnel4) 
+                            apt-get purge stunnel4 -y 2>/dev/null; rm -rf /etc/stunnel
+                            ufw delete allow 443/tcp 2>/dev/null ;;
+                        dropbear) 
+                            apt-get purge dropbear -y 2>/dev/null; rm -rf /etc/default/dropbear
+                            ufw delete allow 44/tcp 2>/dev/null ;;
+                        mx-proxy) 
+                            rm -rf /var/log/MaximusVpsMx/proxy.log
+                            ufw delete allow 80/tcp 2>/dev/null ;;
+                        badvpn)
+                            systemctl stop badvpn 2>/dev/null
+                            ufw delete allow 7300/udp 2>/dev/null ;;
+                    esac
+                    
+                    systemctl daemon-reload
+                    echo -e "${GREEN}✅ $title eliminado totalmente y puerto cerrado.${NC}"
+                fi
+                sleep 2 ;;
             4)
                if [ -f "/etc/MaximusVpsMx/modules/install_${srv}.sh" ]; then
                    echo -e "\n${YELLOW}▶ Reinstalando con nuevo puerto...${NC}"

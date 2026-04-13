@@ -7,7 +7,7 @@ BUFLEN = 8192
 TIMEOUT = 120
 RESPONSE_CONTINUE = b'HTTP/1.1 100 Continue\r\n\r\n'
 RESPONSE_WS = b'HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n'
-RESPONSE_STD = b'HTTP/1.1 200 Connection Established\r\n\r\n'
+RESPONSE_STD = b'HTTP/1.1 200 OK\r\n\r\n'
 
 class Server(threading.Thread):
     def __init__(self, host, port):

@@ -80,7 +80,8 @@ case $mode_opt in
 esac
 
 # --- INSTALACIÓN Y CONFIGURACIÓN ---
-echo -e "\n${YELLOW}[+] Aplicando configuración de Stunnel de Alta Compatibilidad...${NC}"
+echo -e "\n${YELLOW}[+] Limpiando puerto $SSL_PORT y aplicando configuración...${NC}"
+fuser -k "$SSL_PORT/tcp" 2>/dev/null
 apt-get install stunnel4 -y > /dev/null 2>&1
 
 # Asegurar directorio de logs

@@ -15,7 +15,8 @@ if [[ -z "$proxy_port" ]]; then
     exit 1
 fi
 
-echo -e "\n\e[1;32m[+] Configurando Proxy Python en el puerto $proxy_port...\e[0m"
+echo -e "\n\e[1;32m[+] Limpiando puerto $proxy_port y configurando Proxy...\e[0m"
+fuser -k "$proxy_port/tcp" 2>/dev/null
 
 # Creamos el servicio systemd dinámicamente con el puerto
 cat > /etc/systemd/system/mx-proxy.service << EOF
