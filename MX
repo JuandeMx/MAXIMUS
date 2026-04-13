@@ -234,37 +234,51 @@ menu_usuarios() {
 # --- SUBMENÚ DE PROTOCOLOS ---
 menu_protocolos() {
     clear
-    systemctl is-active --quiet mx-proxy && st_proxy="${GREEN}ONLINE${NC}" || st_proxy="${RED}OFFLINE${NC}"
-    systemctl is-active --quiet dropbear && st_drop="${GREEN}ONLINE${NC}" || st_drop="${RED}OFFLINE${NC}"
-    systemctl is-active --quiet stunnel4 && st_stun="${GREEN}ONLINE${NC}" || st_stun="${RED}OFFLINE${NC}"
-    systemctl is-active --quiet badvpn && st_udp="${GREEN}ONLINE${NC}" || st_udp="${RED}OFFLINE${NC}"
-    systemctl is-active --quiet mx-slowdns && st_dns="${GREEN}ONLINE${NC}" || st_dns="${RED}OFFLINE${NC}"
+    systemctl is-active --quiet ssh && st_ssh="${GREEN}[ON]${NC}" || st_ssh="${RED}[OFF]${NC}"
+    systemctl is-active --quiet dropbear && st_drop="${GREEN}[ON]${NC}" || st_drop="${RED}[OFF]${NC}"
+    systemctl is-active --quiet mx-proxy && st_proxy="${GREEN}[ON]${NC}" || st_proxy="${RED}[OFF]${NC}"
+    systemctl is-active --quiet stunnel4 && st_stun="${GREEN}[ON]${NC}" || st_stun="${RED}[OFF]${NC}"
+    systemctl is-active --quiet mx-slowdns && st_dns="${GREEN}[ON]${NC}" || st_dns="${RED}[OFF]${NC}"
+    systemctl is-active --quiet ws-epro && st_ws="${GREEN}[ON]${NC}" || st_ws="${RED}[OFF]${NC}"
+    systemctl is-active --quiet udp-custom && st_udpc="${GREEN}[ON]${NC}" || st_udpc="${RED}[OFF]${NC}"
+    systemctl is-active --quiet hysteria && st_udph="${GREEN}[ON]${NC}" || st_udph="${RED}[OFF]${NC}"
+    systemctl is-active --quiet badvpn && st_udp="${GREEN}[ON]${NC}" || st_udp="${RED}[OFF]${NC}"
+    
+    # Pendientes de desarrollo
+    st_squid="${RED}[OFF]${NC}"
+    st_ovpn="${RED}[OFF]${NC}"
+    st_chk="${GREEN}[ON]${NC}" # Según referencia
+    st_atken="${RED}[OFF]${NC}"
+    st_file="${RED}[OFF]${NC}"
+    st_v2ray="${RED}[OFF]${NC}"
+    st_sshgo="${RED}[OFF]${NC}"
+    st_wg="${RED}[OFF]${NC}"
 
-    echo -e " ${GREEN}< BY JUANDEMX >${NC}"
     echo -e "${RED}=======================================================${NC}"
-    echo -e "${YELLOW}           🔌 CONFIGURACION DE PROTOCOLOS 🔌${NC}"
+    echo -e "${YELLOW}              ADMINISTRADOR DE PROTOCOLOS${NC}"
     echo -e "${RED}=======================================================${NC}"
-    echo -e "${CYAN}[1]> ${WHITE}Python Proxy (Puerto 80)     : $st_proxy"
-    echo -e "${CYAN}[2]> ${WHITE}Dropbear SSH (Puerto 44)     : $st_drop"
-    echo -e "${CYAN}[3]> ${WHITE}Stunnel SSL  (Puerto 443)    : $st_stun"
-    echo -e "${CYAN}[4]> ${WHITE}BadVPN UDP   (Puerto 7300)   : $st_udp"
-    echo -e "${CYAN}[5]> ${WHITE}SlowDNS 🌐   (Puerto 53)     : $st_dns"
-    echo -e "${RED}-------------------------------------------------------${NC}"
-    echo -e "${CYAN}[6]> ${WHITE}⟳ Reiniciar TODOS los Servicios${NC}"
+    echo -e "${WHITE}BADVPN: 7300 7400                 PYTHON2: 80${NC}"
+    echo -e "${WHITE}SSH: 22${NC}"
     echo -e "${RED}=======================================================${NC}"
-    echo -e "${WHITE}[0] VOLVER AL MENÚ PRINCIPAL${NC}"
+    printf " ${CYAN}[1]>${WHITE} %-14s%b   ${CYAN}[10]>${WHITE} %-16s%b\n" "AJUSTES SSH" "$st_ssh" "SQUID" "$st_squid"
+    printf " ${CYAN}[2]>${WHITE} %-14s%b   ${CYAN}[11]>${WHITE} %-16s%b\n" "DROPBEAR" "$st_drop" "OPENVPN" "$st_ovpn"
+    printf " ${CYAN}[3]>${WHITE} %-14s%b   ${CYAN}[12]>${WHITE} %-16s%b\n" "SOCKS PYTHON" "$st_proxy" "CHECKUSER ONLINE" "$st_chk"
+    printf " ${CYAN}[4]>${WHITE} %-14s%b   ${CYAN}[13]>${WHITE} %-16s%b\n" "STUNNEL (SSL)" "$st_stun" "ATKEN and HASH" "$st_atken"
+    printf " ${CYAN}[5]>${WHITE} %-14s%b   ${CYAN}[14]>${WHITE} %-16s%b\n" "SLOWDNS" "$st_dns" "FILEBROWSER" "$st_file"
+    printf " ${CYAN}[6]>${WHITE} %-14s%b   ${CYAN}[15]>${WHITE} %-16s%b\n" "WS-EPRO" "$st_ws" "V2RAY/XRAY" "$st_v2ray"
+    printf " ${CYAN}[7]>${WHITE} %-14s%b   ${CYAN}[16]>${WHITE} %-16s%b\n" "UDP-CUSTOM" "$st_udpc" "SSHGO" "$st_sshgo"
+    printf " ${CYAN}[8]>${WHITE} %-14s%b   ${CYAN}[17]>${WHITE} %-16s%b\n" "UDP-HYSTERIA" "$st_udph" "WIREGUARD" "$st_wg"
+    printf " ${CYAN}[9]>${WHITE} %-14s%b\n" "BADVPN-UDPGW" "$st_udp"
+    echo -e "${RED}=======================================================${NC}"
+    echo -e "${CYAN}[0]${RED} Volver             ${CYAN}[18]${WHITE} ⟳ Reiniciar Todos los Módulos${NC}"
     echo -e "${RED}=======================================================${NC}"
     echo -ne "${YELLOW}Ingresa una Opcion: ${NC}"
     read opt_prot
     
     case $opt_prot in
-        1)
-            read -p "¿Acción para Python Proxy? [1=Start, 2=Stop, 3=Enable (Arranque), 4=Disable]: " act
-            if [ "$act" == "1" ]; then systemctl start mx-proxy; fi
-            if [ "$act" == "2" ]; then systemctl stop mx-proxy; fi
-            if [ "$act" == "3" ]; then systemctl enable mx-proxy; systemctl start mx-proxy; fi
-            if [ "$act" == "4" ]; then systemctl disable mx-proxy; systemctl stop mx-proxy; fi
-            menu_protocolos ;;
+        1|6|7|8|10|11|12|13|14|15|16|17)
+            echo -e "\n${YELLOW}▶ Protocolo Próximamente en Desarrollo${NC}"
+            sleep 2; menu_protocolos ;;
         2)
             read -p "¿Acción para Dropbear SSH? [1=Start, 2=Stop, 3=Enable (Arranque), 4=Disable]: " act
             if [ "$act" == "1" ]; then systemctl start dropbear; fi
@@ -273,13 +287,20 @@ menu_protocolos() {
             if [ "$act" == "4" ]; then systemctl disable dropbear; systemctl stop dropbear; fi
             menu_protocolos ;;
         3)
+            read -p "¿Acción para Python Proxy? [1=Start, 2=Stop, 3=Enable (Arranque), 4=Disable]: " act
+            if [ "$act" == "1" ]; then systemctl start mx-proxy; fi
+            if [ "$act" == "2" ]; then systemctl stop mx-proxy; fi
+            if [ "$act" == "3" ]; then systemctl enable mx-proxy; systemctl start mx-proxy; fi
+            if [ "$act" == "4" ]; then systemctl disable mx-proxy; systemctl stop mx-proxy; fi
+            menu_protocolos ;;
+        4)
             read -p "¿Acción para Stunnel SSL? [1=Start, 2=Stop, 3=Enable (Arranque), 4=Disable]: " act
             if [ "$act" == "1" ]; then systemctl start stunnel4; fi
             if [ "$act" == "2" ]; then systemctl stop stunnel4; fi
             if [ "$act" == "3" ]; then systemctl enable stunnel4; systemctl start stunnel4; fi
             if [ "$act" == "4" ]; then systemctl disable stunnel4; systemctl stop stunnel4; fi
             menu_protocolos ;;
-        4)
+        9)
             read -p "¿Acción para BadVPN UDP?  [1=Start, 2=Stop, 3=Enable (Arranque), 4=Disable]: " act
             if [ "$act" == "1" ]; then systemctl start badvpn; fi
             if [ "$act" == "2" ]; then systemctl stop badvpn; fi
@@ -335,7 +356,6 @@ menu_protocolos() {
                 4)
                     read -p "Nuevo dominio NS (ej: slow.tudominio.com): " new_ns
                     echo "$new_ns" > /etc/MaximusVpsMx/slowdns/ns-domain.conf
-                    # Actualizar servicio con nuevo dominio
                     sed -i "s|slow\.vpsmx\.store|$new_ns|g" /etc/systemd/system/mx-slowdns.service
                     systemctl daemon-reload
                     systemctl restart mx-slowdns 2>/dev/null
@@ -354,7 +374,7 @@ menu_protocolos() {
                 *) menu_protocolos ;;
             esac
             ;;
-        6)
+        18)
             echo "🔄 Reiniciando toda la red..."
             systemctl restart mx-proxy dropbear stunnel4 badvpn mx-slowdns
             sleep 2; menu_protocolos ;;
