@@ -260,7 +260,13 @@ gestor_servicio() {
         case $g_opt in
             1) systemctl enable --now "$srv" 2>/dev/null; echo -e "${GREEN}✅ $title Activado.${NC}"; sleep 1 ;;
             2) systemctl disable --now "$srv" 2>/dev/null; echo -e "${RED}⚠️ $title Desactivado.${NC}"; sleep 1 ;;
-            3|4|5|6) echo -e "\n${YELLOW}▶ Módulo de $title exclusivo en construcción.${NC}"; sleep 2 ;;
+            3|4|5|6) 
+               if [ -f "/etc/MaximusVpsMx/modules/install_${srv}.sh" ]; then
+                   bash "/etc/MaximusVpsMx/modules/install_${srv}.sh"
+               else
+                   echo -e "\n${YELLOW}▶ Módulo de $title exclusivo en construcción.${NC}"; sleep 2
+               fi
+               ;;
             7) 
                clear
                echo -e "${CYAN}================= REGISTRO DEL SERVICIO =================${NC}"
@@ -302,7 +308,13 @@ sub_slowdns() {
         case $s_opt in
             1) systemctl enable --now mx-slowdns 2>/dev/null; echo -e "${GREEN}✅ Activado.${NC}"; sleep 1 ;;
             2) systemctl disable --now mx-slowdns 2>/dev/null; echo -e "${RED}⚠️ Desactivado.${NC}"; sleep 1 ;;
-            3) echo -e "\n${YELLOW}▶ Módulo de Instalar SlowDNS Próximamente.${NC}"; sleep 2 ;;
+            3) 
+               if [ -f "/etc/MaximusVpsMx/modules/install_slowdns.sh" ]; then
+                   bash "/etc/MaximusVpsMx/modules/install_slowdns.sh"
+               else
+                   echo -e "\n${YELLOW}▶ Módulo de Instalar SlowDNS Próximamente.${NC}"; sleep 2
+               fi
+               ;;
             4)
                 read -p " Nuevo dominio NS (ej: slow.tudominio.com): " new_ns
                 echo "$new_ns" > /etc/MaximusVpsMx/slowdns/ns-domain.conf

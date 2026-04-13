@@ -2,7 +2,7 @@ import socket, threading, select, sys, time, datetime
 
 # Config
 LISTENING_ADDR = '0.0.0.0'
-LISTENING_PORT = 80
+LISTENING_PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 80
 BUFLEN = 8192
 TIMEOUT = 120
 RESPONSE_CONTINUE = b'HTTP/1.1 100 Continue\r\n\r\n'
@@ -188,8 +188,8 @@ class ConnectionHandler(threading.Thread):
             except: pass
 
 def main():
-    print("MaximusVpsMx Proxy v3.2 - AWS CloudFront Ready Edition")
-    server = Server('0.0.0.0', 80)
+    print(f"MaximusVpsMx Proxy v3.2 - AWS CloudFront Ready Edition\nListening on {LISTENING_PORT}")
+    server = Server('0.0.0.0', LISTENING_PORT)
     server.start()
     while True:
         try:
