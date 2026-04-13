@@ -165,32 +165,12 @@ class ConnectionHandler(threading.Thread):
                 elif b'\n\n' in client_buffer:
                     leftover = client_buffer.split(b'\n\n', 1)[1]
 
-                ssh_found = False
-                if b'SSH-' in leftover:
-                    idx_ssh = leftover.find(b'SSH-')
-                    target.sendall(leftover[idx_ssh:])
-                    ssh_found = True
-
-                # FILTRO ANTI-BASURA V3.2 (CloudFront / Operadoras)
-                if not ssh_found:
-                    deadline = time.time() + 8 
-                    while True:
-                        remaining = deadline - time.time()
-                        if remaining <= 0:
-                            return
-                        r, _, _ = select.select([self.client], [], [], remaining)
-                        if self.client in r:
-                            first_data = self.client.recv(BUFLEN)
-                            if not first_data:
-                                return
-                            if b'SSH-' in first_data:
-                                idx = first_data.find(b'SSH-')
-                                target.sendall(first_data[idx:])
-                                break
-                        else:
-                            return
+                # Modo Transparente: Si hay leftover, se envía. Si no, se entra a relay.
+                if leftover:
+                    target.sendall(leftover)
 
             # Iniciar Relay Bidireccional de alto rendimiento
+            # En este punto el túnel está establecido y el relay es puro.
             t1 = threading.Thread(target=relay_stream, args=(self.client, target))
             t1.daemon = True
             t1.start()
