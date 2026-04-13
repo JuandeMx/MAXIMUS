@@ -611,6 +611,7 @@ menu_mantenimiento() {
     case $mant_opt in
         1)
             echo -e "\n${YELLOW}▶ Iniciando Actualización Inteligente...${NC}"
+            cd /tmp || exit
             echo -e "${CYAN}[+] Creando respaldo temporal de datos vitales...${NC}"
             mkdir -p /tmp/MX_BACKUP
             [ -f /etc/MaximusVpsMx/users.db ] && cp /etc/MaximusVpsMx/users.db /tmp/MX_BACKUP/
@@ -650,6 +651,7 @@ menu_mantenimiento() {
             echo -e "\n${RED}⚠️ REINSTALACION LIMPIA SELECCIONADA${NC}"
             read -p "¿Estás 100% seguro de borrar TODO? [S/N]: " conf_clean
             if [[ "$conf_clean" == "S" || "$conf_clean" == "s" ]]; then
+                cd /tmp || exit
                 echo -e "${RED}🔥 PURGANDO TODO EL SISTEMA...${NC}"
                 systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns 2>/dev/null
                 killall -9 stunnel4 dropbear python3 badvpn-udpgw 2>/dev/null
