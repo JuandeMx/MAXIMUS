@@ -59,19 +59,24 @@ get_telemetry() {
 # --- SUBMENÚ DE USUARIOS ---
 menu_usuarios() {
     clear
-    echo -e "${CYAN}================================================================${NC}"
-    echo -e "${WHITE}               👥 ADMINISTRADOR DE USUARIOS 👥               ${NC}"
-    echo -e "${CYAN}================================================================${NC}"
-    echo -e "${GREEN} [1] Crear Usuario Premium (Días a elegir)${NC}"
-    echo -e "${GREEN} [2] Crear Usuario Trial (7 Días Automático)${NC}"
-    echo -e "${GREEN} [3] Renovar Usuario (Añadir Días)${NC}"
-    echo -e "${GREEN} [4] Cambiar Contraseña de Usuario${NC}"
-    echo -e "${RED} [5] Eliminar / Banear Usuario${NC}"
-    echo -e "${YELLOW} [6] Listar Todos los Usuarios y Vencimientos${NC}"
-    echo -e "${YELLOW} [7] Rastrear Sesiones en Vivo (Monitor)${NC}"
-    echo -e "${RED} [0] Volver al Menú Principal${NC}"
-    echo -e "${CYAN}================================================================${NC}"
-    read -p "Opción: " opt_user
+    echo -e " ${GREEN}< $OS NOZETA 2 >${NC}"
+    echo -e "${RED}=========================================${NC}"
+    echo -e "${YELLOW}   👥 ADMINISTRADOR DE CUENTAS 👥${NC}"
+    echo -e "${RED}=========================================${NC}"
+    echo -e "${CYAN}[1]> ${WHITE}Crear Usuario Premium (Días a elegir)${NC}"
+    echo -e "${CYAN}[2]> ${WHITE}Crear Usuario Trial (7 Días Automático)${NC}"
+    echo -e "${CYAN}[3]> ${WHITE}Renovar Usuario (Añadir Días)${NC}"
+    echo -e "${CYAN}[4]> ${WHITE}Cambiar Contraseña de Usuario${NC}"
+    echo -e "${RED}-----------------------------------------${NC}"
+    echo -e "${CYAN}[5]> ${RED}Eliminar / Banear Usuario${NC}"
+    echo -e "${RED}-----------------------------------------${NC}"
+    echo -e "${CYAN}[6]> ${WHITE}Listar Todos los Usuarios y Vencimientos${NC}"
+    echo -e "${CYAN}[7]> ${WHITE}Rastrear Sesiones en Vivo (Monitor)${NC}"
+    echo -e "${RED}=========================================${NC}"
+    echo -e "${WHITE}[0] VOLVER AL MENÚ PRINCIPAL${NC}"
+    echo -e "${RED}=========================================${NC}"
+    echo -ne "${YELLOW}Ingresa una Opcion: ${NC}"
+    read opt_user
 
     case $opt_user in
         1)
@@ -163,25 +168,28 @@ menu_usuarios() {
 # --- SUBMENÚ DE PROTOCOLOS ---
 menu_protocolos() {
     clear
-    echo -e "${CYAN}================================================================${NC}"
-    echo -e "${WHITE}            🔌 ADMINISTRADOR DE PROTOCOLOS 🔌            ${NC}"
-    echo -e "${CYAN}================================================================${NC}"
-    
-    systemctl is-active --quiet mx-proxy && st_proxy="${GREEN}[ONLINE]${NC}" || st_proxy="${RED}[OFFLINE]${NC}"
-    systemctl is-active --quiet dropbear && st_drop="${GREEN}[ONLINE]${NC}" || st_drop="${RED}[OFFLINE]${NC}"
-    systemctl is-active --quiet stunnel4 && st_stun="${GREEN}[ONLINE]${NC}" || st_stun="${RED}[OFFLINE]${NC}"
-    systemctl is-active --quiet badvpn && st_udp="${GREEN}[ONLINE]${NC}" || st_udp="${RED}[OFFLINE]${NC}"
-    systemctl is-active --quiet mx-slowdns && st_dns="${GREEN}[ONLINE]${NC}" || st_dns="${RED}[OFFLINE]${NC}"
-    
-    echo -e " ${YELLOW}[1]${NC} Python Proxy (Puerto 80)     : $st_proxy"
-    echo -e " ${YELLOW}[2]${NC} Dropbear SSH (Puerto 44)     : $st_drop"
-    echo -e " ${YELLOW}[3]${NC} Stunnel SSL  (Puerto 443)    : $st_stun"
-    echo -e " ${YELLOW}[4]${NC} BadVPN UDP   (Puerto 7300)   : $st_udp"
-    echo -e " ${YELLOW}[5]${NC} SlowDNS 🌐   (Puerto 53)     : $st_dns"
-    echo -e " ${YELLOW}[6]${NC} ${CYAN}⟳ Reiniciar TODOS los Servicios${NC}"
-    echo -e " ${RED}[0] Volver al Menú Principal${NC}"
-    echo -e "${CYAN}================================================================${NC}"
-    read -p "Opción: " opt_prot
+    systemctl is-active --quiet mx-proxy && st_proxy="${GREEN}ONLINE${NC}" || st_proxy="${RED}OFFLINE${NC}"
+    systemctl is-active --quiet dropbear && st_drop="${GREEN}ONLINE${NC}" || st_drop="${RED}OFFLINE${NC}"
+    systemctl is-active --quiet stunnel4 && st_stun="${GREEN}ONLINE${NC}" || st_stun="${RED}OFFLINE${NC}"
+    systemctl is-active --quiet badvpn && st_udp="${GREEN}ONLINE${NC}" || st_udp="${RED}OFFLINE${NC}"
+    systemctl is-active --quiet mx-slowdns && st_dns="${GREEN}ONLINE${NC}" || st_dns="${RED}OFFLINE${NC}"
+
+    echo -e " ${GREEN}< $OS NOZETA 2 >${NC}"
+    echo -e "${RED}=========================================${NC}"
+    echo -e "${YELLOW}      🔌 CONFIGURACION DE PROTOCOLOS 🔌${NC}"
+    echo -e "${RED}=========================================${NC}"
+    echo -e "${CYAN}[1]> ${WHITE}Python Proxy (Puerto 80)     : $st_proxy"
+    echo -e "${CYAN}[2]> ${WHITE}Dropbear SSH (Puerto 44)     : $st_drop"
+    echo -e "${CYAN}[3]> ${WHITE}Stunnel SSL  (Puerto 443)    : $st_stun"
+    echo -e "${CYAN}[4]> ${WHITE}BadVPN UDP   (Puerto 7300)   : $st_udp"
+    echo -e "${CYAN}[5]> ${WHITE}SlowDNS 🌐   (Puerto 53)     : $st_dns"
+    echo -e "${RED}-----------------------------------------${NC}"
+    echo -e "${CYAN}[6]> ${WHITE}⟳ Reiniciar TODOS los Servicios${NC}"
+    echo -e "${RED}=========================================${NC}"
+    echo -e "${WHITE}[0] VOLVER AL MENÚ PRINCIPAL${NC}"
+    echo -e "${RED}=========================================${NC}"
+    echo -ne "${YELLOW}Ingresa una Opcion: ${NC}"
+    read opt_prot
     
     case $opt_prot in
         1)
@@ -292,25 +300,27 @@ menu_protocolos() {
 # --- SUBMENÚ DE SISTEMA ---
 menu_sistema() {
     clear
-    echo -e "${CYAN}================================================================${NC}"
-    echo -e "${WHITE}               ⚙️  SEGURIDAD Y OPCIONES ⚙️                    ${NC}"
-    echo -e "${CYAN}================================================================${NC}"
-    
     ufw status | grep -q "active" && fw_st="${GREEN}[Activo]${NC}" || fw_st="${RED}[Inactivo]${NC}"
     
     # Detectar estado de Cloudflare DDNS
     crontab -l 2>/dev/null | grep -q "cloudflare-ddns" && cf_st="${GREEN}[Activo cada 5min]${NC}" || cf_st="${RED}[Inactivo]${NC}"
     
-    echo -e "${GREEN} [1] Optimizar VPS (Limpiar RAM y Caché)${NC}"
-    echo -e "${GREEN} [2] Editor de Banner Personal (Mensaje Global)${NC}"
-    echo -e "${GREEN} [3] Respaldar Usuarios Localmente (Backup)${NC}"
-    echo -e "${GREEN} [4] Gestor de Red y Transferencias (vnstat)${NC}"
-    echo -e "${YELLOW} [5] Activar/Desactivar Firewall UFW   | Estado: $fw_st${NC}"
-    echo -e "${CYAN} [6] ☁️  Cloudflare DDNS (IP Dinámica)  | Estado: $cf_st${NC}"
-    echo -e "${RED} [99] DESINSTALADOR MAESTRO (Destruir Script)${NC}"
-    echo -e "${RED} [0] Volver al Menú Principal${NC}"
-    echo -e "${CYAN}================================================================${NC}"
-    read -p "Opción: " opt_sys
+    echo -e " ${GREEN}< $OS NOZETA 2 >${NC}"
+    echo -e "${RED}=========================================${NC}"
+    echo -e "${YELLOW}         ⚙️ HERRAMIENTAS EXTRAS ⚙️${NC}"
+    echo -e "${RED}=========================================${NC}"
+    echo -e "${CYAN}[1]> ${WHITE}Optimizar VPS (Limpiar RAM y Caché)${NC}"
+    echo -e "${CYAN}[2]> ${WHITE}Editor de Banner Personal (Mensaje Global)${NC}"
+    echo -e "${CYAN}[3]> ${WHITE}Respaldar Usuarios Localmente (Backup)${NC}"
+    echo -e "${CYAN}[4]> ${WHITE}Gestor de Red y Transferencias (vnstat)${NC}"
+    echo -e "${RED}-----------------------------------------${NC}"
+    echo -e "${CYAN}[5]> ${WHITE}Activar/Desactivar Firewall UFW   | $fw_st${NC}"
+    echo -e "${CYAN}[6]> ${WHITE}☁️ Cloudflare DDNS (IP Dinámica)  | $cf_st${NC}"
+    echo -e "${RED}=========================================${NC}"
+    echo -e "${WHITE}[0] VOLVER AL MENÚ PRINCIPAL${NC}"
+    echo -e "${RED}=========================================${NC}"
+    echo -ne "${YELLOW}Ingresa una Opcion: ${NC}"
+    read opt_sys
     
     case $opt_sys in
         1)
