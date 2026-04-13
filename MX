@@ -469,42 +469,46 @@ sub_slowdns() {
 # --- SUBMENÚ DE PROTOCOLOS ---
 menu_protocolos() {
     clear
-    systemctl is-active --quiet ssh && st_ssh="${GREEN}[ON]${NC}" || st_ssh="${RED}[OFF]${NC}"
-    systemctl is-active --quiet dropbear && st_drop="${GREEN}[ON]${NC}" || st_drop="${RED}[OFF]${NC}"
-    systemctl is-active --quiet mx-proxy && st_proxy="${GREEN}[ON]${NC}" || st_proxy="${RED}[OFF]${NC}"
-    systemctl is-active --quiet stunnel4 && st_stun="${GREEN}[ON]${NC}" || st_stun="${RED}[OFF]${NC}"
+    # --- DETECCIÓN DINÁMICA DE PUERTOS Y ESTATUS (Socket-Based) ---
+    check_port() {
+        local port=$1
+        if netstat -tuln | grep -q ":$port " >/dev/null 2>&1; then echo -e "${GREEN}[ON]${NC}"; else echo -e "${RED}[OFF]${NC}"; fi
+    }
+
+    # SSH (OpenSSH)
+    P_SSH=$(grep "^Port" /etc/ssh/sshd_config | awk '{print $2}' | xargs | sed 's/ /, /g')
+    [ -z "$P_SSH" ] && P_SSH="22"
+    st_ssh=$(check_port "${P_SSH%%,*}")
+
+    # Dropbear
+    P_DROP=$(grep "DROPBEAR_PORT=" /etc/default/dropbear 2>/dev/null | cut -d= -f2 | tr -d '"' | xargs | sed 's/ /, /g')
+    [ -z "$P_DROP" ] && P_DROP="OFF"
+    [ "$P_DROP" != "OFF" ] && st_drop=$(check_port "${P_DROP%%,*}") || st_drop="${RED}[OFF]${NC}"
+
+    # Proxy Python (Extracción de puerto real del socket)
+    P_PROXY=$(netstat -tulnp 2>/dev/null | grep -E "python|PDirect" | awk '{print $4}' | cut -d: -f2 | xargs | sed 's/ /, /g')
+    [ -z "$P_PROXY" ] && P_PROXY="80"
+    st_proxy=$(check_port "${P_PROXY%%,*}")
+
+    # Stunnel (SSL)
+    P_STUN=$(grep "accept =" /etc/stunnel/stunnel.conf 2>/dev/null | awk '{print $3}' | xargs | sed 's/ /, /g')
+    [ -z "$P_STUN" ] && P_STUN="443"
+    st_stun=$(check_port "${P_STUN%%,*}")
+
+    # BadVPN (UDP)
+    P_BAD=$(ps -ef | grep badvpn-udpgw | grep -v grep | awk -F'--listen-addr' '{print $2}' | awk '{print $2}' | cut -d: -f2 | xargs | sed 's/ /, /g')
+    [ -z "$P_BAD" ] && P_BAD="7300"
+    if netstat -uln | grep -q ":${P_BAD%%,*} " >/dev/null 2>&1; then st_udp="${GREEN}[ON]${NC}"; else st_udp="${RED}[OFF]${NC}"; fi
+
+    # Otros estatus (Ajuste colores ON/OFF)
     systemctl is-active --quiet mx-slowdns && st_dns="${GREEN}[ON]${NC}" || st_dns="${RED}[OFF]${NC}"
     systemctl is-active --quiet ws-epro && st_ws="${GREEN}[ON]${NC}" || st_ws="${RED}[OFF]${NC}"
     systemctl is-active --quiet udp-custom && st_udpc="${GREEN}[ON]${NC}" || st_udpc="${RED}[OFF]${NC}"
     systemctl is-active --quiet hysteria && st_udph="${GREEN}[ON]${NC}" || st_udph="${RED}[OFF]${NC}"
-    systemctl is-active --quiet badvpn && st_udp="${GREEN}[ON]${NC}" || st_udp="${RED}[OFF]${NC}"
     
-    # Pendientes de desarrollo
-    st_squid="${RED}[OFF]${NC}"
-    st_ovpn="${RED}[OFF]${NC}"
-    st_chk="${GREEN}[ON]${NC}" # Según referencia
-    st_atken="${RED}[OFF]${NC}"
-    st_file="${RED}[OFF]${NC}"
-    st_v2ray="${RED}[OFF]${NC}"
-    st_sshgo="${RED}[OFF]${NC}"
-    st_wg="${RED}[OFF]${NC}"
-
-    # --- DETECCIÓN DINÁMICA DE PUERTOS ---
-    # SSH (OpenSSH)
-    P_SSH=$(grep "^Port" /etc/ssh/sshd_config | awk '{print $2}' | xargs | sed 's/ /, /g')
-    [ -z "$P_SSH" ] && P_SSH="22"
-    # Dropbear
-    P_DROP=$(grep "DROPBEAR_PORT=" /etc/default/dropbear 2>/dev/null | cut -d= -f2 | tr -d '"' | xargs | sed 's/ /, /g')
-    [ -z "$P_DROP" ] && P_DROP="OFF"
-    # Proxy Python (Buscamos procesos activos)
-    P_PROXY=$(ps -ef | grep PDirect.py | grep -v grep | awk '{print $NF}' | xargs | sed 's/ /, /g')
-    [ -z "$P_PROXY" ] && P_PROXY="80"
-    # Stunnel (SSL)
-    P_STUN=$(grep "accept =" /etc/stunnel/stunnel.conf 2>/dev/null | awk '{print $3}' | xargs | sed 's/ /, /g')
-    [ -z "$P_STUN" ] && P_STUN="443"
-    # BadVPN (UDP)
-    P_BAD=$(ps -ef | grep badvpn-udpgw | grep -v grep | awk -F'--listen-addr' '{print $2}' | awk '{print $2}' | cut -d: -f2 | xargs | sed 's/ /, /g')
-    [ -z "$P_BAD" ] && P_BAD="7300"
+    st_squid="${RED}[OFF]${NC}"; st_ovpn="${RED}[OFF]${NC}"; st_chk="${GREEN}[ON]${NC}"
+    st_atken="${RED}[OFF]${NC}"; st_file="${RED}[OFF]${NC}"; st_v2ray="${RED}[OFF]${NC}"
+    st_sshgo="${RED}[OFF]${NC}"; st_wg="${RED}[OFF]${NC}"
 
     echo -e "${RED}=======================================================${NC}"
     echo -e "${YELLOW}              ADMINISTRADOR DE PROTOCOLO${NC}"
