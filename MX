@@ -8,6 +8,15 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
+# --- COLORES GLOBALES ---
+RED='\033[1;31m'
+GREEN='\033[1;32m'
+BLUE='\033[1;34m'
+CYAN='\033[1;36m'
+YELLOW='\033[1;33m'
+WHITE='\033[1;37m'
+NC='\033[0m'
+
 # --- ARTE Y ESTÉTICA ---
 draw_banner() {
     clear
@@ -480,11 +489,28 @@ menu_protocolos() {
     st_sshgo="${RED}[OFF]${NC}"
     st_wg="${RED}[OFF]${NC}"
 
+    # --- DETECCIÓN DINÁMICA DE PUERTOS ---
+    # SSH (OpenSSH)
+    P_SSH=$(grep "^Port" /etc/ssh/sshd_config | awk '{print $2}' | xargs | sed 's/ /, /g')
+    [ -z "$P_SSH" ] && P_SSH="22"
+    # Dropbear
+    P_DROP=$(grep "DROPBEAR_PORT=" /etc/default/dropbear 2>/dev/null | cut -d= -f2 | tr -d '"' | xargs | sed 's/ /, /g')
+    [ -z "$P_DROP" ] && P_DROP="OFF"
+    # Proxy Python (Buscamos procesos activos)
+    P_PROXY=$(ps -ef | grep PDirect.py | grep -v grep | awk '{print $NF}' | xargs | sed 's/ /, /g')
+    [ -z "$P_PROXY" ] && P_PROXY="80"
+    # Stunnel (SSL)
+    P_STUN=$(grep "accept =" /etc/stunnel/stunnel.conf 2>/dev/null | awk '{print $3}' | xargs | sed 's/ /, /g')
+    [ -z "$P_STUN" ] && P_STUN="443"
+    # BadVPN (UDP)
+    P_BAD=$(ps -ef | grep badvpn-udpgw | grep -v grep | awk -F'--listen-addr' '{print $2}' | awk '{print $2}' | cut -d: -f2 | xargs | sed 's/ /, /g')
+    [ -z "$P_BAD" ] && P_BAD="7300"
+
     echo -e "${RED}=======================================================${NC}"
-    echo -e "${YELLOW}              ADMINISTRADOR DE PROTOCOLOS${NC}"
+    echo -e "${YELLOW}              ADMINISTRADOR DE PROTOCOLO${NC}"
     echo -e "${RED}=======================================================${NC}"
-    echo -e "${WHITE}BADVPN: 7300 7400                 PYTHON2: 80${NC}"
-    echo -e "${WHITE}SSH: 22${NC}"
+    echo -e " ${CYAN}SSH:${WHITE} $P_SSH  ${CYAN}DROB:${WHITE} $P_DROP  ${CYAN}PROXY:${WHITE} $P_PROXY${NC}"
+    echo -e " ${CYAN}SSL:${WHITE} $P_STUN  ${CYAN}UDPG:${WHITE} $P_BAD${NC}"
     echo -e "${RED}=======================================================${NC}"
     printf " ${CYAN}[1]>${WHITE} %-14s%b   ${CYAN}[10]>${WHITE} %-16s%b\n" "AJUSTES SSH" "$st_ssh" "SQUID" "$st_squid"
     printf " ${CYAN}[2]>${WHITE} %-14s%b   ${CYAN}[11]>${WHITE} %-16s%b\n" "DROPBEAR" "$st_drop" "OPENVPN" "$st_ovpn"
