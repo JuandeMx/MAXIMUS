@@ -32,14 +32,14 @@ esac
 UDP_DIR="/root/udp"
 mkdir -p "$UDP_DIR"
 
-# Descargar el binario
+# Descargar el binario - Fuentes estables v3.0-Lite
 echo -e "${YELLOW}[+] Descargando UDP-Custom ($BIN_ARCH)...${NC}"
-wget -qO "$UDP_DIR/udp-custom" "https://github.com/EdwardTech/udp-custom/releases/download/v1.1/udp-custom-linux-${BIN_ARCH}" 2>/dev/null
+wget -qO "$UDP_DIR/udp-custom" "https://github.com/prjkt-nv404/UDP-Custom-Installer-Manager/releases/download/v3.0-Lite/udp-custom-linux-${BIN_ARCH}" 2>/dev/null
 
-# Fallback
+# Fallback Haris
 if [ ! -f "$UDP_DIR/udp-custom" ] || [ ! -s "$UDP_DIR/udp-custom" ]; then
-    echo -e "${YELLOW}[+] Intentando fuente alternativa...${NC}"
-    wget -qO "$UDP_DIR/udp-custom" "https://github.com/AmineMrabet12/UDP-Custom-V3/releases/latest/download/udp-custom-linux-${BIN_ARCH}" 2>/dev/null
+    echo -e "${YELLOW}[+] Intentando fuente alternativa (Haris)...${NC}"
+    wget -qO "$UDP_DIR/udp-custom" "https://github.com/Haris131/UDP-Custom/releases/download/v1.0/udp-custom-linux-${BIN_ARCH}" 2>/dev/null
 fi
 
 if [ ! -f "$UDP_DIR/udp-custom" ] || [ ! -s "$UDP_DIR/udp-custom" ]; then

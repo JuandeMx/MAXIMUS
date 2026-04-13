@@ -591,11 +591,15 @@ menu_protocolos() {
         P_STUN="--"; st_stun="${RED}[OFF]${NC}"
     fi
 
-    # BadVPN (UDP) - solo si el binario existe
+    # BadVPN (UDP) - solo si está activo
     if [ -f /usr/local/bin/badvpn-udpgw ]; then
-        P_BAD=$(ps -ef | grep badvpn-udpgw | grep -v grep | grep -o ":[0-9]*" | head -1 | tr -d ':')
-        [ -z "$P_BAD" ] && P_BAD="7300"
-        if ps -ef | grep -q "[b]advpn-udpgw"; then st_udp="${GREEN}[ON]${NC}"; else st_udp="${RED}[OFF]${NC}"; fi
+        if ps -ef | grep -q "[b]advpn-udpgw"; then
+            P_BAD=$(ps -ef | grep badvpn-udpgw | grep -v grep | grep -o ":[0-9]*" | head -1 | tr -d ':')
+            [ -z "$P_BAD" ] && P_BAD="7300"
+            st_udp="${GREEN}[ON]${NC}"
+        else
+            P_BAD="--"; st_udp="${RED}[OFF]${NC}"
+        fi
     else
         P_BAD="--"; st_udp="${RED}[OFF]${NC}"
     fi
