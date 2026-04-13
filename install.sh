@@ -14,7 +14,7 @@ echo -e "\e[1;36m=========================================================\e[0m\
 # 1. Update and Dependencies
 echo -e "\e[1;32m[+] Actualizando repositorios e instalando dependencias...\e[0m"
 apt-get update -y
-DEBIAN_FRONTEND=noninteractive apt-get install -y python3 python3-pip dropbear stunnel4 squid net-tools curl wget iptables vnstat cron ufw ncurses-bin jq cmake make gcc build-essential g++ netcat-openbsd
+DEBIAN_FRONTEND=noninteractive apt-get install -y python3 python3-pip squid net-tools curl wget iptables vnstat cron ufw ncurses-bin jq cmake make gcc build-essential g++ netcat-openbsd openssl
 
 # 1.5 Firewall Local
 echo -e "\e[1;32m[+] Blindando Puertos Nativos con UFW...\e[0m"
