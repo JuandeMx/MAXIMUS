@@ -91,8 +91,17 @@ StandardError=append:/var/log/MaximusVpsMx/udp-custom.log
 WantedBy=multi-user.target
 EOF
 
-# Abrir puertos en firewall
+# Abrir puertos en firewall y configurar redirección (NAT)
+echo -e "${GREEN}[+] Configurando redirección de puertos UDP (1-65535 -> 1)...${NC}"
 ufw allow 1:65535/udp 2>/dev/null
+
+# Limpiar reglas previas para evitar duplicados
+iptables -t nat -D PREROUTING -p udp --dport 1:65535 -j REDIRECT --to-port 1 2>/dev/null
+ip6tables -t nat -D PREROUTING -p udp --dport 1:65535 -j REDIRECT --to-port 1 2>/dev/null
+
+# Aplicar nuevas reglas de redirección
+iptables -t nat -A PREROUTING -p udp --dport 1:65535 -j REDIRECT --to-port 1
+ip6tables -t nat -A PREROUTING -p udp --dport 1:65535 -j REDIRECT --to-port 1
 
 # Activar y arrancar
 systemctl daemon-reload
