@@ -244,36 +244,66 @@ gestor_servicio() {
         echo -e "${RED}=======================================================${NC}"
         echo -e " Estado actual en el sistema: $st"
         echo -e "${RED}-------------------------------------------------------${NC}"
-        echo -e "${CYAN} ├─ [1] Activar Servicio (Start & Enable)${NC}"
-        echo -e "${CYAN} ├─ [2] Desactivar Servicio (Stop & Disable)${NC}"
-        echo -e "${CYAN} ├─ [3] Instalar $title${NC}"
-        echo -e "${CYAN} ├─ [4] Reinstalar $title${NC}"
-        echo -e "${CYAN} ├─ [5] Eliminar $title${NC}"
-        echo -e "${CYAN} ├─ [6] Cambiar Puerto(s)${NC}"
-        echo -e "${CYAN} ├─ [7] Ver Estado en Tiempo Real${NC}"
-        echo -e "${CYAN} ├─ [8] Reiniciar Servicio${NC}"
+        echo -e "${CYAN} ├─ [1] Instalar $title${NC}"
+        echo -e "${CYAN} ├─ [2] Reinstalar $title${NC}"
+        echo -e "${CYAN} ├─ [3] Eliminar $title${NC}"
+        echo -e "${CYAN} ├─ [4] Cambiar Puerto(s)${NC}"
+        echo -e "${CYAN} ├─ [5] Ver Estado en Tiempo Real${NC}"
+        echo -e "${CYAN} ├─ [6] Detener / Iniciar / Reiniciar Servicio${NC}"
         echo -e "${CYAN} └─ [0] Volver${NC}"
         echo -e "${RED}=======================================================${NC}"
         echo -ne "${YELLOW} Selecciona una opción: ${NC}"
         read g_opt
         
         case $g_opt in
-            1) systemctl enable --now "$srv" 2>/dev/null; echo -e "${GREEN}✅ $title Activado.${NC}"; sleep 1 ;;
-            2) systemctl disable --now "$srv" 2>/dev/null; echo -e "${RED}⚠️ $title Desactivado.${NC}"; sleep 1 ;;
-            3|4|5|6) 
+            1|2)
                if [ -f "/etc/MaximusVpsMx/modules/install_${srv}.sh" ]; then
                    bash "/etc/MaximusVpsMx/modules/install_${srv}.sh"
                else
-                   echo -e "\n${YELLOW}▶ Módulo de $title exclusivo en construcción.${NC}"; sleep 2
+                   echo -e "\n${YELLOW}▶ Módulo de $title en construcción.${NC}"; sleep 2
                fi
                ;;
-            7) 
+            3)
+               echo -e "\n${RED}⚠️ Esto eliminará $title completamente.${NC}"
+               read -p " ¿Estás seguro? (s/n): " conf_del
+               if [[ "$conf_del" == "s" || "$conf_del" == "S" ]]; then
+                   systemctl disable --now "$srv" 2>/dev/null
+                   echo -e "${GREEN}✅ $title eliminado y desactivado.${NC}"
+               fi
+               sleep 2 ;;
+            4)
+               if [ -f "/etc/MaximusVpsMx/modules/install_${srv}.sh" ]; then
+                   echo -e "\n${YELLOW}▶ Reinstalando con nuevo puerto...${NC}"
+                   bash "/etc/MaximusVpsMx/modules/install_${srv}.sh"
+               else
+                   echo -e "\n${YELLOW}▶ Módulo de $title en construcción.${NC}"; sleep 2
+               fi
+               ;;
+            5) 
                clear
                echo -e "${CYAN}================= REGISTRO DEL SERVICIO =================${NC}"
                systemctl status "$srv" --no-pager | head -n 15
                echo -e "${CYAN}=========================================================${NC}"
                read -p " Presiona Enter..." ;;
-            8) systemctl restart "$srv" 2>/dev/null; echo -e "${GREEN}✅ $title Reiniciado.${NC}"; sleep 1 ;;
+            6)
+               clear
+               echo -e "${RED}=======================================================${NC}"
+               echo -e "${YELLOW}         CONTROL DE SERVICIO: $title${NC}"
+               echo -e "${RED}=======================================================${NC}"
+               echo -e "${CYAN} [1] Iniciar (Start & Enable)${NC}"
+               echo -e "${CYAN} [2] Detener (Stop & Disable)${NC}"
+               echo -e "${CYAN} [3] Reiniciar${NC}"
+               echo -e "${CYAN} [0] Volver${NC}"
+               echo -e "${RED}=======================================================${NC}"
+               echo -ne "${YELLOW} Selecciona: ${NC}"
+               read ctrl_opt
+               case $ctrl_opt in
+                   1) systemctl enable --now "$srv" 2>/dev/null; echo -e "${GREEN}✅ $title Iniciado.${NC}"; sleep 1 ;;
+                   2) systemctl disable --now "$srv" 2>/dev/null; echo -e "${RED}⚠️ $title Detenido.${NC}"; sleep 1 ;;
+                   3) systemctl restart "$srv" 2>/dev/null; echo -e "${GREEN}✅ $title Reiniciado.${NC}"; sleep 1 ;;
+                   *) ;;
+               esac
+               ;;
             0) break ;;
             *) ;;
         esac
@@ -292,36 +322,68 @@ sub_slowdns() {
         echo -e "${RED}=======================================================${NC}"
         echo -e " Estado: $st | Dominio NS: ${YELLOW}$NS_DOMAIN${NC}"
         echo -e "${RED}-------------------------------------------------------${NC}"
-        echo -e "${CYAN} ├─ [1] Activar SlowDNS${NC}"
-        echo -e "${CYAN} ├─ [2] Desactivar SlowDNS${NC}"
-        echo -e "${CYAN} ├─ [3] Instalar Servicio${NC}"
+        echo -e "${CYAN} ├─ [1] Instalar SlowDNS${NC}"
+        echo -e "${CYAN} ├─ [2] Reinstalar SlowDNS${NC}"
+        echo -e "${CYAN} ├─ [3] Eliminar SlowDNS${NC}"
         echo -e "${CYAN} ├─ [4] Cambiar Dominio NS${NC}"
-        echo -e "${CYAN} ├─ [5] Ver Llave Pública Cliente${NC}"
-        echo -e "${CYAN} ├─ [6] Regenerar Llaves RSA${NC}"
-        echo -e "${CYAN} ├─ [7] Ver Estado en Tiempo Real${NC}"
-        echo -e "${CYAN} ├─ [8] Reiniciar SlowDNS${NC}"
+        echo -e "${CYAN} ├─ [5] Ver Estado en Tiempo Real${NC}"
+        echo -e "${CYAN} ├─ [6] Detener / Iniciar / Reiniciar Servicio${NC}"
+        echo -e "${RED}-------------------------------------------------------${NC}"
+        echo -e "${CYAN} ├─ [7] Ver Llave Pública Cliente${NC}"
+        echo -e "${CYAN} ├─ [8] Regenerar Llaves RSA${NC}"
         echo -e "${CYAN} └─ [0] Volver${NC}"
         echo -e "${RED}=======================================================${NC}"
         echo -ne "${YELLOW} Selecciona una opción: ${NC}"
         read s_opt
         
         case $s_opt in
-            1) systemctl enable --now mx-slowdns 2>/dev/null; echo -e "${GREEN}✅ Activado.${NC}"; sleep 1 ;;
-            2) systemctl disable --now mx-slowdns 2>/dev/null; echo -e "${RED}⚠️ Desactivado.${NC}"; sleep 1 ;;
-            3) 
+            1|2)
                if [ -f "/etc/MaximusVpsMx/modules/install_slowdns.sh" ]; then
                    bash "/etc/MaximusVpsMx/modules/install_slowdns.sh"
                else
                    echo -e "\n${YELLOW}▶ Módulo de Instalar SlowDNS Próximamente.${NC}"; sleep 2
                fi
                ;;
+            3)
+               echo -e "\n${RED}⚠️ Esto eliminará SlowDNS completamente.${NC}"
+               read -p " ¿Estás seguro? (s/n): " conf_del
+               if [[ "$conf_del" == "s" || "$conf_del" == "S" ]]; then
+                   systemctl disable --now mx-slowdns 2>/dev/null
+                   echo -e "${GREEN}✅ SlowDNS eliminado y desactivado.${NC}"
+               fi
+               sleep 2 ;;
             4)
                 read -p " Nuevo dominio NS (ej: slow.tudominio.com): " new_ns
                 echo "$new_ns" > /etc/MaximusVpsMx/slowdns/ns-domain.conf
                 sed -i "s|slow\.vpsmx\.store|$new_ns|g" /etc/systemd/system/mx-slowdns.service
                 systemctl daemon-reload; systemctl restart mx-slowdns 2>/dev/null
                 echo -e "${GREEN}✅ Dominio NS actualizado a: $new_ns${NC}"; sleep 2 ;;
-            5)
+            5) 
+               clear
+               echo -e "${CYAN}================= REGISTRO SLOWDNS =================${NC}"
+               systemctl status mx-slowdns --no-pager | head -n 15
+               echo -e "${CYAN}====================================================${NC}"
+               read -p " Presiona Enter..." ;;
+            6)
+               clear
+               echo -e "${RED}=======================================================${NC}"
+               echo -e "${YELLOW}         CONTROL DE SERVICIO: SLOWDNS${NC}"
+               echo -e "${RED}=======================================================${NC}"
+               echo -e "${CYAN} [1] Iniciar (Start & Enable)${NC}"
+               echo -e "${CYAN} [2] Detener (Stop & Disable)${NC}"
+               echo -e "${CYAN} [3] Reiniciar${NC}"
+               echo -e "${CYAN} [0] Volver${NC}"
+               echo -e "${RED}=======================================================${NC}"
+               echo -ne "${YELLOW} Selecciona: ${NC}"
+               read ctrl_opt
+               case $ctrl_opt in
+                   1) systemctl enable --now mx-slowdns 2>/dev/null; echo -e "${GREEN}✅ SlowDNS Iniciado.${NC}"; sleep 1 ;;
+                   2) systemctl disable --now mx-slowdns 2>/dev/null; echo -e "${RED}⚠️ SlowDNS Detenido.${NC}"; sleep 1 ;;
+                   3) systemctl restart mx-slowdns 2>/dev/null; echo -e "${GREEN}✅ SlowDNS Reiniciado.${NC}"; sleep 1 ;;
+                   *) ;;
+               esac
+               ;;
+            7)
                 echo -e "\n${CYAN}════════════════════════════════════════${NC}"
                 if [ -f /etc/MaximusVpsMx/slowdns/server.pub ]; then
                     echo -e "${YELLOW}$(cat /etc/MaximusVpsMx/slowdns/server.pub)${NC}"
@@ -332,7 +394,7 @@ sub_slowdns() {
                 fi
                 echo -e "${CYAN}════════════════════════════════════════${NC}"
                 read -p " Presiona Enter..." ;;
-            6)
+            8)
                 echo -e "${YELLOW}⚠️ Esto invalidará las llaves actuales de los clientes.${NC}"
                 read -p " ¿Continuar? (s/n): " confirmar
                 if [ "$confirmar" == "s" ]; then
@@ -342,13 +404,6 @@ sub_slowdns() {
                     echo -e "${GREEN}✅ Llaves regeneradas.${NC}"
                 fi
                 sleep 2 ;;
-            7) 
-               clear
-               echo -e "${CYAN}================= REGISTRO SLOWDNS =================${NC}"
-               systemctl status mx-slowdns --no-pager | head -n 15
-               echo -e "${CYAN}====================================================${NC}"
-               read -p " Presiona Enter..." ;;
-            8) systemctl restart mx-slowdns 2>/dev/null; echo -e "${GREEN}✅ Reiniciado.${NC}"; sleep 1 ;;
             0) break ;;
             *) ;;
         esac
