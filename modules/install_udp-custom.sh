@@ -32,34 +32,32 @@ esac
 UDP_DIR="/root/udp"
 mkdir -p "$UDP_DIR"
 
-# Descargar el binario - Lógica Robusta (Curl + Wget)
-echo -e "${YELLOW}[+] Descargando UDP-Custom ($BIN_ARCH)...${NC}"
-if curl -sL -o "$UDP_DIR/udp-custom" "https://github.com/Haris131/UDP-Custom/raw/main/udp-custom-linux-${BIN_ARCH}"; then
-    echo -e "${GREEN}[✔] Descarga primaria exitosa (Haris).${NC}"
-elif wget -q -O "$UDP_DIR/udp-custom" "https://github.com/prjkt-nv404/UDP-Custom-Installer-Manager/raw/main/bin/udp-custom-linux-${BIN_ARCH}"; then
-    echo -e "${GREEN}[✔] Descarga secundaria exitosa (Mirror).${NC}"
+# Descargar el binario UNIVERSAL v1.6 (Daybreakersx)
+echo -e "${YELLOW}[+] Descargando UDP-Custom v1.6 Universal ($BIN_ARCH)...${NC}"
+if curl -sL -o "$UDP_DIR/udp-custom" "https://github.com/daybreakersx/UDP-Custom/releases/download/v1.6/udp-custom-linux-${BIN_ARCH}"; then
+    echo -e "${GREEN}[✔] Descarga primaria exitosa (v1.6 Universal).${NC}"
 else
-    echo -e "${RED}[✘] No se pudo descargar desde ninguna fuente.${NC}"
+    # Failsafe a mirror estable
+    wget -q -O "$UDP_DIR/udp-custom" "https://raw.githubusercontent.com/JuandeMx/MAXIMUS/main/bin/udp-custom-linux-${BIN_ARCH}"
+    echo -e "${GREEN}[✔] Descarga desde mirror oficial Maximus.${NC}"
 fi
 
 if [ ! -f "$UDP_DIR/udp-custom" ] || [ ! -s "$UDP_DIR/udp-custom" ]; then
     echo -e "${RED}❌ Error: No se pudo descargar el binario.${NC}"
-    sleep 3
     exit 1
 fi
 
 chmod +x "$UDP_DIR/udp-custom"
 
-# Generar configuración OFICIAL formato Haris v1.4
-echo -e "${GREEN}[+] Generando configuración (rango completo 1-65535)...${NC}"
+# Generar configuración UNIVERSAL (mode: none para máxima estabilidad en AWS)
+echo -e "${GREEN}[+] Generando configuración de estabilidad total...${NC}"
 cat > "$UDP_DIR/config.json" << UDPEOF
 {
     "listen": ":36712",
-    "stream_buffer": 33554432,
-    "receive_buffer": 83886080,
+    "stream_buffer": 2,
+    "receive_buffer": 2,
     "auth": {
-        "mode": "passwords",
-        "passwords": ["volviamorir"]
+        "mode": "none"
     }
 }
 UDPEOF
