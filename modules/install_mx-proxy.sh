@@ -4,7 +4,10 @@
 echo -e "\e[1;36m=========================================================\e[0m"
 echo -e "\e[1;33m          INSTALADOR PROXY PYTHON (CLOUDFRONT)\e[0m"
 echo -e "\e[1;36m=========================================================\e[0m"
-read -p " ¿En qué puerto deseas instalar el Proxy Python? (ej: 80): " proxy_port
+proxy_port=$1
+if [[ -z "$proxy_port" ]]; then
+    read -p " ¿En qué puerto deseas instalar el Proxy Python? (ej: 80): " proxy_port
+fi
 
 if [[ -z "$proxy_port" ]]; then
     echo -e "\e[1;31m❌ Cancelado. Puerto inválido.\e[0m"

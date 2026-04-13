@@ -264,11 +264,24 @@ gestor_servicio() {
                fi
                ;;
             3)
-               echo -e "\n${RED}⚠️ Esto eliminará $title completamente.${NC}"
+               echo -e "\n${RED}⚠️ Esto eliminará $title completamente (incluyendo logs).${NC}"
                read -p " ¿Estás seguro? (s/n): " conf_del
                if [[ "$conf_del" == "s" || "$conf_del" == "S" ]]; then
-                   systemctl disable --now "$srv" 2>/dev/null
-                   echo -e "${GREEN}✅ $title eliminado y desactivado.${NC}"
+                   echo -e "${YELLOW}[+] Purgando servicio $title...${NC}"
+                   systemctl stop "$srv" 2>/dev/null
+                   systemctl disable "$srv" 2>/dev/null
+                   rm -f "/etc/systemd/system/${srv}.service" 2>/dev/null
+                   
+                   # Limpieza profunda según el servicio
+                   case $srv in
+                       stunnel4) apt-get purge stunnel4 -y 2>/dev/null; rm -rf /etc/stunnel ;;
+                       dropbear) apt-get purge dropbear -y 2>/dev/null; rm -rf /etc/default/dropbear ;;
+                       mx-proxy) rm -rf /var/log/MaximusVpsMx/proxy.log ;;
+                       mx-slowdns) rm -rf /var/log/MaximusVpsMx/slowdns.log ;;
+                   esac
+                   
+                   systemctl daemon-reload
+                   echo -e "${GREEN}✅ $title eliminado totalmente del sistema.${NC}"
                fi
                sleep 2 ;;
             4)
