@@ -49,11 +49,11 @@ fi
 
 chmod +x "$UDP_DIR/udp-custom"
 
-# Generar configuración OFICIAL (v4.8.0 - Restoration)
-echo -e "${GREEN}[+] Generando configuración oficial Haris (Puerto :1)...${NC}"
+# Generar configuración de escucha directa (Puerto :36712)
+echo -e "${GREEN}[+] Generando configuración de escucha directa (Puerto :36712)...${NC}"
 cat > "$UDP_DIR/config.json" << UDPEOF
 {
-    "listen": ":1",
+    "listen": ":36712",
     "stream_buffer": 33554432,
     "receive_buffer": 83886080,
     "auth": {
@@ -91,17 +91,14 @@ StandardError=append:/var/log/MaximusVpsMx/udp-custom.log
 WantedBy=multi-user.target
 EOF
 
-# Abrir puertos en firewall y configurar redirección (NAT)
-echo -e "${GREEN}[+] Configurando redirección de puertos UDP (1-65535 -> 1)...${NC}"
-ufw allow 1:65535/udp 2>/dev/null
+# Abrir puertos en firewall (SIN REDIRECCIÓN NAT PARA PRUEBA)
+echo -e "${GREEN}[+] Abriendo puerto 36712 en el servidor...${NC}"
+ufw allow 36712/udp 2>/dev/null
 
-# Limpiar reglas previas para evitar duplicados
+# Limpiar reglas previas de redirección para evitar ruido
 iptables -t nat -D PREROUTING -p udp --dport 1:65535 -j REDIRECT --to-port 1 2>/dev/null
 ip6tables -t nat -D PREROUTING -p udp --dport 1:65535 -j REDIRECT --to-port 1 2>/dev/null
-
-# Aplicar nuevas reglas de redirección
-iptables -t nat -A PREROUTING -p udp --dport 1:65535 -j REDIRECT --to-port 1
-ip6tables -t nat -A PREROUTING -p udp --dport 1:65535 -j REDIRECT --to-port 1
+iptables -t nat -F 2>/dev/null
 
 # Activar y arrancar
 systemctl daemon-reload
