@@ -24,8 +24,6 @@ socket = r:SO_KEEPALIVE=1
 TIMEOUTclose = 0
 TIMEOUTconnect = 10
 TIMEOUTidle = 600
-output = /var/log/MaximusVpsMx/stunnel.log
-syslog = no
 
 [ssh]
 client = no
@@ -42,6 +40,8 @@ fi
 sed -i 's/ENABLED=0/ENABLED=1/g' /etc/default/stunnel4 2>/dev/null
 
 ufw allow ${ssl_port}/tcp 2>/dev/null
+
+killall stunnel4 2>/dev/null || true
 
 systemctl daemon-reload
 systemctl enable --now stunnel4 2>/dev/null
