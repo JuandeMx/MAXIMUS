@@ -300,7 +300,7 @@ purgar_sistema_total() {
     rm -rf /etc/hysteria
     rm -rf /root/udp
     rm -rf /etc/stunnel
-    rm -rf /var/log/MaximusVpsMx
+    rm -rf /var/log/MaximusVpsMx/*
     rm -rf /etc/slowdns
     rm -f /etc/issue.net
 

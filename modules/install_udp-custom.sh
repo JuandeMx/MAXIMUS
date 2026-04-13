@@ -63,11 +63,14 @@ cat > "$UDP_DIR/config.json" << UDPEOF
 }
 UDPEOF
 
-# Matar procesos previos
+# Matar procesos previos y limpiar sockets
+echo -e "${GREEN}[+] Limpiando procesos y sockets previos...${NC}"
+pkill -9 udp-custom 2>/dev/null
 killall -9 udp-custom 2>/dev/null
+fuser -k 36712/udp 2>/dev/null
 
-# Crear servicio systemd
-echo -e "${GREEN}[+] Creando servicio systemd...${NC}"
+# Crear servicio systemd con Logs de Depuración
+echo -e "${GREEN}[+] Creando servicio systemd con registros de error...${NC}"
 cat > /etc/systemd/system/udp-custom.service << EOF
 [Unit]
 Description=MaximusVpsMx UDP-Custom Service
@@ -77,10 +80,13 @@ After=network.target
 Type=simple
 User=root
 WorkingDirectory=$UDP_DIR
+ExecStartPre=/usr/bin/pkill -9 udp-custom || true
 ExecStart=${UDP_DIR}/udp-custom server
 Restart=always
 RestartSec=3
 LimitNOFILE=infinity
+StandardOutput=append:/var/log/MaximusVpsMx/udp-custom.log
+StandardError=append:/var/log/MaximusVpsMx/udp-custom.log
 
 [Install]
 WantedBy=multi-user.target
