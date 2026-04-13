@@ -11,7 +11,8 @@ fi
 # --- ARTE Y ESTÉTICA ---
 draw_banner() {
     clear
-    echo -e "${CYAN}"
+    # Banner ASCII en B/N o colores suaves para no estorbar
+    echo -e "${WHITE}"
     if [ -f "/etc/MaximusVpsMx/ascii-text-art.txt" ]; then
         cat "/etc/MaximusVpsMx/ascii-text-art.txt"
     else
@@ -23,10 +24,6 @@ draw_banner() {
         echo "  |_|  |_|\__,_/_/\_\_|_| |_| |_|\__,_|___/  "
     fi
     echo -e "${NC}"
-    echo -e "${RED}=======================================================${NC}"
-    echo -e "${YELLOW} IP: ${WHITE}$IP   ${YELLOW} S.O: ${WHITE}$OS ${NC}"
-    echo -e "${YELLOW} FECHA: ${WHITE}$FECHA ${YELLOW} HORA: ${WHITE}$HORA ${NC}"
-    echo -e "${RED}=======================================================${NC}"
 }
 
 # Telemetría Global
@@ -787,11 +784,74 @@ menu_mantenimiento() {
     esac
 }
 
+# --- MENÚ AJUSTES DEL SCRIPT ---
+menu_ajustes_script() {
+    while true; do
+        clear
+        draw_banner
+        echo -e "${YELLOW}           🔧 CONFIGURACIÓN DEL SCRIPT 🔧${NC}"
+        echo -e "${RED}=======================================================${NC}"
+        echo -e "${CYAN} [1] ACTUALIZAR PANEL (GitHub Sync)${NC}"
+        echo -e "${CYAN} [2] REINSTALAR PANEL (Forzar Limpieza)${NC}"
+        echo -e "${CYAN} [3] CAMBIAR BANNER SSH (issue.net/Dropbear)${NC}"
+        echo -e "${RED}-------------------------------------------------------${NC}"
+        echo -e "${CYAN} [4] ELIMINAR / DESINSTALAR PANEL${NC}"
+        echo -e "${RED}-------------------------------------------------------${NC}"
+        echo -e "${CYAN} [0] VOLVER${NC}"
+        echo -e "${RED}=======================================================${NC}"
+        read -p " Selecciona una opción: " opt_aj
+        
+        case $opt_aj in
+            1) menu_mantenimiento ;;
+            2) 
+               echo -e "\n${YELLOW}▶ Reinstalando componentes base...${NC}"
+               bash /etc/MaximusVpsMx/install.sh
+               sleep 2 ;;
+            3)
+               echo -e "\n${YELLOW}▶ Configuración del Banner SSH${NC}"
+               echo -e "${CYAN}Escribe el nuevo mensaje para tus clientes:${NC}"
+               read -p " > " new_banner
+               echo -e "$new_banner" > /etc/issue.net
+               echo -e "${GREEN}✅ Banner actualizado correctamente.${NC}"
+               sleep 2 ;;
+            4) 
+               echo -e "\n${RED}================ ¡¡PELIGRO!! ================${NC}"
+               read -p "¿Estás 100% seguro de destruir MaximusVpsMx? [S/N]: " desc
+               if [[ "$desc" == "S" || "$desc" == "s" ]]; then
+                   echo -e "${RED}🔥 INICIANDO PURGA MASIVA...${NC}"
+                   systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns 2>/dev/null
+                   killall -9 stunnel4 dropbear python3 badvpn-udpgw 2>/dev/null
+                   rm -rf /etc/MaximusVpsMx
+                   rm -f /usr/local/bin/MX
+                   rm -f /etc/systemd/system/mx-proxy.service
+                   rm -f /etc/systemd/system/badvpn.service
+                   rm -f /etc/systemd/system/mx-slowdns.service
+                   apt-get purge stunnel4 dropbear -y 2>/dev/null
+                   systemctl daemon-reload
+                   echo -e "${GREEN}✅ VUELO COMPLETADO. Servidor de fábrica.${NC}"
+                   exit
+               fi
+               ;;
+            0) main_menu ;;
+        esac
+    done
+}
+
 # --- MENÚ PRINCIPAL ---
 main_menu() {
     get_telemetry
     draw_banner
-    printf "   ${CYAN}USUARIOS ACTIVOS: ${WHITE}%-4s ${RED}EXPIRADOS: ${WHITE}%-4s ${CYAN}TOTAL: ${WHITE}%-4s${NC}\n" "$ACTIVA" "$EXPIRADA" "$TOTAL"
+    echo -e "${RED}=======================================================${NC}"
+    printf "${CYAN}S.O:    ${WHITE}%-25s ${CYAN}Fecha: ${WHITE}%-10s${NC}\n" "$OS" "$FECHA"
+    printf "${CYAN}IP:     ${WHITE}%-25s ${CYAN}Hora:  ${WHITE}%-10s${NC}\n" "$IP" "$HORA"
+    echo -e "${RED}===========${CYAN}Disc${RED}============ ${RED}============${CYAN}CPU${RED}============${NC}"
+    printf "${CYAN}Total:  ${WHITE}%-9s ${CYAN}Dispo: ${WHITE}%-9s ${CYAN}Cores:  ${WHITE}%-9s${NC}\n" "$DISC_TOTAL" "$DISC_DISP" "$CORES"
+    printf "${CYAN}En Uso: ${WHITE}%-9s ${CYAN}Libre: ${WHITE}%-9s ${CYAN}En Uso: ${WHITE}%-9s${NC}\n" "$DISC_USO" "$DISC_FREE" "$CPU_USE"
+    echo -e "${RED}==========================${CYAN}Ram${RED}==========================${NC}"
+    printf "${CYAN}Total:  ${WHITE}%-9s ${CYAN}En Uso: ${WHITE}%-9s ${CYAN}Libre: ${WHITE}%-9s${NC}\n" "$RAM_TOTAL" "$RAM_USO" "$RAM_FREE"
+    printf "${CYAN}Buffer: ${WHITE}%-9s ${CYAN}Cache:  ${WHITE}%-9s${NC}\n" "$RAM_BUFF" "$RAM_CACHE"
+    echo -e "${RED}=======================================================${NC}"
+    printf "   ${CYAN}ACTIVOS: ${WHITE}%-4s ${RED}EXPIRADOS: ${WHITE}%-4s ${CYAN}TOTAL: ${WHITE}%-4s${NC}\n" "$ACTIVA" "$EXPIRADA" "$TOTAL"
     echo -e "${RED}=======================================================${NC}"
     echo -e "${CYAN}[1]> ${WHITE}ADMINISTRAR CUENTAS (SSH/DROPBEAR)${NC}"
     echo -e "${RED}-------------------------------------------------------${NC}"
@@ -816,7 +876,7 @@ main_menu() {
         1) menu_usuarios ;;
         2) menu_protocolos ;;
         3) menu_sistema ;;
-        4) echo -e "\n${YELLOW}▶ Próximamente: Configuración del Script${NC}"; sleep 2; main_menu ;;
+        4) menu_ajustes_script ;;
         5) echo -e "\n${YELLOW}▶ Idioma Actual: Español${NC}"; sleep 2; main_menu ;;
         6) 
             echo -e "\n${RED}================ ¡¡PELIGRO!! ================${NC}"
