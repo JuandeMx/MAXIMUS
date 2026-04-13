@@ -80,7 +80,6 @@ After=network.target
 Type=simple
 User=root
 WorkingDirectory=$UDP_DIR
-ExecStartPre=/usr/bin/pkill -9 udp-custom || true
 ExecStart=${UDP_DIR}/udp-custom server
 Restart=always
 RestartSec=3
