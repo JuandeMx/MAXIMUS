@@ -80,8 +80,12 @@ case $mode_opt in
 esac
 
 # --- INSTALACIÓN Y CONFIGURACIÓN ---
-echo -e "\n${YELLOW}[+] Aplicando configuración de Stunnel...${NC}"
+echo -e "\n${YELLOW}[+] Aplicando configuración de Stunnel de Alta Compatibilidad...${NC}"
 apt-get install stunnel4 -y > /dev/null 2>&1
+
+# Asegurar directorio de logs
+mkdir -p /var/log/stunnel4
+chown stunnel4:stunnel4 /var/log/stunnel4
 
 cat > /etc/stunnel/stunnel.conf << EOF
 cert = /etc/stunnel/stunnel.pem
@@ -92,6 +96,16 @@ socket = r:SO_KEEPALIVE=1
 TIMEOUTclose = 0
 TIMEOUTconnect = 10
 TIMEOUTidle = 600
+
+# Parámetros de Compatibilidad para Apps Móviles
+sslVersion = all
+options = NO_SSLv2
+options = NO_SSLv3
+ciphers = HIGH:!aNULL:!MD5
+
+# Debug (Activar si hay problemas)
+debug = 7
+output = /var/log/stunnel4/stunnel.log
 
 [ssh]
 client = no
