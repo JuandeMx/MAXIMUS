@@ -32,14 +32,14 @@ esac
 UDP_DIR="/root/udp"
 mkdir -p "$UDP_DIR"
 
-# Descargar el binario - Fuentes estables v3.0-Lite
+# Descargar el binario - Lógica Robusta (Curl + Wget)
 echo -e "${YELLOW}[+] Descargando UDP-Custom ($BIN_ARCH)...${NC}"
-wget -qO "$UDP_DIR/udp-custom" "https://github.com/prjkt-nv404/UDP-Custom-Installer-Manager/releases/download/v3.0-Lite/udp-custom-linux-${BIN_ARCH}" 2>/dev/null
-
-# Fallback Haris
-if [ ! -f "$UDP_DIR/udp-custom" ] || [ ! -s "$UDP_DIR/udp-custom" ]; then
-    echo -e "${YELLOW}[+] Intentando fuente alternativa (Haris)...${NC}"
-    wget -qO "$UDP_DIR/udp-custom" "https://github.com/Haris131/UDP-Custom/releases/download/v1.0/udp-custom-linux-${BIN_ARCH}" 2>/dev/null
+if curl -sL -o "$UDP_DIR/udp-custom" "https://github.com/Haris131/UDP-Custom/raw/main/udp-custom-linux-${BIN_ARCH}"; then
+    echo -e "${GREEN}[✔] Descarga primaria exitosa (Haris).${NC}"
+elif wget -q -O "$UDP_DIR/udp-custom" "https://github.com/prjkt-nv404/UDP-Custom-Installer-Manager/raw/main/bin/udp-custom-linux-${BIN_ARCH}"; then
+    echo -e "${GREEN}[✔] Descarga secundaria exitosa (Mirror).${NC}"
+else
+    echo -e "${RED}[✘] No se pudo descargar desde ninguna fuente.${NC}"
 fi
 
 if [ ! -f "$UDP_DIR/udp-custom" ] || [ ! -s "$UDP_DIR/udp-custom" ]; then

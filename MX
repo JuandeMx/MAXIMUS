@@ -618,11 +618,15 @@ menu_protocolos() {
         P_UDPC="--"; st_udpc="${RED}[OFF]${NC}"
     fi
 
-    # Hysteria v2 - solo si el binario existe
+    # Hysteria v2 - solo si está activo
     if [ -f /etc/hysteria/hysteria ]; then
-        P_HY=$(grep 'listen:' /etc/hysteria/config.yaml 2>/dev/null | grep -o '[0-9]*')
-        [ -z "$P_HY" ] && P_HY="443"
-        if ps -ef | grep -q "[h]ysteria"; then st_udph="${GREEN}[ON]${NC}"; else st_udph="${RED}[OFF]${NC}"; fi
+        if ps -ef | grep -q "[h]ysteria"; then
+            P_HY=$(grep 'listen:' /etc/hysteria/config.yaml 2>/dev/null | grep -o '[0-9]*')
+            [ -z "$P_HY" ] && P_HY="443"
+            st_udph="${GREEN}[ON]${NC}"
+        else
+            P_HY="--"; st_udph="${RED}[OFF]${NC}"
+        fi
     else
         P_HY="--"; st_udph="${RED}[OFF]${NC}"
     fi
