@@ -32,12 +32,12 @@ esac
 UDP_DIR="/root/udp"
 mkdir -p "$UDP_DIR"
 
-# Descargar el binario UNIVERSAL v1.6 (Daybreakersx)
-echo -e "${YELLOW}[+] Descargando UDP-Custom v1.6 Universal ($BIN_ARCH)...${NC}"
-if curl -sL -o "$UDP_DIR/udp-custom" "https://github.com/daybreakersx/UDP-Custom/releases/download/v1.6/udp-custom-linux-${BIN_ARCH}"; then
-    echo -e "${GREEN}[✔] Descarga primaria exitosa (v1.6 Universal).${NC}"
+# Descargar el binario Real de Haris131
+echo -e "${YELLOW}[+] Descargando UDP-Custom Real desde Haris131 ($BIN_ARCH)...${NC}"
+if curl -sL -o "$UDP_DIR/udp-custom" "https://github.com/Haris131/UDP-Custom/raw/main/udp-custom-linux-${BIN_ARCH}"; then
+    echo -e "${GREEN}[✔] Descarga primaria exitosa (Haris Real).${NC}"
 else
-    # Failsafe a mirror estable
+    # Mirror estable propio
     wget -q -O "$UDP_DIR/udp-custom" "https://raw.githubusercontent.com/JuandeMx/MAXIMUS/main/bin/udp-custom-linux-${BIN_ARCH}"
     echo -e "${GREEN}[✔] Descarga desde mirror oficial Maximus.${NC}"
 fi
@@ -49,15 +49,16 @@ fi
 
 chmod +x "$UDP_DIR/udp-custom"
 
-# Generar configuración UNIVERSAL (mode: none para máxima estabilidad en AWS)
-echo -e "${GREEN}[+] Generando configuración de estabilidad total...${NC}"
+# Generar configuración OFICIAL (v4.8.0 - Restoration)
+echo -e "${GREEN}[+] Generando configuración oficial Haris (Puerto :1)...${NC}"
 cat > "$UDP_DIR/config.json" << UDPEOF
 {
-    "listen": ":36712",
-    "stream_buffer": 2,
-    "receive_buffer": 2,
+    "listen": ":1",
+    "stream_buffer": 33554432,
+    "receive_buffer": 83886080,
     "auth": {
-        "mode": "none"
+        "mode": "passwords",
+        "passwords": ["volviamorir"]
     }
 }
 UDPEOF
