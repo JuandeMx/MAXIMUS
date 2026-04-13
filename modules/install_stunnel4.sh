@@ -1,50 +1,89 @@
 #!/bin/bash
-# Instalador Dinámico Stunnel4 SSL + Cadena Automática
+# MaximusVpsMx - Instalador Avanzado Stunnel4 (SSL)
+# Soporta Modo Directo y Modo Cadena (Proxy)
 
-echo -e "\e[1;36m=========================================================\e[0m"
-echo -e "\e[1;33m        INSTALADOR STUNNEL SSL (CADENA COMPLETA)\e[0m"
-echo -e "\e[1;36m=========================================================\e[0m"
-echo -e "\e[1;37m Este instalador configura automáticamente:\e[0m"
-echo -e "\e[1;32m   HTTP Custom → Stunnel(SSL) → Proxy Python → SSH\e[0m"
-echo -e "\e[1;36m=========================================================\e[0m"
-read -p " ¿En qué puerto público deseas recibir SSL? (ej: 443): " ssl_port
-if [[ -z "$ssl_port" ]]; then ssl_port=443; fi
+RED='\033[1;31m'
+GREEN='\033[1;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[1;36m'
+NC='\033[0m'
 
-echo -e "\n\e[1;32m[1/4] Verificando Proxy Python en puerto 80...\e[0m"
+clear
+echo -e "${CYAN}=======================================================${NC}"
+echo -e "${YELLOW}           CONFIGURACIÓN DE STUNNEL (SSL)${NC}"
+echo -e "${CYAN}=======================================================${NC}"
+echo -e "${WHITE} Elige el modo de funcionamiento para el SSL:${NC}"
+echo -e "${RED}-------------------------------------------------------${NC}"
+echo -e " [1] MODO DIRECTO (SSL → SSH)"
+echo -e "     ${YELLOW}* Recomendado para velocidad (Sin Payload).${NC}"
+echo -e " [2] MODO CADENA (SSL → PROXY → SSH)"
+echo -e "     ${YELLOW}* Permite usar Payloads/Websockets en la App.${NC}"
+echo -e "${RED}-------------------------------------------------------${NC}"
+read -p " Selecciona una opción [1-2]: " mode_opt
 
-# === AUTO-INSTALAR PROXY PYTHON SI NO ESTÁ CORRIENDO ===
-if ! systemctl is-active --quiet mx-proxy; then
-    echo -e "\e[1;33m    → Proxy Python NO detectado. Instalando automáticamente en puerto 80...\e[0m"
-    
-    cat > /etc/systemd/system/mx-proxy.service << EOF
-[Unit]
-Description=MaximusVpsMx Python Proxy Port 80
-After=network.target
+# --- VARIABLES POR DEFECTO ---
+SSL_PORT=443
+BACKEND_PORT=22
 
-[Service]
-Type=simple
-User=root
-WorkingDirectory=/etc/MaximusVpsMx/core
-ExecStart=/usr/bin/python3 /etc/MaximusVpsMx/core/PDirect.py 80
-Restart=always
+case $mode_opt in
+    1)
+        # MODO DIRECTO
+        echo -e "\n${CYAN}▶ MODO DIRECTO SELECCIONADO${NC}"
+        read -p " Puerto SSL a escuchar (ej: 443, 444): " SSL_PORT
+        [ -z "$SSL_PORT" ] && SSL_PORT=443
 
-[Install]
-WantedBy=multi-user.target
-EOF
-    ufw allow 80/tcp 2>/dev/null
-    systemctl daemon-reload
-    systemctl enable --now mx-proxy 2>/dev/null
-    echo -e "\e[1;32m    ✓ Proxy Python activo en puerto 80.\e[0m"
-else
-    echo -e "\e[1;32m    ✓ Proxy Python ya está corriendo.\e[0m"
-fi
+        echo -e "\n${WHITE} Configuración del puerto destino (Backend):${NC}"
+        echo -e " [1] Autodetectar (OpenSSH/Dropbear)"
+        echo -e " [2] Configuración Manual"
+        read -p " Elige: " back_opt
+        
+        if [ "$back_opt" == "1" ]; then
+            echo -e "${YELLOW}[+] Detectando servicios...${NC}"
+            if systemctl is-active --quiet dropbear; then
+                # Intentar leer puerto de dropbear
+                BACKEND_PORT=$(grep "DROPBEAR_PORT=" /etc/default/dropbear | cut -d= -f2 | tr -d '"')
+                [ -z "$BACKEND_PORT" ] && BACKEND_PORT=44
+                echo -e "${GREEN}✓ Dropbear detectado en puerto $BACKEND_PORT${NC}"
+            elif systemctl is-active --quiet ssh; then
+                BACKEND_PORT=22
+                echo -e "${GREEN}✓ OpenSSH detectado en puerto 22${NC}"
+            else
+                echo -e "${RED}✗ No se detectaron servicios SSH activos. Usando puerto 22 por defecto.${NC}"
+                BACKEND_PORT=22
+            fi
+        else
+            read -p " Ingresa puerto local destino (ej: 22, 44): " BACKEND_PORT
+            [ -z "$BACKEND_PORT" ] && BACKEND_PORT=22
+        fi
+        
+        CONNECT_TARGET="127.0.0.1:$BACKEND_PORT"
+        ;;
+    2)
+        # MODO CADENA
+        echo -e "\n${CYAN}▶ MODO CADENA (PROXY) SELECCIONADO${NC}"
+        read -p " Puerto SSL a escuchar (ej: 443, 444): " SSL_PORT
+        [ -z "$SSL_PORT" ] && SSL_PORT=443
+        
+        echo -e "${YELLOW}[+] Verificando Proxy Python en puerto 80...${NC}"
+        if ! systemctl is-active --quiet mx-proxy; then
+            echo -e "${YELLOW}    → El Proxy no está activo. Levantándolo en puerto 80 automáticamente...${NC}"
+            bash /etc/MaximusVpsMx/modules/install_mx-proxy.sh 80 > /dev/null 2>&1
+        fi
+        
+        CONNECT_TARGET="127.0.0.1:80"
+        echo -e "${GREEN}✓ Conectando Stunnel al Proxy (Puerto 80)${NC}"
+        ;;
+    *)
+        echo -e "${RED}Opción inválida.${NC}"
+        exit 1
+        ;;
+esac
 
-echo -e "\e[1;32m[2/4] Configurando Stunnel SSL en puerto $ssl_port...\e[0m"
-
-DEBIAN_FRONTEND=noninteractive apt-get install -y stunnel4 2>/dev/null
+# --- INSTALACIÓN Y CONFIGURACIÓN ---
+echo -e "\n${YELLOW}[+] Aplicando configuración de Stunnel...${NC}"
+apt-get install stunnel4 -y > /dev/null 2>&1
 
 cat > /etc/stunnel/stunnel.conf << EOF
-; MaximusVpsMx - Stunnel SSL Configuration (Auto-Chain)
 cert = /etc/stunnel/stunnel.pem
 socket = l:TCP_NODELAY=1
 socket = r:TCP_NODELAY=1
@@ -56,34 +95,27 @@ TIMEOUTidle = 600
 
 [ssh]
 client = no
-accept = $ssl_port
-connect = 127.0.0.1:80
+accept = $SSL_PORT
+connect = $CONNECT_TARGET
 EOF
 
-echo -e "\e[1;32m[3/4] Generando certificado SSL...\e[0m"
-
+# Certificado
 if [ ! -f /etc/stunnel/stunnel.pem ]; then
+    echo -e "${YELLOW}[+] Generando certificado SSL...${NC}"
     openssl req -new -newkey rsa:2048 -days 3650 -nodes -x509 -sha256 -subj "/CN=MaximusVpsMx/O=Maximus/C=US" -keyout /etc/stunnel/stunnel.pem -out /etc/stunnel/stunnel.pem >/dev/null 2>&1
-    chmod 600 /etc/stunnel/stunnel.pem
-    echo -e "\e[1;32m    ✓ Certificado SSL generado.\e[0m"
-else
-    echo -e "\e[1;32m    ✓ Certificado SSL ya existe.\e[0m"
 fi
 
 sed -i 's/ENABLED=0/ENABLED=1/g' /etc/default/stunnel4 2>/dev/null
+ufw allow $SSL_PORT/tcp 2>/dev/null
 
-ufw allow ${ssl_port}/tcp 2>/dev/null
-
-echo -e "\e[1;32m[4/4] Activando servicios...\e[0m"
-
-killall stunnel4 2>/dev/null || true
+echo -e "${YELLOW}[+] Reiniciando servicios...${NC}"
 systemctl daemon-reload
-systemctl enable --now stunnel4 2>/dev/null
-systemctl restart stunnel4 2>/dev/null
-systemctl restart mx-proxy 2>/dev/null
+systemctl enable stunnel4 > /dev/null 2>&1
+systemctl restart stunnel4 > /dev/null 2>&1
 
-echo -e "\n\e[1;36m=========================================================\e[0m"
-echo -e "\e[1;32m[✓] CADENA SSL COMPLETA ACTIVADA:\e[0m"
-echo -e "\e[1;37m    Cliente → Stunnel(:$ssl_port) → Proxy(:80) → SSH(:22)\e[0m"
-echo -e "\e[1;36m=========================================================\e[0m"
-sleep 3
+echo -e "\n${GREEN}=======================================================${NC}"
+echo -e "${GREEN} ✅ STUNNEL CONFIGURADO EXITOSAMENTE${NC}"
+echo -e "${CYAN} Puerto SSL: $SSL_PORT${NC}"
+echo -e "${CYAN} Destino:    $CONNECT_TARGET${NC}"
+echo -e "${GREEN}=======================================================${NC}"
+sleep 2
