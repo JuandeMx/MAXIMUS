@@ -22,7 +22,7 @@ class Server(threading.Thread):
             self.soc.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.soc.settimeout(2)
             self.soc.bind((self.host, self.port))
-            self.soc.listen(100)
+            self.soc.listen(200)
             self.running = True
             while self.running:
                 try:
@@ -48,22 +48,6 @@ def log_error(msg):
             f.write(f"[{datetime.datetime.now()}] {msg}\n")
     except:
         pass
-
-def relay_stream(source, destination):
-    """Relay bidireccional puro."""
-    try:
-        while True:
-            data = source.recv(BUFLEN)
-            if not data:
-                break
-            destination.sendall(data)
-    except:
-        pass
-    finally:
-        try: source.close()
-        except: pass
-        try: destination.close()
-        except: pass
 
 def collect_headers(sock, initial_buffer, timeout_sec):
     """Recolectar datos hasta encontrar fin de cabeceras HTTP doble CRLF."""
@@ -103,37 +87,26 @@ class ConnectionHandler(threading.Thread):
             is_ssh = client_buffer.startswith(b'SSH-')
 
             if not is_ssh:
-                # MODO PROXY HTTP / CLOUDFRONT
-                # Recolectar cabeceras completas (soporta payloads largos y junk)
+                # MODO PROXY HTTP / CLOUDFRONT / WEBSOCKET
                 client_buffer = collect_headers(self.client, client_buffer, 5)
 
-                # Detección de Handshake WebSocket (Standard-compliant)
                 is_ws = b'upgrade: websocket' in client_buffer.lower()
                 is_split = b'100-continue' in client_buffer.lower()
 
                 if is_split:
-                    # Responder 100 Continue (Protocolo Split)
                     self.client.sendall(RESPONSE_CONTINUE)
-                    time.sleep(0.1)
-                    # Esperar la segunda parte del payload
                     second_buffer = b''
                     second_buffer = collect_headers(self.client, second_buffer, 3)
-                    
                     if b'websocket' in second_buffer.lower():
                         self.client.sendall(RESPONSE_WS)
                     else:
                         self.client.sendall(RESPONSE_STD)
                 elif is_ws:
-                    # Handshake directo para CloudFront / No-Split
                     self.client.sendall(RESPONSE_WS)
                 else:
-                    # Respuesta estandar para el resto
                     self.client.sendall(RESPONSE_STD)
-                
-                # Sincronización: Forzar envío del paquete HTTP antes de activar el tunel SSH
-                time.sleep(0.1)
 
-            # Conexión al Backend local (OpenSSH 22 o Dropbear paramétrico)
+            # Conexión al Backend local
             drop_port = 44
             try:
                 import os
@@ -146,23 +119,20 @@ class ConnectionHandler(threading.Thread):
 
             for port in [22, drop_port]:
                 try:
-                    target = socket.create_connection(('127.0.0.1', port), timeout=10)
+                    target = socket.create_connection(('127.0.0.1', port), timeout=5)
                     target.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
                     target.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
-                    target.settimeout(TIMEOUT)
                     break
                 except:
                     target = None
-                    continue
 
             if not target:
                 return
 
-            # Manejo del flujo inicial
+            # Manejo del flujo inicial (Injectar datos residuales)
             if is_ssh:
                 target.sendall(client_buffer)
             else:
-                # Revisar si el saludo SSH quedó atrapado en el buffer tras el HTTP
                 leftover = b''
                 header_end = -1
                 if b'\r\n\r\n' in client_buffer:
@@ -172,31 +142,34 @@ class ConnectionHandler(threading.Thread):
                 
                 if header_end != -1:
                     leftover = client_buffer[header_end:]
-
-                # Modo Transparente: Si hay leftover, se envía. Si no, se entra a relay.
                 if leftover:
                     target.sendall(leftover)
 
-            # Iniciar Relay Bidireccional de alto rendimiento
-            # En este punto el túnel está establecido y el relay es puro.
-            t1 = threading.Thread(target=relay_stream, args=(self.client, target))
-            t1.daemon = True
-            t1.start()
-
-            relay_stream(target, self.client)
-            t1.join(timeout=5)
+            # --- RELAY BIDIRECCIONAL BASADO EN SELECT (MÁXIMA ESTABILIDAD) ---
+            sockets = [self.client, target]
+            while True:
+                r, _, e = select.select(sockets, [], sockets, 60)
+                if e: break
+                for sock in r:
+                    data = sock.recv(BUFLEN)
+                    if not data:
+                        return # Cierre normal
+                    
+                    # Determinar destino
+                    out = target if sock is self.client else self.client
+                    out.sendall(data)
 
         except Exception as e:
-            log_error(f"Error en ConnectionHandler: {e}")
+            log_error(f"Handler error ({self.addr}): {e}")
         finally:
             try: self.client.close()
             except: pass
-            try:
+            try: 
                 if target: target.close()
             except: pass
 
 def main():
-    print(f"MaximusVpsMx Proxy v3.2 - AWS CloudFront Ready Edition\nListening on {LISTENING_PORT}")
+    print(f"MaximusVpsMx Proxy v3.5 - High Stability Select Engine\nListening on {LISTENING_PORT}")
     server = Server('0.0.0.0', LISTENING_PORT)
     server.start()
     while True:
