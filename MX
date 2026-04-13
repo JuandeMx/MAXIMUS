@@ -715,10 +715,31 @@ menu_sistema() {
     
     case $opt_sys in
         1)
-            echo -e "\n${YELLOW}▶ Limpiando Memoria RAM Inactiva...${NC}"
+            echo -e "\n${YELLOW}▶ Iniciando Limpieza Profunda y Optimización...${NC}"
+            
+            # 1. Limpieza de Memoria RAM
+            echo -ne "${CYAN}[+] Liberando Memoria RAM...${NC}"
             sync; echo 3 > /proc/sys/vm/drop_caches
             swapoff -a && swapon -a
-            echo -e "${GREEN}✅ El VPS se siente fresco y rápido.${NC}"
+            echo -e " ${GREEN}[OK]${NC}"
+
+            # 2. Limpieza de Logs del Sistema (Journald)
+            echo -ne "${CYAN}[+] Purgando Journald (Semanas previas)...${NC}"
+            journalctl --vacuum-time=1d > /dev/null 2>&1
+            echo -e " ${GREEN}[OK]${NC}"
+
+            # 3. Limpieza de Caché APT
+            echo -ne "${CYAN}[+] Limpiando caché de paquetes APT...${NC}"
+            apt-get clean > /dev/null 2>&1
+            echo -e " ${GREEN}[OK]${NC}"
+
+            # 4. Truncado de Archivos Log (Vaciar sin borrar)
+            echo -ne "${CYAN}[+] Vaciando archivos .log del sistema...${NC}"
+            find /var/log -type f -name "*.log" -exec truncate -s 0 {} +
+            rm -rf /var/log/MaximusVpsMx/* 2>/dev/null
+            echo -e " ${GREEN}[OK]${NC}"
+
+            echo -e "\n${GREEN}✅ VPS Optimizado: RAM liberada y Disco limpio.${NC}"
             sleep 2; menu_sistema ;;
         2)
             echo -e "\n${YELLOW}▶ Ingrese nuevo texto HTML para el Banner (Ctrl+O para guardar, Ctrl+X para salir)${NC}"
