@@ -1,6 +1,7 @@
 #!/bin/bash
-# MaximusVpsMx - Instalador UDP-CUSTOM v2.0
-# Formato compatible: IP:1-65535@usuario:contraseña
+# MaximusVpsMx - Instalador UDP-CUSTOM v2.1
+# Autenticación: Usa los mismos usuarios SSH del panel
+# Formato cliente: IP:1-65535@usuarioSSH:contraseñaSSH
 
 RED='\033[1;31m'
 GREEN='\033[1;32m'
@@ -10,21 +11,11 @@ WHITE='\033[1;37m'
 NC='\033[0m'
 
 echo -e "${CYAN}=========================================================${NC}"
-echo -e "${YELLOW}        INSTALADOR UDP-CUSTOM v2.0 (AUTH MODE)${NC}"
+echo -e "${YELLOW}         INSTALADOR UDP-CUSTOM (TUNNELING UDP)${NC}"
 echo -e "${CYAN}=========================================================${NC}"
-echo -e "${WHITE} Formato de conexión del cliente:${NC}"
-echo -e "${CYAN} IP:1-65535@usuario:contraseña${NC}"
+echo -e "${WHITE} Los clientes usan sus credenciales SSH del panel.${NC}"
+echo -e "${CYAN} Formato: IP:1-65535@usuarioSSH:contraseñaSSH${NC}"
 echo -e "${CYAN}=========================================================${NC}"
-
-# Puerto de escucha
-read -p " Puerto UDP (Default 1, rango completo 1-65535): " udp_port
-[ -z "$udp_port" ] && udp_port=1
-
-# Contraseña(s) de autenticación
-echo -e "\n${YELLOW} Puedes agregar múltiples contraseñas separadas por coma.${NC}"
-echo -e "${CYAN} Ejemplo: pass1,pass2,pass3${NC}"
-read -p " Contraseña(s) (Default: maximus): " udp_pass
-[ -z "$udp_pass" ] && udp_pass="maximus"
 
 echo -e "\n${GREEN}[+] Preparando entorno...${NC}"
 
@@ -59,35 +50,20 @@ fi
 
 chmod +x "$UDP_DIR/udp-custom"
 
-# Construir lista de contraseñas en formato JSON
-PASS_JSON=""
-IFS=',' read -ra PASS_ARRAY <<< "$udp_pass"
-for i in "${!PASS_ARRAY[@]}"; do
-    p=$(echo "${PASS_ARRAY[$i]}" | xargs) # trim spaces
-    if [ $i -eq 0 ]; then
-        PASS_JSON="\"$p\""
-    else
-        PASS_JSON="$PASS_JSON, \"$p\""
-    fi
-done
-
-# Generar configuración con autenticación por contraseñas
-echo -e "${GREEN}[+] Generando configuración (puerto $udp_port, rango 1-65535)...${NC}"
+# Generar configuración SIN autenticación propia (usa SSH del panel)
+echo -e "${GREEN}[+] Generando configuración (rango completo 1-65535)...${NC}"
 cat > "$UDP_DIR/config.json" << UDPEOF
 {
-    "listen": ":$udp_port",
+    "listen": ":1",
     "stream_buffer": 33554432,
     "receive_buffer": 33554432,
     "auth": {
-        "mode": "passwords",
-        "passwords": [$PASS_JSON]
+        "mode": "disabled"
     }
 }
 UDPEOF
 
 # Matar procesos previos
-fuser -k "$udp_port/udp" 2>/dev/null
-fuser -k "$udp_port/tcp" 2>/dev/null
 killall -9 udp-custom 2>/dev/null
 
 # Crear servicio systemd
@@ -110,7 +86,7 @@ LimitNOFILE=infinity
 WantedBy=multi-user.target
 EOF
 
-# Abrir puertos en firewall (rango completo para UDP)
+# Abrir puertos en firewall
 ufw allow 1:65535/udp 2>/dev/null
 
 # Activar y arrancar
@@ -128,13 +104,12 @@ if systemctl is-active --quiet udp-custom; then
     echo -e "\n${GREEN}=========================================================${NC}"
     echo -e "${GREEN} ✅ UDP-CUSTOM INSTALADO CORRECTAMENTE${NC}"
     echo -e "${GREEN}=========================================================${NC}"
-    echo -e "${CYAN} Puerto:      $udp_port (Rango: 1-65535)${NC}"
-    echo -e "${CYAN} Contraseñas: $udp_pass${NC}"
-    echo -e "${GREEN}=========================================================${NC}"
+    echo -e "${CYAN} Rango de puertos: 1-65535${NC}"
+    echo -e "${CYAN} Autenticación:    Usuarios SSH del Panel${NC}"
+    echo -e "${GREEN}---------------------------------------------------------${NC}"
     echo -e "${YELLOW} 📋 CONFIGURACIÓN PARA EL CLIENTE:${NC}"
-    echo -e "${WHITE} ${SERVER_IP}:1-65535@usuario:${PASS_ARRAY[0]}${NC}"
+    echo -e "${WHITE} ${SERVER_IP}:1-65535@USUARIO_SSH:CONTRASEÑA_SSH${NC}"
     echo -e "${GREEN}=========================================================${NC}"
-    echo -e "${CYAN} Copia esa línea en tu app (HTTP Custom / HA Tunnel).${NC}"
 else
     echo -e "\n${RED}=========================================================${NC}"
     echo -e "${RED} ⚠️ UDP-CUSTOM no arrancó. Verifica con:${NC}"
