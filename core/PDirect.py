@@ -129,8 +129,18 @@ class ConnectionHandler(threading.Thread):
                     # Respuesta estandar para el resto
                     self.client.sendall(RESPONSE_STD)
 
-            # Conexión al Backend local (OpenSSH 22 o Dropbear 44)
-            for port in [22, 44]:
+            # Conexión al Backend local (OpenSSH 22 o Dropbear paramétrico)
+            drop_port = 44
+            try:
+                import os
+                if os.path.exists('/etc/default/dropbear'):
+                    with open('/etc/default/dropbear', 'r') as f:
+                        for line in f:
+                            if line.startswith('DROPBEAR_PORT='):
+                                drop_port = int(line.split('=')[1].strip())
+            except: pass
+
+            for port in [drop_port, 22]:
                 try:
                     target = socket.create_connection(('127.0.0.1', port), timeout=10)
                     target.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
@@ -148,27 +158,37 @@ class ConnectionHandler(threading.Thread):
             if is_ssh:
                 target.sendall(client_buffer)
             else:
-                # FILTRO ANTI-BASURA V3.2 (Escudo Protector)
-                # CloudFront y Operadoras inyectan respuestas HTTP intermedias.
-                # Este loop absorbe el ruido hasta encontrar el "SSH-2.0" real del cliente.
-                deadline = time.time() + 8 # Más tiempo para AWS
-                while True:
-                    remaining = deadline - time.time()
-                    if remaining <= 0:
-                        return
-                    r, _, _ = select.select([self.client], [], [], remaining)
-                    if self.client in r:
-                        first_data = self.client.recv(BUFLEN)
-                        if not first_data:
+                # Revisar si el saludo SSH quedó atrapado en el buffer tras el HTTP
+                leftover = b''
+                if b'\r\n\r\n' in client_buffer:
+                    leftover = client_buffer.split(b'\r\n\r\n', 1)[1]
+                elif b'\n\n' in client_buffer:
+                    leftover = client_buffer.split(b'\n\n', 1)[1]
+
+                ssh_found = False
+                if b'SSH-' in leftover:
+                    idx_ssh = leftover.find(b'SSH-')
+                    target.sendall(leftover[idx_ssh:])
+                    ssh_found = True
+
+                # FILTRO ANTI-BASURA V3.2 (CloudFront / Operadoras)
+                if not ssh_found:
+                    deadline = time.time() + 8 
+                    while True:
+                        remaining = deadline - time.time()
+                        if remaining <= 0:
                             return
-                        if b'SSH-' in first_data:
-                            # Encontramos el saludo SSH (puede no estar al inicio por el junk)
-                            idx = first_data.find(b'SSH-')
-                            target.sendall(first_data[idx:])
-                            break
-                        # Si no hay SSH-, es residuo del payload -> destruir y seguir
-                    else:
-                        return
+                        r, _, _ = select.select([self.client], [], [], remaining)
+                        if self.client in r:
+                            first_data = self.client.recv(BUFLEN)
+                            if not first_data:
+                                return
+                            if b'SSH-' in first_data:
+                                idx = first_data.find(b'SSH-')
+                                target.sendall(first_data[idx:])
+                                break
+                        else:
+                            return
 
             # Iniciar Relay Bidireccional de alto rendimiento
             t1 = threading.Thread(target=relay_stream, args=(self.client, target))
