@@ -59,7 +59,7 @@ get_telemetry() {
 # --- SUBMENÚ DE USUARIOS ---
 menu_usuarios() {
     clear
-    echo -e " ${GREEN}< $OS NOZETA 2 >${NC}"
+    echo -e " ${GREEN}< BY JUANDEMX >${NC}"
     echo -e "${RED}=======================================================${NC}"
     echo -e "${YELLOW}            👥 ADMINISTRADOR DE CUENTAS 👥${NC}"
     echo -e "${RED}=======================================================${NC}"
@@ -174,7 +174,7 @@ menu_protocolos() {
     systemctl is-active --quiet badvpn && st_udp="${GREEN}ONLINE${NC}" || st_udp="${RED}OFFLINE${NC}"
     systemctl is-active --quiet mx-slowdns && st_dns="${GREEN}ONLINE${NC}" || st_dns="${RED}OFFLINE${NC}"
 
-    echo -e " ${GREEN}< $OS NOZETA 2 >${NC}"
+    echo -e " ${GREEN}< BY JUANDEMX >${NC}"
     echo -e "${RED}=======================================================${NC}"
     echo -e "${YELLOW}           🔌 CONFIGURACION DE PROTOCOLOS 🔌${NC}"
     echo -e "${RED}=======================================================${NC}"
@@ -305,7 +305,7 @@ menu_sistema() {
     # Detectar estado de Cloudflare DDNS
     crontab -l 2>/dev/null | grep -q "cloudflare-ddns" && cf_st="${GREEN}[Activo cada 5min]${NC}" || cf_st="${RED}[Inactivo]${NC}"
     
-    echo -e " ${GREEN}< $OS NOZETA 2 >${NC}"
+    echo -e " ${GREEN}< BY JUANDEMX >${NC}"
     echo -e "${RED}=======================================================${NC}"
     echo -e "${YELLOW}               ⚙️ HERRAMIENTAS EXTRAS ⚙️${NC}"
     echo -e "${RED}=======================================================${NC}"
@@ -465,9 +465,9 @@ CFEOF
 main_menu() {
     get_telemetry
     clear
-    echo -e " ${GREEN}< $OS NOZETA 2 >${NC}"
+    echo -e " ${GREEN}< BY JUANDEMX >${NC}"
     echo -e "${RED}=======================================================${NC}"
-    echo -e "${YELLOW}                      SSH PRIVATE${NC}"
+    echo -e "${YELLOW}                      MAXIMUS VPS${NC}"
     echo -e "${RED}=======================================================${NC}"
     printf "${CYAN}S.O:    ${WHITE}%-25s ${CYAN}Fecha: ${WHITE}%-10s${NC}\n" "$OS" "$FECHA"
     printf "${CYAN}IP:     ${WHITE}%-25s ${CYAN}Hora:  ${WHITE}%-10s${NC}\n" "$IP" "$HORA"
