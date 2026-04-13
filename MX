@@ -272,6 +272,7 @@ gestor_servicio() {
             *) ;;
         esac
     done
+    menu_protocolos
 }
 
 # --- SUBMENU EXCLUSIVO SLOWDNS ---
@@ -340,6 +341,7 @@ sub_slowdns() {
             *) ;;
         esac
     done
+    menu_protocolos
 }
 
 # --- SUBMENÚ DE PROTOCOLOS ---
