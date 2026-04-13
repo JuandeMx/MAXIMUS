@@ -488,31 +488,31 @@ menu_protocolos() {
     [ -z "$P_SSH" ] && P_SSH="22"
     if netstat -tuln 2>/dev/null | grep -q ":${P_SSH} "; then st_ssh="${GREEN}[ON]${NC}"; else st_ssh="${RED}[OFF]${NC}"; fi
 
-    # Dropbear - solo si está instalado Y configurado
+    # Dropbear - solo si está instalado
     if dpkg -l dropbear 2>/dev/null | grep -q "^ii"; then
         P_DROP=$(grep "DROPBEAR_PORT=" /etc/default/dropbear 2>/dev/null | cut -d= -f2 | tr -d '"' | xargs)
         [ -z "$P_DROP" ] && P_DROP="44"
         if netstat -tuln 2>/dev/null | grep -q ":${P_DROP} "; then st_drop="${GREEN}[ON]${NC}"; else st_drop="${RED}[OFF]${NC}"; fi
     else
-        P_DROP="OFF"; st_drop="${RED}[OFF]${NC}"
+        P_DROP="--"; st_drop="${RED}[OFF]${NC}"
     fi
 
-    # Proxy Python - solo si el servicio mx-proxy existe
+    # Proxy Python - solo si el servicio existe
     if [ -f /etc/systemd/system/mx-proxy.service ]; then
         P_PROXY=$(grep "ExecStart=" /etc/systemd/system/mx-proxy.service 2>/dev/null | awk '{print $NF}')
         [ -z "$P_PROXY" ] && P_PROXY="80"
         if netstat -tuln 2>/dev/null | grep -q ":${P_PROXY} "; then st_proxy="${GREEN}[ON]${NC}"; else st_proxy="${RED}[OFF]${NC}"; fi
     else
-        P_PROXY="80"; st_proxy="${RED}[OFF]${NC}"
+        P_PROXY="--"; st_proxy="${RED}[OFF]${NC}"
     fi
 
-    # Stunnel (SSL) - solo si el archivo de config existe
+    # Stunnel (SSL) - solo si config existe y paquete instalado
     if [ -f /etc/stunnel/stunnel.conf ] && dpkg -l stunnel4 2>/dev/null | grep -q "^ii"; then
         P_STUN=$(grep "accept =" /etc/stunnel/stunnel.conf 2>/dev/null | awk '{print $3}' | head -1)
         [ -z "$P_STUN" ] && P_STUN="443"
         if netstat -tuln 2>/dev/null | grep -q ":${P_STUN} "; then st_stun="${GREEN}[ON]${NC}"; else st_stun="${RED}[OFF]${NC}"; fi
     else
-        P_STUN="443"; st_stun="${RED}[OFF]${NC}"
+        P_STUN="--"; st_stun="${RED}[OFF]${NC}"
     fi
 
     # BadVPN (UDP) - solo si el binario existe
@@ -521,7 +521,7 @@ menu_protocolos() {
         [ -z "$P_BAD" ] && P_BAD="7300"
         if ps -ef | grep -q "[b]advpn-udpgw"; then st_udp="${GREEN}[ON]${NC}"; else st_udp="${RED}[OFF]${NC}"; fi
     else
-        P_BAD="7300"; st_udp="${RED}[OFF]${NC}"
+        P_BAD="--"; st_udp="${RED}[OFF]${NC}"
     fi
 
     # SlowDNS
@@ -532,10 +532,10 @@ menu_protocolos() {
     # UDP-Custom - solo si el binario existe
     if [ -f /root/udp/udp-custom ]; then
         P_UDPC=$(grep -o '"listen":.*' /root/udp/config.json 2>/dev/null | grep -o '[0-9]*')
-        [ -z "$P_UDPC" ] && P_UDPC="36712"
+        [ -z "$P_UDPC" ] && P_UDPC="1-65535"
         if ps -ef | grep -q "[u]dp-custom"; then st_udpc="${GREEN}[ON]${NC}"; else st_udpc="${RED}[OFF]${NC}"; fi
     else
-        P_UDPC="36712"; st_udpc="${RED}[OFF]${NC}"
+        P_UDPC="--"; st_udpc="${RED}[OFF]${NC}"
     fi
 
     # Hysteria v2 - solo si el binario existe
@@ -544,7 +544,7 @@ menu_protocolos() {
         [ -z "$P_HY" ] && P_HY="443"
         if ps -ef | grep -q "[h]ysteria"; then st_udph="${GREEN}[ON]${NC}"; else st_udph="${RED}[OFF]${NC}"; fi
     else
-        P_HY="443"; st_udph="${RED}[OFF]${NC}"
+        P_HY="--"; st_udph="${RED}[OFF]${NC}"
     fi
 
     st_squid="${RED}[OFF]${NC}"; st_ovpn="${RED}[OFF]${NC}"; st_chk="${GREEN}[ON]${NC}"
