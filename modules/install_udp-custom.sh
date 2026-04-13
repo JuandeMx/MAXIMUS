@@ -58,7 +58,7 @@ cat > "$UDP_DIR/config.json" << UDPEOF
     "stream_buffer": 33554432,
     "receive_buffer": 33554432,
     "auth": {
-        "mode": "disabled"
+        "mode": "ssh"
     }
 }
 UDPEOF
