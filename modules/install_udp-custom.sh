@@ -50,15 +50,16 @@ fi
 
 chmod +x "$UDP_DIR/udp-custom"
 
-# Generar configuración SIN autenticación propia (usa SSH del panel)
+# Generar configuración OFICIAL formato Haris v1.4
 echo -e "${GREEN}[+] Generando configuración (rango completo 1-65535)...${NC}"
 cat > "$UDP_DIR/config.json" << UDPEOF
 {
     "listen": ":36712",
     "stream_buffer": 33554432,
-    "receive_buffer": 33554432,
+    "receive_buffer": 83886080,
     "auth": {
-        "mode": "database"
+        "mode": "passwords",
+        "passwords": ["volviamorir"]
     }
 }
 UDPEOF
