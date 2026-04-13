@@ -249,6 +249,71 @@ menu_usuarios() {
     esac
 }
 
+# --- PURGA NUCLEAR DEL SISTEMA ---
+purgar_sistema_total() {
+    clear
+    echo -e "${RED}☢️ INICIANDO PURGA NUCLEAR DEL SISTEMA...${NC}"
+    echo -e "${YELLOW}Esto eliminará absolutamente todos los módulos y datos.${NC}"
+    sleep 2
+
+    # 1. Detener todos los servicios conocidos
+    echo -e "${CYAN}[+] Deteniendo servicios...${NC}"
+    local services=("stunnel4" "dropbear" "mx-proxy" "badvpn" "mx-slowdns" "udp-custom" "hysteria" "ws-epro" "udp-custom" "ssh" "sshd")
+    for srv in "${services[@]}"; do
+        systemctl stop "$srv" 2>/dev/null
+        systemctl disable "$srv" 2>/dev/null
+    done
+
+    # 2. Matar procesos remanentes por nombre de binario
+    echo -e "${CYAN}[+] Asegurando cierre de procesos...${NC}"
+    local binaries=("stunnel4" "dropbear" "python3" "badvpn-udpgw" "udp-custom" "hysteria" "slowdns")
+    for bin in "${binaries[@]}"; do
+        killall -9 "$bin" 2>/dev/null
+    done
+
+    # 3. Limpiar Firewall UFW (Puertos conocidos)
+    echo -e "${CYAN}[+] Limpiando reglas del Firewall...${NC}"
+    # Puertos TCP
+    local tcp_ports=(22 44 80 443 8080 8443)
+    for p in "${tcp_ports[@]}"; do
+        ufw delete allow "$p/tcp" 2>/dev/null
+    done
+    # Puertos UDP
+    local udp_ports=(443 7300 36712 53)
+    for p in "${udp_ports[@]}"; do
+        ufw delete allow "$p/udp" 2>/dev/null
+    done
+
+    # 4. Eliminar directorios y archivos de configuración
+    echo -e "${CYAN}[+] Eliminando archivos y directorios...${NC}"
+    rm -rf /etc/MaximusVpsMx
+    rm -rf /etc/hysteria
+    rm -rf /root/udp
+    rm -rf /etc/stunnel
+    rm -rf /var/log/MaximusVpsMx
+    rm -f /usr/local/bin/MX
+    rm -f /etc/issue.net
+
+    # 5. Eliminar archivos de servicio systemd
+    echo -e "${CYAN}[+] Eliminando archivos de sistema...${NC}"
+    rm -f /etc/systemd/system/mx-proxy.service 2>/dev/null
+    rm -f /etc/systemd/system/badvpn.service 2>/dev/null
+    rm -f /etc/systemd/system/mx-slowdns.service 2>/dev/null
+    rm -f /etc/systemd/system/udp-custom.service 2>/dev/null
+    rm -f /etc/systemd/system/hysteria.service 2>/dev/null
+    rm -f /etc/systemd/system/ws-epro.service 2>/dev/null
+
+    # 6. Limpieza de paquetes APT (opcional pero recomendada)
+    echo -e "${CYAN}[+] Purgando paquetes del sistema...${NC}"
+    DEBIAN_FRONTEND=noninteractive apt-get purge stunnel4 dropbear badvpn -y 2>/dev/null
+    apt-get autoremove -y 2>/dev/null
+
+    # 7. Finalizar
+    systemctl daemon-reload
+    echo -e "${GREEN}✅ SISTEMA LIMPIADO COMPLETAMENTE.${NC}"
+    sleep 2
+}
+
 # --- GESTOR DINÁMICO DE SERVICIOS ---
 gestor_servicio() {
     local title="$1"
@@ -824,18 +889,9 @@ menu_mantenimiento() {
             echo -e "\n${RED}⚠️ REINSTALACION LIMPIA SELECCIONADA${NC}"
             read -p "¿Estás 100% seguro de borrar TODO? [S/N]: " conf_clean
             if [[ "$conf_clean" == "S" || "$conf_clean" == "s" ]]; then
-                cd /tmp || exit
-                echo -e "${RED}🔥 PURGANDO TODO EL SISTEMA...${NC}"
-                systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns 2>/dev/null
-                killall -9 stunnel4 dropbear python3 badvpn-udpgw 2>/dev/null
-                rm -rf /etc/MaximusVpsMx
-                rm -f /usr/local/bin/MX
-                rm -f /etc/systemd/system/mx-proxy.service
-                rm -f /etc/systemd/system/badvpn.service
-                rm -f /etc/systemd/system/mx-slowdns.service
-                apt-get purge stunnel4 dropbear -y 2>/dev/null
-                systemctl daemon-reload
+                purgar_sistema_total
                 
+                cd /tmp || exit
                 echo -e "${CYAN}[+] Instalando versión limpia de GitHub...${NC}"
                 rm -rf /tmp/MaximusVpsMx
                 apt-get install -y git 2>/dev/null
@@ -876,8 +932,19 @@ menu_ajustes_script() {
         case $opt_aj in
             1) menu_mantenimiento ;;
             2) 
-               echo -e "\n${YELLOW}▶ Reinstalando componentes base...${NC}"
-               bash /etc/MaximusVpsMx/install.sh
+               echo -e "\n${RED}⚠️ REINSTALACION FORZADA SELECCIONADA${NC}"
+               read -p "¿Deseas purgar TODO antes de reinstalar? [S/N]: " conf_p
+               if [[ "$conf_p" == "S" || "$conf_p" == "s" ]]; then
+                   purgar_sistema_total
+                   # Re-clonar e instalar
+                   cd /tmp || exit
+                   rm -rf /tmp/MaximusVpsMx
+                   git clone https://github.com/JuandeMx/MAXIMUS.git /tmp/MaximusVpsMx
+                   cd /tmp/MaximusVpsMx && chmod +x install.sh && bash install.sh
+               else
+                   echo -e "\n${YELLOW}▶ Reinstalando componentes base sin purgar...${NC}"
+                   bash /etc/MaximusVpsMx/install.sh
+               fi
                sleep 2 ;;
             3)
                echo -e "\n${YELLOW}▶ Configuración del Banner SSH${NC}"
@@ -890,16 +957,7 @@ menu_ajustes_script() {
                echo -e "\n${RED}================ ¡¡PELIGRO!! ================${NC}"
                read -p "¿Estás 100% seguro de destruir MaximusVpsMx? [S/N]: " desc
                if [[ "$desc" == "S" || "$desc" == "s" ]]; then
-                   echo -e "${RED}🔥 INICIANDO PURGA MASIVA...${NC}"
-                   systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns 2>/dev/null
-                   killall -9 stunnel4 dropbear python3 badvpn-udpgw 2>/dev/null
-                   rm -rf /etc/MaximusVpsMx
-                   rm -f /usr/local/bin/MX
-                   rm -f /etc/systemd/system/mx-proxy.service
-                   rm -f /etc/systemd/system/badvpn.service
-                   rm -f /etc/systemd/system/mx-slowdns.service
-                   apt-get purge stunnel4 dropbear -y 2>/dev/null
-                   systemctl daemon-reload
+                   purgar_sistema_total
                    echo -e "${GREEN}✅ VUELO COMPLETADO. Servidor de fábrica.${NC}"
                    exit
                fi
