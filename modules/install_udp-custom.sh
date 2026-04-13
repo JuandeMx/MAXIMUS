@@ -91,14 +91,30 @@ StandardError=append:/var/log/MaximusVpsMx/udp-custom.log
 WantedBy=multi-user.target
 EOF
 
-# Abrir puertos en firewall (SIN REDIRECCIÓN NAT PARA PRUEBA)
-echo -e "${GREEN}[+] Abriendo puerto 36712 en el servidor...${NC}"
-ufw allow 36712/udp 2>/dev/null
+# Habilitar IP Forwarding (Vital para métodos de internet gratis)
+echo -ne "${GREEN}[+] Habilitando IPv4 Forwarding...${NC}"
+sysctl -w net.ipv4.ip_forward=1 > /dev/null
+sed -i '/net.ipv4.ip_forward/d' /etc/sysctl.conf
+echo "net.ipv4.ip_forward=1" >> /etc/sysctl.conf
+echo -e "${GREEN} [OK]${NC}"
 
-# Limpiar reglas previas de redirección para evitar ruido
-iptables -t nat -D PREROUTING -p udp --dport 1:65535 -j REDIRECT --to-port 1 2>/dev/null
-ip6tables -t nat -D PREROUTING -p udp --dport 1:65535 -j REDIRECT --to-port 1 2>/dev/null
-iptables -t nat -F 2>/dev/null
+# Abrir puertos en firewall y configurar REDIRECCIÓN MAESTRA (NAT)
+echo -e "${GREEN}[+] Configurando Rango Total UDP (1-65535 -> 36712)...${NC}"
+ufw allow 1:65535/udp 2>/dev/null
+
+# Limpiar todas las reglas NAT previas para evitar conflictos
+iptables -t nat -F PREROUTING 2>/dev/null
+
+# Aplicar Redirección Maestra (IPv4 e IPv6)
+iptables -t nat -A PREROUTING -p udp --dport 1:65535 -j REDIRECT --to-port 36712
+ip6tables -t nat -A PREROUTING -p udp --dport 1:65535 -j REDIRECT --to-port 36712
+
+# Guardar reglas para que sean permanentes
+if command -v iptables-save > /dev/null; then
+    mkdir -p /etc/iptables
+    iptables-save > /etc/iptables/rules.v4
+    ip6tables-save > /etc/iptables/rules.v6
+fi
 
 # Activar y arrancar
 systemctl daemon-reload
