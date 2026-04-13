@@ -733,13 +733,18 @@ menu_sistema() {
             apt-get clean > /dev/null 2>&1
             echo -e " ${GREEN}[OK]${NC}"
 
-            # 4. Truncado de Archivos Log (Vaciar sin borrar)
-            echo -ne "${CYAN}[+] Vaciando archivos .log del sistema...${NC}"
-            find /var/log -type f -name "*.log" -exec truncate -s 0 {} +
+            # 4. Super Limpieza de Logs (Archivos antiguos y rotados)
+            echo -ne "${CYAN}[+] Eliminando historiales de log (.gz, .1, .log.*)...${NC}"
+            find /var/log -type f -name "*.[0-9]" -delete > /dev/null 2>&1
+            find /var/log -type f -name "*.gz" -delete > /dev/null 2>&1
+            find /var/log -type f -name "*.log.*" -delete > /dev/null 2>&1
+            
+            # Vaciar los logs activos
+            find /var/log -type f -name "*.log" -exec truncate -s 0 {} + > /dev/null 2>&1
             rm -rf /var/log/MaximusVpsMx/* 2>/dev/null
             echo -e " ${GREEN}[OK]${NC}"
 
-            echo -e "\n${GREEN}✅ VPS Optimizado: RAM liberada y Disco limpio.${NC}"
+            echo -e "\n${GREEN}✅ VPS OPTIMIZADO: Se han liberado GB de espacio en disco.${NC}"
             sleep 2; menu_sistema ;;
         2)
             echo -e "\n${YELLOW}▶ Ingrese nuevo texto HTML para el Banner (Ctrl+O para guardar, Ctrl+X para salir)${NC}"
