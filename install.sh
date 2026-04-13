@@ -80,6 +80,7 @@ ln -sf /etc/MaximusVpsMx/MX /usr/local/bin/MX
 chmod 700 /etc/MaximusVpsMx/MX
 chmod 700 /etc/MaximusVpsMx/core/PDirect.py
 chmod 700 /etc/MaximusVpsMx/modules/cloudflare-ddns.sh 2>/dev/null
+chmod +x /etc/MaximusVpsMx/modules/install_*.sh 2>/dev/null
 chmod 600 /etc/MaximusVpsMx/cloudflare.conf 2>/dev/null
 chmod 600 /etc/MaximusVpsMx/users.db 2>/dev/null
 chown -R root:root /etc/MaximusVpsMx
