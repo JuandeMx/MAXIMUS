@@ -609,11 +609,15 @@ menu_protocolos() {
     # WS-EPRO
     systemctl is-active --quiet ws-epro && st_ws="${GREEN}[ON]${NC}" || st_ws="${RED}[OFF]${NC}"
 
-    # UDP-Custom - solo si el binario existe
+    # UDP-Custom - solo si está activo
     if [ -f /root/udp/udp-custom ]; then
-        P_UDPC=$(grep -o '"listen":.*' /root/udp/config.json 2>/dev/null | grep -o '[0-9]*')
-        [ -z "$P_UDPC" ] && P_UDPC="1-65535"
-        if ps -ef | grep -q "[u]dp-custom"; then st_udpc="${GREEN}[ON]${NC}"; else st_udpc="${RED}[OFF]${NC}"; fi
+        if ps -ef | grep -q "[u]dp-custom"; then
+            # Mostramos el rango completo para estética premium
+            P_UDPC="1-65535"
+            st_udpc="${GREEN}[ON]${NC}"
+        else
+            P_UDPC="--"; st_udpc="${RED}[OFF]${NC}"
+        fi
     else
         P_UDPC="--"; st_udpc="${RED}[OFF]${NC}"
     fi

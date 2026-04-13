@@ -54,7 +54,7 @@ chmod +x "$UDP_DIR/udp-custom"
 echo -e "${GREEN}[+] Generando configuración (rango completo 1-65535)...${NC}"
 cat > "$UDP_DIR/config.json" << UDPEOF
 {
-    "listen": ":1",
+    "listen": ":36712",
     "stream_buffer": 33554432,
     "receive_buffer": 33554432,
     "auth": {
