@@ -73,6 +73,7 @@ mkdir -p /var/log/stunnel4
 chown stunnel4:stunnel4 /var/log/stunnel4
 
 # Generar Configuración
+mkdir -p /etc/stunnel
 cat > /etc/stunnel/stunnel.conf << EOF
 cert = /etc/stunnel/stunnel.pem
 socket = l:TCP_NODELAY=1
