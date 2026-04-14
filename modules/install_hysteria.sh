@@ -55,6 +55,46 @@ fi
 
 chmod +x "$HY_DIR/hysteria"
 
+# Instalar motor de autenticación
+echo -e "${GREEN}[+] Instalando motor de autenticación dinámico...${NC}"
+mkdir -p /etc/MaximusVpsMx/core
+cat > /etc/MaximusVpsMx/core/hysteria_auth.py << 'PYEOF'
+import sys
+import json
+import datetime
+import os
+
+DB_PATH = "/etc/MaximusVpsMx/hysteria_users.db"
+
+def check_auth():
+    try:
+        line = sys.stdin.readline()
+        if not line: return
+        data = json.loads(line)
+        client_auth = data.get("auth", "")
+        if not os.path.exists(DB_PATH):
+            print(json.dumps({"ok": False}))
+            return
+        with open(DB_PATH, "r") as f:
+            for line in f:
+                parts = line.strip().split(":")
+                if len(parts) < 5: continue
+                user, password, expiry_str, up_m, down_m = parts
+                if password == client_auth:
+                    expiry_date = datetime.datetime.strptime(expiry_str, "%Y-%m-%d")
+                    if datetime.datetime.now() <= expiry_date:
+                        print(json.dumps({"ok": True, "id": user, "up": int(up_m)*1000000, "down": int(down_m)*1000000}))
+                        return
+        print(json.dumps({"ok": False}))
+    except:
+        print(json.dumps({"ok": False}))
+
+if __name__ == "__main__":
+    check_auth()
+PYEOF
+chmod +x /etc/MaximusVpsMx/core/hysteria_auth.py
+touch /etc/MaximusVpsMx/hysteria_users.db
+
 # Generar certificado auto-firmado para TLS/QUIC
 echo -e "${GREEN}[+] Generando certificado SSL para QUIC...${NC}"
 openssl req -new -newkey rsa:2048 -days 3650 -nodes -x509 -sha256 \
@@ -62,8 +102,8 @@ openssl req -new -newkey rsa:2048 -days 3650 -nodes -x509 -sha256 \
     -keyout "$HY_DIR/hysteria.key" \
     -out "$HY_DIR/hysteria.crt" >/dev/null 2>&1
 
-# Generar configuración YAML (Hysteria v2)
-echo -e "${GREEN}[+] Generando configuración con mascarada...${NC}"
+# Generar configuración YAML (Hysteria v2 Multi-User)
+echo -e "${GREEN}[+] Generando configuración con motor de autenticación dinámico...${NC}"
 cat > "$HY_DIR/config.yaml" << HYEOF
 listen: :$hy_port
 
@@ -72,8 +112,12 @@ tls:
   key: $HY_DIR/hysteria.key
 
 auth:
-  type: password
-  password: $hy_pass
+  type: command
+  command: /usr/bin/python3 /etc/MaximusVpsMx/core/hysteria_auth.py
+
+obfs:
+  type: salamander
+  password: maximus_obfs_maestra
 
 masquerade:
   type: proxy
@@ -82,8 +126,10 @@ masquerade:
     rewriteHost: true
 
 bandwidth:
-  up: 100 mbps
-  down: 100 mbps
+  up: 1 gbps
+  down: 1 gbps
+
+ignoreClientBandwidth: true
 HYEOF
 
 # Matar procesos previos

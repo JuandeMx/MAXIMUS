@@ -1,6 +1,6 @@
 #!/bin/bash
-# MaximusVpsMx - Super Panel v2.0
-# Modificado para Submenús y Funciones Avanzadas
+# MaximusVpsMx - Super Panel v11.0.0 (Premium)
+# Modificado para Submenús y Funciones Avanzadas + Hysteria v2 Manager
 
 # SEGURIDAD: Solo root puede ejecutar este panel
 if [ "$EUID" -ne 0 ]; then
@@ -553,6 +553,84 @@ sub_slowdns() {
     menu_protocolos
 }
 
+# --- SUBMENÚ HYSTERIA v2 ---
+sub_hysteria() {
+    while true; do
+        clear
+        # Detección de estatus
+        systemctl is-active --quiet hysteria && hy_st="${GREEN}[ON]${NC}" || hy_st="${RED}[OFF]${NC}"
+        hy_port=$(grep 'listen:' /etc/hysteria/config.yaml 2>/dev/null | grep -o '[0-9]*' | head -1)
+        [ -z "$hy_port" ] && hy_port="443"
+
+        echo -e " ${GREEN}< MANEJADOR HYSTERIA v2 >${NC}"
+        echo -e "${RED}=======================================================${NC}"
+        echo -e "${YELLOW}           GESTIÓN DE CUENTAS PREMIUM${NC}"
+        echo -e "${RED}=======================================================${NC}"
+        echo -e " Estatus: $hy_st   Puerto: ${WHITE}$hy_port${NC}"
+        echo -e "${RED}-------------------------------------------------------${NC}"
+        echo -e "${CYAN} [1] CREAR USUARIO HYSTERIA${NC}"
+        echo -e "${CYAN} [2] ELIMINAR / RENOVAR USUARIO${NC}"
+        echo -e "${CYAN} [3] LISTAR CUENTAS ACTIVAS${NC}"
+        echo -e "${RED}-------------------------------------------------------${NC}"
+        echo -e "${CYAN} [4] MONITOR DE CONEXIONES${NC}"
+        echo -e "${CYAN} [5] CONFIGURACIÓN GLOBAL (Puerto/Obfs)${NC}"
+        echo -e "${CYAN} [6] INSTALAR / REINSTALAR MOTOR H2${NC}"
+        echo -e "${RED}=======================================================${NC}"
+        echo -e "${CYAN} [0] VOLVER${NC}"
+        echo -e "${RED}=======================================================${NC}"
+        echo -ne "${YELLOW} Selecciona: ${NC}"; read opt_hy
+
+        case $opt_hy in
+            1)
+                echo -e "\n${YELLOW}▶ Nuevo Usuario Hysteria${NC}"
+                read -p " Nombre de Usuario: " hy_user
+                read -p " Contraseña/Key: " hy_pass
+                read -p " Días de Duración: " hy_days
+                read -p " Límite Bajada (Mbps): " hy_down
+                read -p " Límite Subida (Mbps): " hy_up
+                
+                exp_date=$(date -d "+$hy_days days" +%Y-%m-%d)
+                # user:pass:expiry:up_m:down_m
+                echo "$hy_user:$hy_pass:$exp_date:$hy_up:$hy_down" >> /etc/MaximusVpsMx/hysteria_users.db
+                
+                # Generar enlace hy2
+                server_ip=$(wget -qO- ipv4.icanhazip.com)
+                obfs_val=$(grep 'password:' /etc/hysteria/config.yaml | tail -1 | awk '{print $NF}')
+                echo -e "\n${GREEN}✅ Usuario $hy_user Creado Correctamente.${NC}"
+                echo -e "${CYAN}Expiración: $exp_date${NC}"
+                echo -e "${WHITE}-------------------------------------------------------${NC}"
+                echo -e "${YELLOW}📋 ENLACE HY2:${NC}"
+                echo -e "${WHITE}hy2://$hy_pass@$server_ip:$hy_port?insecure=1&sni=bing.com&obfs=salamander&obfs-password=$obfs_val#$hy_user${NC}"
+                echo -e "${WHITE}-------------------------------------------------------${NC}"
+                read -p "Presiona Enter..." ;;
+            2)
+                echo -e "\n${YELLOW}▶ Eliminar Usuario Hysteria${NC}"
+                read -p " Nombre a eliminar: " user_del
+                sed -i "/^$user_del:/d" /etc/MaximusVpsMx/hysteria_users.db
+                echo -e "${RED}✅ Usuario $user_del eliminado.${NC}"; sleep 2 ;;
+            3)
+                echo -e "\n${YELLOW}▶ Cuentas Activas Hysteria v2${NC}"
+                echo -e "${CYAN}-------------------------------------------------------${NC}"
+                printf "${WHITE}%-12s | %-12s | %-10s | %-10s\n${NC}" "USUARIO" "EXPIRACIÓN" "LIMIT UP" "LIMIT DOWN"
+                echo -e "${CYAN}-------------------------------------------------------${NC}"
+                while IFS=: read -r huser hpass hexp hup hdown; do
+                    printf "%-12s | %-12s | %-10s | %-10s\n" "$huser" "$hexp" "${hup}M" "${hdown}M"
+                done < /etc/MaximusVpsMx/hysteria_users.db
+                read -p "Presiona Enter..." ;;
+            4)
+                echo -e "\n${YELLOW}▶ Monitor Hysteria (Presiona Ctrl+C para salir)...${NC}"
+                journalctl -u hysteria -f ;;
+            5)
+                echo -e "\n${YELLOW}▶ Configuración Global Hysteria${NC}"
+                nano /etc/hysteria/config.yaml
+                systemctl restart hysteria 2>/dev/null ;;
+            6)
+                bash /etc/MaximusVpsMx/modules/install_hysteria.sh ;;
+            0) break ;;
+        esac
+    done
+}
+
 # --- SUBMENÚ DE PROTOCOLOS ---
 menu_protocolos() {
     clear
@@ -669,7 +747,7 @@ menu_protocolos() {
         5) sub_slowdns ;;
         6) gestor_servicio "WS-EPRO" "ws-epro" ;;
         7) gestor_servicio "UDP-CUSTOM" "udp-custom" ;;
-        8) gestor_servicio "UDP-HYSTERIA" "hysteria" ;;
+        8) sub_hysteria ;;
         9) gestor_servicio "BADVPN-UDPGW" "badvpn" ;;
         10) gestor_servicio "SQUID" "squid" ;;
         11) gestor_servicio "OPENVPN" "openvpn" ;;
