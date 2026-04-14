@@ -552,6 +552,88 @@ sub_slowdns() {
     menu_protocolos
 }
 
+# --- SUBMENÚ X-UI PANEL (V2RAY/XRAY) ---
+sub_xui() {
+    while true; do
+        clear
+        systemctl is-active --quiet x-ui 2>/dev/null && xui_st="${GREEN}[ON]${NC}" || xui_st="${RED}[OFF]${NC}"
+        # Obtener puerto de sqlite o de setting
+        xui_port=$(/usr/local/x-ui/x-ui setting -show 2>/dev/null | grep -Po 'webPort: \K[0-9]+')
+        [ -z "$xui_port" ] && xui_port="--"
+
+        echo -e " ${GREEN}< MANEJADOR PANEL X-UI >${NC}"
+        echo -e "${RED}=======================================================${NC}"
+        echo -e "${YELLOW}           GESTIÓN DE RUTEO V2RAY/XRAY${NC}"
+        echo -e "${RED}=======================================================${NC}"
+        echo -e " Estatus: $xui_st   Puerto Web: ${WHITE}$xui_port${NC}"
+        echo -e "${RED}-------------------------------------------------------${NC}"
+        echo -e "${CYAN} [1] INSTALAR O REINSTALAR X-UI${NC}"
+        echo -e "${CYAN} [2] DESINSTALAR X-UI COMPLETAMENTE${NC}"
+        echo -e "${RED}-------------------------------------------------------${NC}"
+        echo -e "${CYAN} [3] CAMBIAR PUERTO DEL PANEL WEB${NC}"
+        echo -e "${CYAN} [4] ABRIR PANEL WEB${NC}"
+        echo -e "${RED}=======================================================${NC}"
+        echo -e "${CYAN} [0] VOLVER${NC}"
+        echo -e "${RED}=======================================================${NC}"
+        echo -ne "${YELLOW} Selecciona: ${NC}"; read opt_xui
+
+        case $opt_xui in
+            1)
+                bash /etc/MaximusVpsMx/modules/install_xui.sh
+                ;;
+            2)
+                echo -e "\n${RED}⚠️ Esto eliminará el panel X-UI y todos sus usuarios.${NC}"
+                read -p " ¿Estás seguro? (s/n): " conf_del
+                if [[ "$conf_del" == "s" || "$conf_del" == "S" ]]; then
+                    echo -e "${YELLOW}[+] Deteniendo y limpiando X-UI...${NC}"
+                    systemctl stop x-ui 2>/dev/null
+                    systemctl disable x-ui 2>/dev/null
+                    rm -rf /usr/local/x-ui
+                    rm -rf /etc/x-ui
+                    rm -f /usr/bin/x-ui
+                    rm -f /etc/systemd/system/x-ui.service
+                    systemctl daemon-reload
+                    echo -e "${GREEN}✅ Panel X-UI desinstalado.${NC}"
+                    sleep 2
+                fi
+                ;;
+            3)
+                if [ "$xui_port" == "--" ]; then
+                    echo -e "\n${RED}Primero debes instalar X-UI.${NC}"; sleep 2
+                else
+                    echo -e "\n${YELLOW}▶ Cambiar Puerto del Panel X-UI${NC}"
+                    read -p " Ingresa el nuevo puerto (ej. 54321): " n_port
+                    if [[ "$n_port" =~ ^[0-9]+$ ]]; then
+                        /usr/local/x-ui/x-ui setting -port $n_port >/dev/null 2>&1
+                        ufw allow $n_port/tcp >/dev/null 2>&1
+                        systemctl restart x-ui
+                        echo -e "${GREEN}✅ Puerto cambiado a $n_port.${NC}"
+                    else
+                        echo -e "${RED}Puerto inválido.${NC}"
+                    fi
+                    sleep 2
+                fi
+                ;;
+            4)
+                if [ "$xui_port" == "--" ]; then
+                    echo -e "\n${RED}Primero debes instalar X-UI.${NC}"; sleep 2
+                else
+                    IP=$(wget -qO- ipv4.icanhazip.com 2>/dev/null)
+                    [ -z "$IP" ] && IP="Tu-IP"
+                    echo -e "\n${GREEN}=======================================================${NC}"
+                    echo -e "${CYAN}▶ URL DE ACCESO AL PANEL:${NC}"
+                    echo -e "${WHITE}http://$IP:$xui_port/${NC}"
+                    echo -e "${GREEN}=======================================================${NC}"
+                    echo -e "Copia el link y pégalo en tu navegador."
+                    read -p " Presiona Enter para volver..."
+                fi
+                ;;
+            0) break ;;
+            *) ;;
+        esac
+    done
+}
+
 # --- SUBMENÚ HYSTERIA v2 ---
 sub_hysteria() {
     while true; do
@@ -715,7 +797,8 @@ menu_protocolos() {
     fi
 
     st_squid="${RED}[OFF]${NC}"; st_ovpn="${RED}[OFF]${NC}"; st_chk="${GREEN}[ON]${NC}"
-    st_atken="${RED}[OFF]${NC}"; st_file="${RED}[OFF]${NC}"; st_v2ray="${RED}[OFF]${NC}"
+    st_atken="${RED}[OFF]${NC}"; st_file="${RED}[OFF]${NC}"
+    if systemctl is-active --quiet x-ui 2>/dev/null; then st_xui="${GREEN}[ON]${NC}"; else st_xui="${RED}[OFF]${NC}"; fi
     st_sshgo="${RED}[OFF]${NC}"; st_wg="${RED}[OFF]${NC}"
 
     echo -e "${RED}=======================================================${NC}"
@@ -730,7 +813,7 @@ menu_protocolos() {
     printf " ${CYAN}[3]>${WHITE} %-14s%b   ${CYAN}[12]>${WHITE} %-16s%b\n" "SOCKS PYTHON" "$st_proxy" "CHECKUSER ONLINE" "$st_chk"
     printf " ${CYAN}[4]>${WHITE} %-14s%b   ${CYAN}[13]>${WHITE} %-16s%b\n" "STUNNEL (SSL)" "$st_stun" "ATKEN and HASH" "$st_atken"
     printf " ${CYAN}[5]>${WHITE} %-14s%b   ${CYAN}[14]>${WHITE} %-16s%b\n" "SLOWDNS" "$st_dns" "FILEBROWSER" "$st_file"
-    printf " ${CYAN}[6]>${WHITE} %-14s%b   ${CYAN}[15]>${WHITE} %-16s%b\n" "WS-EPRO" "$st_ws" "V2RAY/XRAY" "$st_v2ray"
+    printf " ${CYAN}[6]>${WHITE} %-14s%b   ${CYAN}[15]>${WHITE} %-16s%b\n" "WS-EPRO" "$st_ws" "PANEL X-UI" "$st_xui"
     printf " ${CYAN}[7]>${WHITE} %-14s%b   ${CYAN}[16]>${WHITE} %-16s%b\n" "UDP-CUSTOM" "$st_udpc" "SSHGO" "$st_sshgo"
     printf " ${CYAN}[8]>${WHITE} %-14s%b   ${CYAN}[17]>${WHITE} %-16s%b\n" "UDP-HYSTERIA" "$st_udph" "WIREGUARD" "$st_wg"
     printf " ${CYAN}[9]>${WHITE} %-14s%b\n" "BADVPN-UDPGW" "$st_udp"
@@ -755,7 +838,7 @@ menu_protocolos() {
         12) gestor_servicio "CHECKUSER ONLINE" "checkuser" ;;
         13) gestor_servicio "ATKEN AND HASH" "atken" ;;
         14) gestor_servicio "FILEBROWSER" "filebrowser" ;;
-        15) gestor_servicio "V2RAY/XRAY" "v2ray" ;;
+        15) sub_xui ; menu_protocolos ;;
         16) gestor_servicio "SSHGO" "sshgo" ;;
         17) gestor_servicio "WIREGUARD" "wireguard" ;;
         18)
