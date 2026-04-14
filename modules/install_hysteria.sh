@@ -65,16 +65,25 @@ import datetime
 import os
 
 DB_PATH = "/etc/MaximusVpsMx/hysteria_users.db"
+LOG_PATH = "/var/log/MaximusVpsMx/hysteria_auth.log"
+
+def log_msg(msg):
+    try:
+        with open(LOG_PATH, "a") as f:
+            f.write(f"[{datetime.datetime.now()}] {msg}\n")
+    except:
+        pass
 
 def check_auth():
     try:
-        # sys.argv en Hysteria 2: script addr auth rx tx
         if len(sys.argv) < 3:
+            log_msg("Faltan argumentos pasados por Hysteria.")
             sys.exit(1)
             
         client_auth = sys.argv[2]
         
         if not os.path.exists(DB_PATH):
+            log_msg("No se encontro la database de usuarios.")
             sys.exit(1)
 
         with open(DB_PATH, "r") as f:
@@ -89,16 +98,18 @@ def check_auth():
                 if password == client_auth:
                     expiry_date = datetime.datetime.strptime(expiry_str, "%Y-%m-%d")
                     if datetime.datetime.now() <= expiry_date:
-                        print(user) # Retorna el usuario al server
+                        log_msg(f"Auth OK para usuario: {user}")
+                        print(user) 
                         sys.exit(0)
                     else:
-                        print("Cuenta expirada")
+                        log_msg(f"Auth Fallida: Cuenta expirada ({user})")
                         sys.exit(1)
                         
-        print("Credenciales invalidas")
+        log_msg(f"Auth Fallida: Credenciales invalidas (Pass: {client_auth})")
         sys.exit(1)
 
-    except Exception:
+    except Exception as e:
+        log_msg(f"Error interno: {str(e)}")
         sys.exit(1)
 
 if __name__ == "__main__":
@@ -125,7 +136,7 @@ tls:
 
 auth:
   type: command
-  command: python3 /etc/MaximusVpsMx/core/hysteria_auth.py
+  command: /usr/bin/python3 /etc/MaximusVpsMx/core/hysteria_auth.py
 
 obfs:
   type: salamander
