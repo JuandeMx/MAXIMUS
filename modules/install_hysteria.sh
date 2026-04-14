@@ -80,7 +80,7 @@ def check_auth():
             log_msg("Faltan argumentos pasados por Hysteria.")
             sys.exit(1)
             
-        client_auth = sys.argv[2]
+        client_auth = sys.argv[2].strip()
         
         if not os.path.exists(DB_PATH):
             log_msg("No se encontro la database de usuarios.")

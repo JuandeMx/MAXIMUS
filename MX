@@ -618,7 +618,9 @@ sub_hysteria() {
                 read -p "Presiona Enter..." ;;
             4)
                 echo -e "\n${YELLOW}▶ Monitor Hysteria (Presiona Ctrl+C para salir)...${NC}"
-                journalctl -u hysteria -f ;;
+                tail -f /var/log/MaximusVpsMx/hysteria_auth.log &
+                journalctl -u hysteria -f
+                kill %1 2>/dev/null ;;
             5)
                 echo -e "\n${YELLOW}▶ Configuración Global Hysteria${NC}"
                 nano /etc/hysteria/config.yaml
