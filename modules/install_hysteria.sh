@@ -155,8 +155,14 @@ LimitNOFILE=infinity
 WantedBy=multi-user.target
 EOF
 
-# Abrir puerto en firewall
+# Abrir puerto en firewall local
 ufw allow ${hy_port}/udp 2>/dev/null
+
+# EXCLUSIÓN NAT (Crítico para que udp-custom no robe el tráfico de Hysteria)
+echo -e "${YELLOW}[+] Salvando a Hysteria de la redirección maestra (udp-custom)...${NC}"
+iptables -t nat -I PREROUTING -p udp --dport ${hy_port} -j ACCEPT
+ip6tables -t nat -I PREROUTING -p udp --dport ${hy_port} -j ACCEPT 2>/dev/null
+
 
 # Activar y arrancar
 systemctl daemon-reload
