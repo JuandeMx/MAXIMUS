@@ -1,7 +1,7 @@
-                    MMM"""AMV           mm            
-                    M'   AMV            MM            
-`7MMpMMMb.  ,pW"Wq. '   AMV    .gP"Ya mmMMmm  ,6"Yb.  
-  MM    MM 6W'   `Wb   AMV    ,M'   Yb  MM   8)   MM  
-  MM    MM 8M     M8  AMV   , 8M""""""  MM    ,pm9MM  
-  MM    MM YA.   ,A9 AMV   ,M YM.    ,  MM   8M   MM  
-.JMML  JMML.`Ybmd9' AMVmmmmMM  `Mbmmd'  `Mbmo`Moo9^Yo.
+                    [1;36mMMM"""AMV[0;37m           mm            
+                    [1;36mM'   AMV[0;37m            MM            
+`7MMpMMMb.  ,pW"Wq. [1;36m'   AMV[0;37m    .gP"Ya mmMMmm  ,6"Yb.  
+  MM    MM 6W'   `Wb   [1;36mAMV[0;37m    ,M'   Yb  MM   8)   MM  
+  MM    MM 8M     M8  [1;36mAMV[0;37m   , 8M""""""  MM    ,pm9MM  
+  MM    MM YA.   ,A9 [1;36mAMV[0;37m   ,M YM.    ,  MM   8M   MM  
+.JMML  JMML.`Ybmd9' [1;36mAMVmmmmMM[0;37m  `Mbmmd'  `Mbmo`Moo9^Yo.
