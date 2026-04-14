@@ -38,9 +38,13 @@ echo -e "${YELLOW}[+] Iniciando bases de datos y demonio X-UI...${NC}"
 systemctl daemon-reload
 systemctl enable x-ui > /dev/null 2>&1
 systemctl start x-ui > /dev/null 2>&1
-sleep 2
+sleep 3
 
-/usr/local/x-ui/x-ui setting -cert /etc/x-ui/server.crt -key /etc/x-ui/server.key >/dev/null 2>&1
+apt-get install -y sqlite3 >/dev/null 2>&1
+chmod 644 /etc/x-ui/server.crt /etc/x-ui/server.key
+sqlite3 /etc/x-ui/x-ui.db "UPDATE settings SET value='/etc/x-ui/server.crt' WHERE key='webCertFile';" >/dev/null 2>&1
+sqlite3 /etc/x-ui/x-ui.db "UPDATE settings SET value='/etc/x-ui/server.key' WHERE key='webKeyFile';" >/dev/null 2>&1
+
 systemctl restart x-ui > /dev/null 2>&1
 sleep 1
 
