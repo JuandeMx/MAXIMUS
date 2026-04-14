@@ -30,12 +30,19 @@ cp /usr/local/x-ui/x-ui.service /etc/systemd/system/x-ui.service
 cp /usr/local/x-ui/x-ui.sh /usr/bin/x-ui
 chmod +x /usr/bin/x-ui
 
-echo -e "${YELLOW}[+] Iniciando bases de datos y demonio X-UI...${NC}"
+echo -e "${YELLOW}[+] Generando Certificado TLS/SSL Autenticado...${NC}"
 mkdir -p /etc/x-ui/
+openssl req -x509 -newkey rsa:2048 -days 3650 -nodes -sha256 -subj "/CN=MaximusVpsMx/O=Maximus/C=US" -keyout /etc/x-ui/server.key -out /etc/x-ui/server.crt >/dev/null 2>&1
+
+echo -e "${YELLOW}[+] Iniciando bases de datos y demonio X-UI...${NC}"
 systemctl daemon-reload
 systemctl enable x-ui > /dev/null 2>&1
-systemctl restart x-ui > /dev/null 2>&1
+systemctl start x-ui > /dev/null 2>&1
 sleep 2
+
+/usr/local/x-ui/x-ui setting -cert /etc/x-ui/server.crt -key /etc/x-ui/server.key >/dev/null 2>&1
+systemctl restart x-ui > /dev/null 2>&1
+sleep 1
 
 PORT=$(/usr/local/x-ui/x-ui setting -show 2>/dev/null | grep -Po 'webPort: \K[0-9]+')
 if [ -z "$PORT" ]; then
@@ -52,7 +59,7 @@ clear
 echo -e "${CYAN}=======================================================${NC}"
 echo -e "${GREEN} ✅ PANEL X-UI INSTALADO EXITOSAMENTE${NC}"
 echo -e "${CYAN}=======================================================${NC}"
-echo -e "${YELLOW}▶ URL de Acceso:   ${WHITE}http://$IP:$PORT/${NC}"
+echo -e "${YELLOW}▶ URL de Acceso:   ${WHITE}https://$IP:$PORT/${NC}"
 echo -e "${YELLOW}▶ Usuario Inicial: ${WHITE}admin${NC}"
 echo -e "${YELLOW}▶ Clave Inicial:   ${WHITE}admin${NC}"
 echo -e "${CYAN}=======================================================${NC}"

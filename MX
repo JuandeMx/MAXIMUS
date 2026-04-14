@@ -622,7 +622,7 @@ sub_xui() {
                     [ -z "$IP" ] && IP="Tu-IP"
                     echo -e "\n${GREEN}=======================================================${NC}"
                     echo -e "${CYAN}▶ URL DE ACCESO AL PANEL:${NC}"
-                    echo -e "${WHITE}http://$IP:$xui_port/${NC}"
+                    echo -e "${WHITE}https://$IP:$xui_port/${NC}"
                     echo -e "${GREEN}=======================================================${NC}"
                     echo -e "Copia el link y pégalo en tu navegador."
                     read -p " Presiona Enter para volver..."
