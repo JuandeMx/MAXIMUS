@@ -61,7 +61,6 @@ echo -e "${GREEN}[+] Instalando motor de autenticación dinámico...${NC}"
 mkdir -p /etc/MaximusVpsMx/core
 cat > /etc/MaximusVpsMx/core/hysteria_auth.py << 'PYEOF'
 import sys
-import json
 import datetime
 import os
 
@@ -69,26 +68,38 @@ DB_PATH = "/etc/MaximusVpsMx/hysteria_users.db"
 
 def check_auth():
     try:
-        line = sys.stdin.readline()
-        if not line: return
-        data = json.loads(line)
-        client_auth = data.get("auth", "")
+        # sys.argv en Hysteria 2: script addr auth rx tx
+        if len(sys.argv) < 3:
+            sys.exit(1)
+            
+        client_auth = sys.argv[2]
+        
         if not os.path.exists(DB_PATH):
-            print(json.dumps({"ok": False}))
-            return
+            sys.exit(1)
+
         with open(DB_PATH, "r") as f:
             for line in f:
                 parts = line.strip().split(":")
-                if len(parts) < 5: continue
-                user, password, expiry_str, up_m, down_m = parts
+                if len(parts) < 3: continue
+                
+                user = parts[0]
+                password = parts[1]
+                expiry_str = parts[2]
+                
                 if password == client_auth:
                     expiry_date = datetime.datetime.strptime(expiry_str, "%Y-%m-%d")
                     if datetime.datetime.now() <= expiry_date:
-                        print(json.dumps({"ok": True, "id": user, "up": int(up_m)*1000000, "down": int(down_m)*1000000}))
-                        return
-        print(json.dumps({"ok": False}))
-    except:
-        print(json.dumps({"ok": False}))
+                        print(user) # Retorna el usuario al server
+                        sys.exit(0)
+                    else:
+                        print("Cuenta expirada")
+                        sys.exit(1)
+                        
+        print("Credenciales invalidas")
+        sys.exit(1)
+
+    except Exception:
+        sys.exit(1)
 
 if __name__ == "__main__":
     check_auth()
