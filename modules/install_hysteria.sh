@@ -21,7 +21,8 @@ read -p " Puerto UDP para Hysteria (Default 443, Enter para Default): " hy_port
 read -p " Contraseña de autenticación (Default: maximus): " hy_pass
 [ -z "$hy_pass" ] && hy_pass="maximus"
 
-echo -e "\n${GREEN}[+] Preparando entorno...${NC}"
+echo -e "\n${GREEN}[+] Preparando entorno e instalando dependencias...${NC}"
+apt-get update -y && apt-get install -y python3 wget openssl 2>/dev/null
 
 # Detectar arquitectura
 ARCH=$(uname -m)
