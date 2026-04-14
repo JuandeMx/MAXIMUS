@@ -60,6 +60,7 @@ chmod +x "$HY_DIR/hysteria"
 echo -e "${GREEN}[+] Instalando motor de autenticación dinámico...${NC}"
 mkdir -p /etc/MaximusVpsMx/core
 cat > /etc/MaximusVpsMx/core/hysteria_auth.py << 'PYEOF'
+#!/usr/bin/env python3
 import sys
 import datetime
 import os
@@ -136,7 +137,7 @@ tls:
 
 auth:
   type: command
-  command: /usr/bin/python3 /etc/MaximusVpsMx/core/hysteria_auth.py
+  command: /etc/MaximusVpsMx/core/hysteria_auth.py
 
 obfs:
   type: salamander
