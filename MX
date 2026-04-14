@@ -557,8 +557,11 @@ sub_xui() {
     while true; do
         clear
         systemctl is-active --quiet x-ui 2>/dev/null && xui_st="${GREEN}[ON]${NC}" || xui_st="${RED}[OFF]${NC}"
-        # Obtener puerto de sqlite o de setting
-        xui_port=$(/usr/local/x-ui/x-ui setting -show 2>/dev/null | grep -Po 'webPort: \K[0-9]+')
+        # Obtener puerto de sqlite o por defecto
+        if [ -f /etc/x-ui/x-ui.db ]; then
+            xui_port=$(sqlite3 /etc/x-ui/x-ui.db "SELECT value FROM settings WHERE key='webPort';" 2>/dev/null)
+        fi
+        [ -z "$xui_port" ] && [ -f /usr/local/x-ui/x-ui ] && xui_port="54321"
         [ -z "$xui_port" ] && xui_port="--"
 
         echo -e " ${GREEN}< MANEJADOR PANEL X-UI >${NC}"
