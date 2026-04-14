@@ -33,20 +33,13 @@ chmod +x /usr/bin/x-ui
 echo -e "${YELLOW}[+] Generando Certificado TLS/SSL Autenticado...${NC}"
 mkdir -p /etc/x-ui/
 openssl req -x509 -newkey rsa:2048 -days 3650 -nodes -sha256 -subj "/CN=MaximusVpsMx/O=Maximus/C=US" -keyout /etc/x-ui/server.key -out /etc/x-ui/server.crt >/dev/null 2>&1
+chmod 644 /etc/x-ui/server.crt /etc/x-ui/server.key
 
 echo -e "${YELLOW}[+] Iniciando bases de datos y demonio X-UI...${NC}"
 systemctl daemon-reload
 systemctl enable x-ui > /dev/null 2>&1
-systemctl start x-ui > /dev/null 2>&1
-sleep 3
-
-apt-get install -y sqlite3 >/dev/null 2>&1
-chmod 644 /etc/x-ui/server.crt /etc/x-ui/server.key
-sqlite3 /etc/x-ui/x-ui.db "UPDATE settings SET value='/etc/x-ui/server.crt' WHERE key='webCertFile';" >/dev/null 2>&1
-sqlite3 /etc/x-ui/x-ui.db "UPDATE settings SET value='/etc/x-ui/server.key' WHERE key='webKeyFile';" >/dev/null 2>&1
-
 systemctl restart x-ui > /dev/null 2>&1
-sleep 1
+sleep 2
 
 PORT=$(/usr/local/x-ui/x-ui setting -show 2>/dev/null | grep -Po 'webPort: \K[0-9]+')
 if [ -z "$PORT" ]; then
@@ -63,12 +56,16 @@ clear
 echo -e "${CYAN}=======================================================${NC}"
 echo -e "${GREEN} ✅ PANEL X-UI INSTALADO EXITOSAMENTE${NC}"
 echo -e "${CYAN}=======================================================${NC}"
-echo -e "${YELLOW}▶ URL de Acceso:   ${WHITE}https://$IP:$PORT/${NC}"
+echo -e "${YELLOW}▶ URL de Acceso:   ${WHITE}http://$IP:$PORT/${NC}"
 echo -e "${YELLOW}▶ Usuario Inicial: ${WHITE}admin${NC}"
 echo -e "${YELLOW}▶ Clave Inicial:   ${WHITE}admin${NC}"
 echo -e "${CYAN}=======================================================${NC}"
 echo -e "${RED}⚠️ IMPORTANTE: Por seguridad, cambia estas credenciales${NC}"
 echo -e "${RED}   inmediatamente desde el propio Panel Web.${NC}"
+echo -e "${CYAN}=======================================================${NC}"
+echo -e "${GREEN}▶ Para Quitar la alerta roja, copia y pega esto en Panel Settings:${NC}"
+echo -e "${WHITE}  Ruta Clave Pública (Public Key):${CYAN} /etc/x-ui/server.crt${NC}"
+echo -e "${WHITE}  Ruta Clave Privada (Private Key):${CYAN} /etc/x-ui/server.key${NC}"
 echo -e "${CYAN}=======================================================${NC}"
 echo -e ""
 read -p " Presiona Enter para volver..."
