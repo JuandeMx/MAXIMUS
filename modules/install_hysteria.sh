@@ -118,7 +118,8 @@ auth:
 
 obfs:
   type: salamander
-  password: maximus_obfs_maestra
+  salamander:
+    password: maximus_obfs_maestra
 
 masquerade:
   type: proxy

@@ -102,7 +102,6 @@ menu_usuarios() {
     echo -e "${CYAN}[14]>${WHITE} CONFIGURACION ADMINISTRADOR DE CUENTAS${NC}"
     echo -e "${RED}=======================================================${NC}"
     echo -e "${CYAN}[0]${RED} Volver            ${CYAN}[15]${WHITE} CAMBIAR A MODO SSH/HWID/TOKE${NC}"
-    echo -e "${CYAN}[16]${WHITE} GESTIÓN DE CUENTAS HYSTERIA v2${NC}"
     echo -e "${RED}=======================================================${NC}"
     echo -ne "${YELLOW}Ingresa una Opcion: ${NC}"
     read opt_user
@@ -244,7 +243,6 @@ menu_usuarios() {
             echo -e "\n${YELLOW}▶ Modo SSH/HWID/TOKEN (Próximamente)${NC}"
             sleep 2; menu_usuarios
             ;;
-        16) sub_hysteria ; menu_usuarios ;;
         0) main_menu ;;
         *) menu_usuarios ;;
     esac
