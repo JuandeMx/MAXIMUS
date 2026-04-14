@@ -101,8 +101,8 @@ menu_usuarios() {
     echo -e "${RED}-------------------------------------------------------${NC}"
     echo -e "${CYAN}[14]>${WHITE} CONFIGURACION ADMINISTRADOR DE CUENTAS${NC}"
     echo -e "${RED}=======================================================${NC}"
-    # Se ajusta longitud a 55 caracteres. " Volver" (7) + ESPACIOS(12) + " [15]" (4) + "CAMBIAR..." (32) = 55
     echo -e "${CYAN}[0]${RED} Volver            ${CYAN}[15]${WHITE} CAMBIAR A MODO SSH/HWID/TOKE${NC}"
+    echo -e "${CYAN}[16]${WHITE} GESTIÓN DE CUENTAS HYSTERIA v2${NC}"
     echo -e "${RED}=======================================================${NC}"
     echo -ne "${YELLOW}Ingresa una Opcion: ${NC}"
     read opt_user
@@ -244,6 +244,7 @@ menu_usuarios() {
             echo -e "\n${YELLOW}▶ Modo SSH/HWID/TOKEN (Próximamente)${NC}"
             sleep 2; menu_usuarios
             ;;
+        16) sub_hysteria ;;
         0) main_menu ;;
         *) menu_usuarios ;;
     esac
@@ -1049,8 +1050,6 @@ menu_ajustes_script() {
         echo -e "${CYAN} [1] ACTUALIZAR PANEL (GitHub Sync)${NC}"
         echo -e "${CYAN} [2] REINSTALAR PANEL (Forzar Limpieza)${NC}"
         echo -e "${CYAN} [3] CAMBIAR BANNER SSH (issue.net/Dropbear)${NC}"
-        echo -e "${RED}-------------------------------------------------------${NC}"
-        echo -e "${CYAN} [4] ELIMINAR / DESINSTALAR PANEL${NC}"
         echo -e "${RED}-------------------------------------------------------${NC}"
         echo -e "${CYAN} [0] VOLVER${NC}"
         echo -e "${RED}=======================================================${NC}"
