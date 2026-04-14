@@ -113,7 +113,7 @@ tls:
 
 auth:
   type: command
-  command: /usr/bin/python3 /etc/MaximusVpsMx/core/hysteria_auth.py
+  command: python3 /etc/MaximusVpsMx/core/hysteria_auth.py
 
 obfs:
   type: salamander
@@ -126,10 +126,8 @@ masquerade:
     rewriteHost: true
 
 bandwidth:
-  up: 1 gbps
-  down: 1 gbps
-
-ignoreClientBandwidth: true
+  up: 100 mbps
+  down: 100 mbps
 HYEOF
 
 # Matar procesos previos

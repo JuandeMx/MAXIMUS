@@ -244,7 +244,7 @@ menu_usuarios() {
             echo -e "\n${YELLOW}▶ Modo SSH/HWID/TOKEN (Próximamente)${NC}"
             sleep 2; menu_usuarios
             ;;
-        16) sub_hysteria ;;
+        16) sub_hysteria ; menu_usuarios ;;
         0) main_menu ;;
         *) menu_usuarios ;;
     esac
@@ -748,7 +748,7 @@ menu_protocolos() {
         5) sub_slowdns ;;
         6) gestor_servicio "WS-EPRO" "ws-epro" ;;
         7) gestor_servicio "UDP-CUSTOM" "udp-custom" ;;
-        8) sub_hysteria ;;
+        8) sub_hysteria ; menu_protocolos ;;
         9) gestor_servicio "BADVPN-UDPGW" "badvpn" ;;
         10) gestor_servicio "SQUID" "squid" ;;
         11) gestor_servicio "OPENVPN" "openvpn" ;;
