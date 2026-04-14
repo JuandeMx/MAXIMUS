@@ -42,7 +42,9 @@ mkdir -p /var/log/MaximusVpsMx
 
 cp -r "$SCRIPT_DIR/"* /etc/MaximusVpsMx/
 chmod +x /etc/MaximusVpsMx/MX
-chmod +x /etc/MaximusVpsMx/core/PDirect.py
+chmod +x /etc/MaximusVpsMx/core/*.sh 2>/dev/null
+chmod +x /etc/MaximusVpsMx/core/*.py 2>/dev/null
+touch /etc/MaximusVpsMx/hysteria_users.db
 
 
 
@@ -90,6 +92,7 @@ chmod 700 /etc/MaximusVpsMx/modules/cloudflare-ddns.sh 2>/dev/null
 chmod +x /etc/MaximusVpsMx/modules/install_*.sh 2>/dev/null
 chmod 600 /etc/MaximusVpsMx/cloudflare.conf 2>/dev/null
 chmod 600 /etc/MaximusVpsMx/users.db 2>/dev/null
+chmod 600 /etc/MaximusVpsMx/hysteria_users.db 2>/dev/null
 chown -R root:root /etc/MaximusVpsMx
 
 
