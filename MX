@@ -248,6 +248,79 @@ menu_usuarios() {
     esac
 }
 
+# --- ADMINISTRADOR DE CUENTAS POR PROTOCOLO ---
+menu_cuentas() {
+    while true; do
+        clear
+        draw_banner
+        echo -e "${RED}=======================================================${NC}"
+        echo -e "${YELLOW}               👥 ADMINISTRADOR DE CUENTAS${NC}"
+        echo -e "${RED}=======================================================${NC}"
+        echo -e "${CYAN}[1]>${WHITE} SSH / DROPBEAR (Usuarios del sistema)${NC}"
+        echo -e "${CYAN}[2]>${WHITE} OPENVPN (Clientes .ovpn)${NC}"
+        echo -e "${CYAN}[3]>${WHITE} HYSTERIA v2 (Cuentas premium)${NC}"
+        echo -e "${CYAN}[4]>${WHITE} PANEL X-UI (Usuarios/Inbound)${NC}"
+        echo -e "${RED}-------------------------------------------------------${NC}"
+        echo -e "${CYAN}[0]${RED} Volver${NC}"
+        echo -e "${RED}=======================================================${NC}"
+        echo -ne "${YELLOW}Ingresa una Opcion: ${NC}"
+        read opt_acc
+
+        case $opt_acc in
+            1) menu_usuarios ;;
+            2)
+                while true; do
+                    clear
+                    echo -e "${RED}=======================================================${NC}"
+                    echo -e "${YELLOW}                 👥 CUENTAS OPENVPN${NC}"
+                    echo -e "${RED}=======================================================${NC}"
+                    echo -e "${CYAN}[1]>${WHITE} LISTAR CLIENTES${NC}"
+                    echo -e "${CYAN}[2]>${WHITE} CREAR CLIENTE (.ovpn)${NC}"
+                    echo -e "${CYAN}[3]>${RED} REVOCAR CLIENTE${NC}"
+                    echo -e "${RED}-------------------------------------------------------${NC}"
+                    echo -e "${CYAN}[0]${WHITE} Volver${NC}"
+                    echo -e "${RED}=======================================================${NC}"
+                    read -p " Opción: " ovpn_opt
+
+                    case $ovpn_opt in
+                        1)
+                            if [ -f /etc/MaximusVpsMx/modules/install_openvpn.sh ]; then
+                                bash /etc/MaximusVpsMx/modules/install_openvpn.sh --list-clients
+                            else
+                                echo -e "${RED}❌ Módulo OpenVPN no encontrado.${NC}"
+                            fi
+                            read -p "Presiona Enter..." ;;
+                        2)
+                            read -p " Nombre del cliente: " c
+                            if [ -z "$c" ]; then echo -e "${RED}Nombre inválido.${NC}"; sleep 2; continue; fi
+                            if [ -f /etc/MaximusVpsMx/modules/install_openvpn.sh ]; then
+                                bash /etc/MaximusVpsMx/modules/install_openvpn.sh --add-client "$c"
+                            else
+                                echo -e "${RED}❌ Módulo OpenVPN no encontrado.${NC}"
+                            fi
+                            read -p "Presiona Enter..." ;;
+                        3)
+                            read -p " Cliente a revocar: " c
+                            if [ -z "$c" ]; then echo -e "${RED}Nombre inválido.${NC}"; sleep 2; continue; fi
+                            if [ -f /etc/MaximusVpsMx/modules/install_openvpn.sh ]; then
+                                bash /etc/MaximusVpsMx/modules/install_openvpn.sh --revoke-client "$c"
+                            else
+                                echo -e "${RED}❌ Módulo OpenVPN no encontrado.${NC}"
+                            fi
+                            read -p "Presiona Enter..." ;;
+                        0) break ;;
+                        *) ;;
+                    esac
+                done
+                ;;
+            3) sub_hysteria ;;
+            4) sub_xui ;;
+            0) break ;;
+            *) ;;
+        esac
+    done
+}
+
 # --- PURGA NUCLEAR DEL SISTEMA ---
 purgar_sistema_total() {
     clear
@@ -1236,7 +1309,7 @@ main_menu() {
     echo -e "${RED}=======================================================${NC}"
     printf "   ${CYAN}ACTIVOS: ${WHITE}%-4s ${RED}EXPIRADOS: ${WHITE}%-4s ${CYAN}TOTAL: ${WHITE}%-4s${NC}\n" "$ACTIVA" "$EXPIRADA" "$TOTAL"
     echo -e "${RED}=======================================================${NC}"
-    echo -e "${CYAN}[1]> ${WHITE}ADMINISTRAR CUENTAS (SSH/DROPBEAR)${NC}"
+    echo -e "${CYAN}[1]> ${WHITE}USUARIOS / CUENTAS (SSH, OPENVPN, HYSTERIA, X-UI)${NC}"
     echo -e "${RED}-------------------------------------------------------${NC}"
     echo -e "${CYAN}[2]> ${WHITE}CONFIGURACION DE PROTOCOLOS${NC}"
     echo -e "${CYAN}[3]> ${WHITE}HERRAMIENTAS EXTRAS${NC}"
@@ -1256,7 +1329,7 @@ main_menu() {
     read main_opt
 
     case $main_opt in
-        1) menu_usuarios ;;
+        1) menu_cuentas ;;
         2) menu_protocolos ;;
         3) menu_sistema ;;
         4) menu_ajustes_script ;;

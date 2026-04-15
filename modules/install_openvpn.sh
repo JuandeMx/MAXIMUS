@@ -239,6 +239,35 @@ revoke_client() {
   echo -e "${YELLOW}⚠️ Cliente revocado y archivo .ovpn eliminado: ${client}${NC}"
 }
 
+list_clients() {
+  if [ ! -f "${PKI_DIR}/index.txt" ]; then
+    echo -e "${RED}❌ No hay PKI. Primero instala OpenVPN.${NC}"
+    return 1
+  fi
+
+  echo -e "${CYAN}=========================================================${NC}"
+  echo -e "${YELLOW}                 CLIENTES OPENVPN (PKI)${NC}"
+  echo -e "${CYAN}=========================================================${NC}"
+  echo -e "${WHITE} Estado | Cliente | Expiración${NC}"
+  echo -e "${CYAN}---------------------------------------------------------${NC}"
+
+  # Formato index.txt: V\t<exp>\t<rev>\t<serial>\t<file>\t/CN=client
+  awk -F'\t' '
+    $1 ~ /^[VR]/ {
+      st=$1;
+      exp=$2;
+      cn=$6;
+      gsub(/^\/CN=/,"",cn);
+      if (cn=="") next;
+      printf "  %s     | %s | %s\n", st, cn, exp;
+    }
+  ' "${PKI_DIR}/index.txt" 2>/dev/null | sed 's/^  V/  ✅/; s/^  R/  ❌/'
+
+  echo -e "${CYAN}---------------------------------------------------------${NC}"
+  echo -e "${WHITE} Archivos .ovpn en: ${YELLOW}${CLIENTS_DIR}${NC}"
+  echo -e "${CYAN}=========================================================${NC}"
+}
+
 uninstall_openvpn() {
   read_current_server_settings
 
@@ -258,6 +287,60 @@ uninstall_openvpn() {
   systemctl daemon-reload >/dev/null 2>&1 || true
 
   echo -e "${GREEN}✅ OpenVPN eliminado completamente.${NC}"
+}
+
+usage() {
+  echo "Uso:"
+  echo "  install_openvpn.sh                # menú interactivo"
+  echo "  install_openvpn.sh --list-clients"
+  echo "  install_openvpn.sh --add-client <nombre>"
+  echo "  install_openvpn.sh --revoke-client <nombre>"
+  echo "  install_openvpn.sh --status"
+  echo "  install_openvpn.sh --uninstall"
+}
+
+handle_args() {
+  ensure_root
+
+  case "${1:-}" in
+    --list-clients)
+      list_clients
+      exit $?
+      ;;
+    --add-client)
+      shift
+      if [ -z "${1:-}" ]; then usage; exit 1; fi
+      if [ ! -d "$PKI_DIR" ]; then echo -e "${RED}❌ Primero instala OpenVPN.${NC}"; exit 1; fi
+      create_client "$1"
+      exit $?
+      ;;
+    --revoke-client)
+      shift
+      if [ -z "${1:-}" ]; then usage; exit 1; fi
+      if [ ! -d "$PKI_DIR" ]; then echo -e "${RED}❌ Primero instala OpenVPN.${NC}"; exit 1; fi
+      revoke_client "$1"
+      exit $?
+      ;;
+    --status)
+      read_current_server_settings
+      systemctl is-active --quiet openvpn-server@server 2>/dev/null && st="ON" || st="OFF"
+      echo "OPENVPN_STATUS=${st}"
+      echo "OPENVPN_PORT=${OVPN_PORT}"
+      echo "OPENVPN_PROTO=${OVPN_PROTO}"
+      exit 0
+      ;;
+    --uninstall)
+      uninstall_openvpn
+      exit $?
+      ;;
+    "" )
+      return 0
+      ;;
+    * )
+      usage
+      exit 1
+      ;;
+  esac
 }
 
 menu() {
@@ -348,5 +431,6 @@ menu() {
   done
 }
 
+handle_args "$@"
 menu
 
