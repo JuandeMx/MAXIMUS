@@ -43,18 +43,30 @@ case $mode_opt in
         fi
         CONNECT_TARGET="127.0.0.1:$BACKEND_PORT"
         ;;
-    2|3)
-        # --- MODO PROXY / HÍBRIDO ---
+    2)
+        # --- MODO PROXY (SSL + PROXY) ---
         echo -e "\n${CYAN}▶ MODO PROXY/HÍBRIDO SELECCIONADO${NC}"
         read -p " Puerto SSL (Default 443): " SSL_PORT
         [ -z "$SSL_PORT" ] && SSL_PORT=443
         
-        # Aseguramos que el Proxy Python v4.0 esté activo en el puerto 8080 (o 80)
-        # Usaremos el 8080 para evitar conflictos con Nginx/Apache si existen
+        # En modo PROXY clásico, el puerto recomendado es 80 (compatibilidad máxima)
+        PROXY_PORT=80
+        echo -e "${YELLOW}[+] Levantando Proxy en puerto $PROXY_PORT...${NC}"
+        bash /etc/MaximusVpsMx/modules/install_mx-proxy.sh $PROXY_PORT > /dev/null 2>&1
+        
+        CONNECT_TARGET="127.0.0.1:$PROXY_PORT"
+        ;;
+    3)
+        # --- MODO HÍBRIDO (Proxy universal) ---
+        echo -e "\n${CYAN}▶ MODO HÍBRIDO SELECCIONADO${NC}"
+        read -p " Puerto SSL (Default 443): " SSL_PORT
+        [ -z "$SSL_PORT" ] && SSL_PORT=443
+
+        # En híbrido, levantamos el proxy en 8080 para evitar conflictos con 80 si ya lo usan
         PROXY_PORT=8080
         echo -e "${YELLOW}[+] Levantando Proxy Universal en puerto $PROXY_PORT...${NC}"
         bash /etc/MaximusVpsMx/modules/install_mx-proxy.sh $PROXY_PORT > /dev/null 2>&1
-        
+
         CONNECT_TARGET="127.0.0.1:$PROXY_PORT"
         ;;
     *)

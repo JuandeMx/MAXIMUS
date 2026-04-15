@@ -840,6 +840,8 @@ menu_protocolos() {
     # Proxy Python - solo si el servicio existe
     if [ -f /etc/systemd/system/mx-proxy.service ]; then
         P_PROXY=$(grep "ExecStart=" /etc/systemd/system/mx-proxy.service 2>/dev/null | awk '{print $NF}')
+        # Compatibilidad: si por alguna razón quedó como "80-80", mostramos solo el puerto base
+        P_PROXY="${P_PROXY%%-*}"
         [ -z "$P_PROXY" ] && P_PROXY="80"
         if netstat -tuln 2>/dev/null | grep -q ":${P_PROXY} "; then st_proxy="${GREEN}[ON]${NC}"; else st_proxy="${RED}[OFF]${NC}"; fi
     else

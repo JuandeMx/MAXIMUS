@@ -15,6 +15,22 @@ if [[ -z "$proxy_port" ]]; then
     exit 1
 fi
 
+# Compatibilidad: si llega como rango (ej: 80-80), tomamos el primer puerto
+proxy_port="${proxy_port%%-*}"
+
+# Validación estricta (el motor Python solo acepta un puerto numérico)
+if ! [[ "$proxy_port" =~ ^[0-9]+$ ]]; then
+    echo -e "\e[1;31m❌ Puerto inválido. Usa un número (ej: 80).\e[0m"
+    sleep 2
+    exit 1
+fi
+
+if [ "$proxy_port" -lt 1 ] || [ "$proxy_port" -gt 65535 ]; then
+    echo -e "\e[1;31m❌ Puerto fuera de rango (1-65535).\e[0m"
+    sleep 2
+    exit 1
+fi
+
 echo -e "\n\e[1;32m[+] Limpiando puerto $proxy_port y configurando Proxy...\e[0m"
 fuser -k "$proxy_port/tcp" 2>/dev/null
 
