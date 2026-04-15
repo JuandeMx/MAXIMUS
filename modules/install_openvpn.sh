@@ -229,7 +229,7 @@ EOF
   echo -e "${GREEN}✅ Cliente creado: ${WHITE}${client_conf}${NC}"
   
   # Generar enlace de descarga
-  local port_fs=8888
+  local port_fs=8081
   echo -e "${YELLOW}📋 ENLACE DE DESCARGA:${NC}"
   echo -e "${WHITE}http://${server_ip}:${port_fs}/${client}.ovpn${NC}"
   echo -e "${CYAN}---------------------------------------------------------${NC}"

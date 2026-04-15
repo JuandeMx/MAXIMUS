@@ -10,7 +10,7 @@ WHITE='\033[1;37m'
 NC='\033[0m'
 
 FILES_DIR="/root/openvpn-clients"
-PORT=8888
+PORT=8081
 
 ensure_root() {
     if [ "$EUID" -ne 0 ]; then
