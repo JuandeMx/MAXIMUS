@@ -30,6 +30,8 @@ ufw allow 44/tcp 2>/dev/null
 ufw allow 80/tcp 2>/dev/null
 ufw allow 443/tcp 2>/dev/null
 ufw allow 7300/udp 2>/dev/null
+ufw allow 54321/tcp 2>/dev/null
+ufw allow 8081/tcp 2>/dev/null
 ufw --force enable
 
 # 2. Archivos y Rutas

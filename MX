@@ -1139,37 +1139,45 @@ menu_mantenimiento() {
     case $mant_opt in
         1)
             echo -e "\n${YELLOW}▶ Iniciando Actualización Inteligente...${NC}"
-            cd /tmp || exit
-            echo -e "${CYAN}[+] Creando respaldo temporal de datos vitales...${NC}"
+            URL_REPO="https://github.com/JuandeMx/MAXIMUS.git"
+            TEMP_DIR="/tmp/MaximusVpsMx_temp"
+
+            echo -e "${CYAN}[+] Descargando última versión de GitHub...${NC}"
+            rm -rf "$TEMP_DIR" 2>/dev/null
+            if git clone "$URL_REPO" "$TEMP_DIR"; then
+                echo -e "${GREEN}[OK] Descarga exitosa.${NC}"
+            else
+                echo -e "${RED}❌ ERROR: No se pudo conectar con GitHub.${NC}"
+                echo -e "${YELLOW}Tu panel actual no ha sido modificado.${NC}"
+                ui_pause
+                return 1
+            fi
+
+            echo -e "${CYAN}[+] Creando respaldo de datos vitales...${NC}"
             mkdir -p /tmp/MX_BACKUP
             [ -f /etc/MaximusVpsMx/users.db ] && cp /etc/MaximusVpsMx/users.db /tmp/MX_BACKUP/
             [ -f /etc/MaximusVpsMx/cloudflare.conf ] && cp /etc/MaximusVpsMx/cloudflare.conf /tmp/MX_BACKUP/
             [ -f /etc/MaximusVpsMx/slowdns/ns-domain.conf ] && cp /etc/MaximusVpsMx/slowdns/ns-domain.conf /tmp/MX_BACKUP/
             [ -f /etc/stunnel/stunnel.pem ] && cp /etc/stunnel/stunnel.pem /tmp/MX_BACKUP/
             [ -f /etc/default/dropbear ] && cp /etc/default/dropbear /tmp/MX_BACKUP/
-            
-            echo -e "${CYAN}[+] Limpiando archivos del panel actual...${NC}"
+
+            echo -e "${CYAN}[+] Reemplazando archivos del sistema...${NC}"
             systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns 2>/dev/null
             rm -rf /etc/MaximusVpsMx
             rm -f /usr/local/bin/MX
-            
-            echo -e "${CYAN}[+] Descargando última versión de GitHub...${NC}"
-            rm -rf /tmp/MaximusVpsMx
-            apt-get install -y git 2>/dev/null
-            git clone https://github.com/JuandeMx/MAXIMUS.git /tmp/MaximusVpsMx
-            
+
             echo -e "${CYAN}[+] Ejecutando instalador...${NC}"
-            cd /tmp/MaximusVpsMx && chmod +x install.sh && bash install.sh
-            
+            cd "$TEMP_DIR" && chmod +x install.sh && bash install.sh
+
             echo -e "${CYAN}[+] Restaurando respaldo de datos...${NC}"
             [ -f /tmp/MX_BACKUP/users.db ] && cp /tmp/MX_BACKUP/users.db /etc/MaximusVpsMx/
             [ -f /tmp/MX_BACKUP/cloudflare.conf ] && cp /tmp/MX_BACKUP/cloudflare.conf /etc/MaximusVpsMx/
             [ -f /tmp/MX_BACKUP/ns-domain.conf ] && cp /tmp/MX_BACKUP/ns-domain.conf /etc/MaximusVpsMx/slowdns/
             [ -f /tmp/MX_BACKUP/stunnel.pem ] && cp /tmp/MX_BACKUP/stunnel.pem /etc/stunnel/
             [ -f /tmp/MX_BACKUP/dropbear ] && cp /tmp/MX_BACKUP/dropbear /etc/default/
-            
-            rm -rf /tmp/MX_BACKUP
-            echo -e "\n${GREEN}✅ ACTUALIZACION COMPLETADA EXITOSAMENTE.${NC}"
+
+            rm -rf "$TEMP_DIR" /tmp/MX_BACKUP
+            echo -e "\n${GREEN}✅ ACTUALIZACIÓN COMPLETADA EXITOSAMENTE.${NC}"
             echo -e "${YELLOW}Presiona Enter para volver a iniciar el panel...${NC}"
             read
             MX
