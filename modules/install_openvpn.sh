@@ -227,6 +227,12 @@ EOF
 
   chmod 600 "$client_conf" 2>/dev/null
   echo -e "${GREEN}✅ Cliente creado: ${WHITE}${client_conf}${NC}"
+  
+  # Generar enlace de descarga
+  local port_fs=8888
+  echo -e "${YELLOW}📋 ENLACE DE DESCARGA:${NC}"
+  echo -e "${WHITE}http://${server_ip}:${port_fs}/${client}.ovpn${NC}"
+  echo -e "${CYAN}---------------------------------------------------------${NC}"
 }
 
 revoke_client() {
@@ -387,6 +393,11 @@ menu() {
         write_iptables_rules "$(detect_iface)" "$proto" "$port"
 
         restart_openvpn
+        
+        # Instalar y activar el servidor de descargas
+        if [ -f "/etc/MaximusVpsMx/modules/install_file-server.sh" ]; then
+            bash "/etc/MaximusVpsMx/modules/install_file-server.sh"
+        fi
 
         sleep 2
         if systemctl is-active --quiet openvpn-server@server 2>/dev/null; then
