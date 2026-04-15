@@ -373,6 +373,14 @@ gestor_servicio() {
                         badvpn) port_to_kill=7300 ;;
                         udp-custom) port_to_kill=36712 ;;
                         hysteria) port_to_kill=443 ;;
+                        openvpn)
+                            if [ -f /etc/openvpn/server/server.conf ]; then
+                                port_to_kill=$(grep -E '^port ' /etc/openvpn/server/server.conf 2>/dev/null | awk '{print $2}' | head -1)
+                                [ -z "$port_to_kill" ] && port_to_kill=1194
+                            else
+                                port_to_kill=1194
+                            fi
+                            ;;
                     esac
 
                     # Matar procesos remanentes por la fuerza
@@ -406,6 +414,21 @@ gestor_servicio() {
                             killall -9 hysteria 2>/dev/null
                             rm -rf /etc/hysteria
                             ufw delete allow 443/udp 2>/dev/null ;;
+                        openvpn)
+                            systemctl disable --now openvpn-server@server 2>/dev/null
+                            apt-get purge openvpn easy-rsa -y 2>/dev/null
+                            apt-get autoremove -y 2>/dev/null
+                            rm -rf /etc/openvpn
+                            if [ -f /etc/openvpn/server/server.conf ]; then
+                                ovpn_port=$(grep -E '^port ' /etc/openvpn/server/server.conf 2>/dev/null | awk '{print $2}' | head -1)
+                                ovpn_proto=$(grep -E '^proto ' /etc/openvpn/server/server.conf 2>/dev/null | awk '{print $2}' | head -1)
+                                [ -z "$ovpn_port" ] && ovpn_port=1194
+                                [ -z "$ovpn_proto" ] && ovpn_proto=udp
+                                ufw delete allow "${ovpn_port}/${ovpn_proto}" 2>/dev/null
+                            else
+                                ufw delete allow 1194/udp 2>/dev/null
+                            fi
+                            ;;
                     esac
                     
                     systemctl daemon-reload
@@ -803,7 +826,20 @@ menu_protocolos() {
         P_HY="--"; st_udph="${RED}[OFF]${NC}"
     fi
 
-    st_squid="${RED}[OFF]${NC}"; st_ovpn="${RED}[OFF]${NC}"; st_chk="${GREEN}[ON]${NC}"
+    # OpenVPN - detectar por config + servicio systemd
+    P_OVPN="--"
+    if [ -f /etc/openvpn/server/server.conf ]; then
+        OVPN_PORT=$(grep -E '^port ' /etc/openvpn/server/server.conf 2>/dev/null | awk '{print $2}' | head -1)
+        OVPN_PROTO=$(grep -E '^proto ' /etc/openvpn/server/server.conf 2>/dev/null | awk '{print $2}' | head -1)
+        [ -z "$OVPN_PORT" ] && OVPN_PORT="1194"
+        [ -z "$OVPN_PROTO" ] && OVPN_PROTO="udp"
+        P_OVPN="${OVPN_PORT}/${OVPN_PROTO}"
+        systemctl is-active --quiet openvpn-server@server 2>/dev/null && st_ovpn="${GREEN}[ON]${NC}" || st_ovpn="${RED}[OFF]${NC}"
+    else
+        st_ovpn="${RED}[OFF]${NC}"
+    fi
+
+    st_squid="${RED}[OFF]${NC}"; st_chk="${GREEN}[ON]${NC}"
     st_atken="${RED}[OFF]${NC}"; st_file="${RED}[OFF]${NC}"
     if systemctl is-active --quiet x-ui 2>/dev/null; then st_xui="${GREEN}[ON]${NC}"; else st_xui="${RED}[OFF]${NC}"; fi
     st_sshgo="${RED}[OFF]${NC}"; st_wg="${RED}[OFF]${NC}"
@@ -814,6 +850,7 @@ menu_protocolos() {
     echo -e " ${CYAN}SSH:${WHITE} $P_SSH  ${CYAN}DROB:${WHITE} $P_DROP  ${CYAN}PROXY:${WHITE} $P_PROXY${NC}"
     echo -e " ${CYAN}SSL:${WHITE} $P_STUN  ${CYAN}UDPG:${WHITE} $P_BAD${NC}"
     echo -e " ${CYAN}UDP-C:${WHITE} $P_UDPC  ${CYAN}HYST:${WHITE} $P_HY${NC}"
+    echo -e " ${CYAN}OVPN:${WHITE} $P_OVPN${NC}"
     echo -e "${RED}=======================================================${NC}"
     printf " ${CYAN}[1]>${WHITE} %-14s%b   ${CYAN}[10]>${WHITE} %-16s%b\n" "AJUSTES SSH" "$st_ssh" "SQUID" "$st_squid"
     printf " ${CYAN}[2]>${WHITE} %-14s%b   ${CYAN}[11]>${WHITE} %-16s%b\n" "DROPBEAR" "$st_drop" "OPENVPN" "$st_ovpn"

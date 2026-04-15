@@ -14,6 +14,9 @@ __pycache__/
 cloudflare.conf
 users.db
 .last_ip
+*.pem
+*.key
+*.crt
 
 # OS generated files
 .DS_Store
