@@ -20,15 +20,15 @@ NC='\033[0m'
 # --- UI / THEME ---
 UI_WIDTH=55
 
-ui_hr() { echo -e "${GREEN}=======================================================${NC}"; }
-ui_subhr() { echo -e "${GREEN}-------------------------------------------------------${NC}"; }
+ui_hr() { echo -e "${CYAN}═══════════════════════════════════════════════════════${NC}"; }
+ui_subhr() { echo -e "${CYAN}───────────────────────────────────────────────────────${NC}"; }
 ui_prompt() { echo -ne "${YELLOW}$1${NC}"; }
 ui_pause() { read -p "Presiona Enter para volver..." ; }
 
 # --- ARTE Y ESTÉTICA ---
 draw_banner() {
     clear
-    echo -e "${WHITE}"
+    echo -e "${CYAN}"
     if [ -f "/etc/MaximusVpsMx/ascii-text-art.txt" ]; then
         cat "/etc/MaximusVpsMx/ascii-text-art.txt"
     else
@@ -37,6 +37,7 @@ draw_banner() {
         echo "  | \\  / | __ ___  ___ _ __ ___  _   _ ___   "
         echo "  | |\\/| |/ _\` \\ \\/ / | '_ \` _ \\| | | / __|  "
         echo "  | |  | | (_| |>  <| | | | | | | |_| \\__ \\  "
+        echo "  |_|  |_|\\__,_/_/\\_\\_|_| |_| |_|\\__,_|___/  "
         echo "  |_|  |_|\\__,_/_/\\_\\_|_| |_| |_|\\__,_|___/  "
     fi
     echo -e "${NC}"
@@ -93,30 +94,23 @@ get_telemetry() {
 
 # --- SUBMENÚ DE USUARIOS ---
 menu_usuarios() {
-    ui_header "ADMINISTRACIÓN DE USUARIOS (SSH/DROPBEAR)"
-    echo -e "${CYAN}[1]>${WHITE} NUEVO USUARIO${NC}"
-    echo -e "${CYAN}[2]>${RED} REMOVER USUARIO${NC}"
-    echo -e "${CYAN}[3]>${WHITE} RENOVAR USUARIO${NC}"
-    echo -e "${CYAN}[4]>${YELLOW} EDITAR USUARIO${NC}"
-    echo -e "${CYAN}[5]>${WHITE} BLOQUEAR/DESBLOQUEAR USUARIO${NC}"
+    ui_header "ADMINISTRACIÓN DE CUENTAS SSH / DROPBEAR"
+    echo -e "  ${CYAN}[1]>${WHITE} CREAR NUEVO USUARIO PREMIUM${NC}"
+    echo -e "  ${CYAN}[2]>${RED} REMOVER / ELIMINAR USUARIO${NC}"
+    echo -e "  ${CYAN}[3]>${WHITE} RENOVAR VENCIMIENTO${NC}"
+    echo -e "  ${CYAN}[4]>${YELLOW} CAMBIAR CONTRASEÑA${NC}"
+    echo -e "  ${CYAN}[5]>${WHITE} BLOQUEAR/DESBLOQUEAR USUARIO${NC}"
     ui_subhr
-    echo -e "${CYAN}[6]>${WHITE} CONFIGURAR CONTRASEÑA GENERAL${NC}"
+    echo -e "  ${CYAN}[7]>${GREEN} VER DETALLES DE TODOS LOS USUARIOS${NC}"
+    echo -e "  ${CYAN}[8]>${WHITE} MONITOR DE CONEXIONES ACTUALES${NC}"
+    echo -e "  ${CYAN}[10]>${WHITE} LIMPIAR USUARIOS VENCIDOS${NC}"
     ui_subhr
-    echo -e "${CYAN}[7]>${GREEN} DETALLES DE TODOS USUARIOS${NC}"
-    echo -e "${CYAN}[8]>${WHITE} MONITOR DE USUARIOS CONECTADOS${NC}"
-    echo -e "${CYAN}[9]>${YELLOW} LIMITADOR-DE-CUENTAS${NC}"
-    ui_subhr
-    echo -e "${CYAN}[10]>${WHITE} ELIMINAR USUARIOS VENCIDOS${NC}"
-    echo -e "${CYAN}[11]>${RED} ELIMINAR TODOS LOS USUARIOS${NC}"
-    ui_subhr
-    echo -e "${CYAN}[12]>${WHITE} ADMINISTRACION COPIAS DE USUARIOS${NC}"
-    echo -e "${CYAN}[13]>${BLUE} DESACTIVAR CONTRASEÑA ALFANUMERICA${NC}"
-    ui_subhr
-    echo -e "${CYAN}[14]>${WHITE} CONFIGURACION ADMINISTRADOR DE CUENTAS${NC}"
+    echo -e "  ${CYAN}[12]>${WHITE} BACKUP DE BASE DE DATOS${NC}"
+    echo -e "  ${CYAN}[15]>${WHITE} CAMBIAR A MODO SSH/HWID/TOKEN${NC}"
     ui_hr
-    echo -e "${CYAN}[0]${RED} Volver            ${CYAN}[15]${WHITE} CAMBIAR A MODO SSH/HWID/TOKE${NC}"
+    echo -e "  ${WHITE}[0] VOLVER AL MENÚ ANTERIOR${NC}"
     ui_hr
-    ui_prompt "Ingresa una opción: "
+    ui_prompt " Selecciona una opción: "
     read opt_user
 
     case $opt_user in
@@ -264,15 +258,15 @@ menu_usuarios() {
 # --- ADMINISTRADOR DE CUENTAS POR PROTOCOLO ---
 menu_cuentas() {
     while true; do
-        ui_header "USUARIOS / CUENTAS (POR PROTOCOLO)"
-        echo -e "${CYAN}[1]>${WHITE} SSH / DROPBEAR (Usuarios del sistema)${NC}"
-        echo -e "${CYAN}[2]>${WHITE} OPENVPN (Clientes .ovpn)${NC}"
-        echo -e "${CYAN}[3]>${WHITE} HYSTERIA v2 (Cuentas premium)${NC}"
-        echo -e "${CYAN}[4]>${WHITE} PANEL X-UI (Usuarios/Inbound)${NC}"
+        ui_header "G EST I Ó N   D E   C U E N T A S"
+        echo -e "  ${CYAN}[1]>${WHITE} SSH / DROPBEAR (Usuarios del sistema)${NC}"
+        echo -e "  ${CYAN}[2]>${WHITE} OPENVPN (Clientes .ovpn)${NC}"
+        echo -e "  ${CYAN}[3]>${WHITE} HYSTERIA v2 (Cuentas premium)${NC}"
+        echo -e "  ${CYAN}[4]>${WHITE} PANEL X-UI (Admin Inbounds)${NC}"
         ui_subhr
-        echo -e "${CYAN}[0]${RED} Volver${NC}"
+        echo -e "  ${WHITE}[0] VOLVER AL MENÚ PRINCIPAL${NC}"
         ui_hr
-        ui_prompt "Ingresa una opción: "
+        ui_prompt " Selecciona una opción: "
         read opt_acc
 
         case $opt_acc in
@@ -805,16 +799,15 @@ sub_hysteria() {
 
 # --- SUBMENÚ DE PROTOCOLOS ---
 menu_protocolos() {
-    ui_header "ADMINISTRADOR DE PROTOCOLOS"
+    ui_header "A D M I N I S T R A D O R   D E   P R O T O C O L O S"
     # --- DETECCIÓN DINÁMICA DE PUERTOS Y ESTATUS (Doble Verificación) ---
-    # Solo marca [ON] si: 1) El servicio está configurado/instalado Y 2) El puerto está activo
 
-    # SSH (OpenSSH) - siempre existe
+    # SSH (OpenSSH)
     P_SSH=$(grep "^Port" /etc/ssh/sshd_config 2>/dev/null | awk '{print $2}' | head -1)
     [ -z "$P_SSH" ] && P_SSH="22"
     if netstat -tuln 2>/dev/null | grep -q ":${P_SSH} "; then st_ssh="${GREEN}[ON]${NC}"; else st_ssh="${RED}[OFF]${NC}"; fi
 
-    # Dropbear - solo si está instalado
+    # Dropbear
     if dpkg -l dropbear 2>/dev/null | grep -q "^ii"; then
         P_DROP=$(grep "DROPBEAR_PORT=" /etc/default/dropbear 2>/dev/null | cut -d= -f2 | tr -d '"' | xargs)
         [ -z "$P_DROP" ] && P_DROP="44"
@@ -823,10 +816,9 @@ menu_protocolos() {
         P_DROP="--"; st_drop="${RED}[OFF]${NC}"
     fi
 
-    # Proxy Python - solo si el servicio existe
+    # Proxy Python
     if [ -f /etc/systemd/system/mx-proxy.service ]; then
         P_PROXY=$(grep "ExecStart=" /etc/systemd/system/mx-proxy.service 2>/dev/null | awk '{print $NF}')
-        # Compatibilidad: si por alguna razón quedó como "80-80", mostramos solo el puerto base
         P_PROXY="${P_PROXY%%-*}"
         [ -z "$P_PROXY" ] && P_PROXY="80"
         if netstat -tuln 2>/dev/null | grep -q ":${P_PROXY} "; then st_proxy="${GREEN}[ON]${NC}"; else st_proxy="${RED}[OFF]${NC}"; fi
@@ -834,7 +826,7 @@ menu_protocolos() {
         P_PROXY="--"; st_proxy="${RED}[OFF]${NC}"
     fi
 
-    # Stunnel (SSL) - solo si config existe y paquete instalado
+    # Stunnel (SSL)
     if [ -f /etc/stunnel/stunnel.conf ] && dpkg -l stunnel4 2>/dev/null | grep -q "^ii"; then
         P_STUN=$(grep "accept =" /etc/stunnel/stunnel.conf 2>/dev/null | awk '{print $3}' | head -1)
         [ -z "$P_STUN" ] && P_STUN="443"
@@ -843,7 +835,7 @@ menu_protocolos() {
         P_STUN="--"; st_stun="${RED}[OFF]${NC}"
     fi
 
-    # BadVPN (UDP) - solo si está activo
+    # BadVPN (UDP)
     if [ -f /usr/local/bin/badvpn-udpgw ]; then
         if ps -ef | grep -q "[b]advpn-udpgw"; then
             P_BAD=$(ps -ef | grep badvpn-udpgw | grep -v grep | grep -o ":[0-9]*" | head -1 | tr -d ':')
@@ -861,10 +853,9 @@ menu_protocolos() {
     # WS-EPRO
     systemctl is-active --quiet ws-epro && st_ws="${GREEN}[ON]${NC}" || st_ws="${RED}[OFF]${NC}"
 
-    # UDP-Custom - solo si está activo
+    # UDP-Custom
     if [ -f /root/udp/udp-custom ]; then
         if ps -ef | grep -q "[u]dp-custom"; then
-            # Mostramos el rango completo para estética premium
             P_UDPC="1-65535"
             st_udpc="${GREEN}[ON]${NC}"
         else
@@ -874,7 +865,7 @@ menu_protocolos() {
         P_UDPC="--"; st_udpc="${RED}[OFF]${NC}"
     fi
 
-    # Hysteria v2 - solo si está activo
+    # Hysteria v2
     if [ -f /etc/hysteria/hysteria ]; then
         if ps -ef | grep -q "[h]ysteria"; then
             P_HY=$(grep 'listen:' /etc/hysteria/config.yaml 2>/dev/null | grep -o '[0-9]*')
@@ -887,7 +878,7 @@ menu_protocolos() {
         P_HY="--"; st_udph="${RED}[OFF]${NC}"
     fi
 
-    # OpenVPN - detectar por config + servicio systemd
+    # OpenVPN
     P_OVPN="--"
     if [ -f /etc/openvpn/server/server.conf ]; then
         OVPN_PORT=$(grep -E '^port ' /etc/openvpn/server/server.conf 2>/dev/null | awk '{print $2}' | head -1)
@@ -906,24 +897,22 @@ menu_protocolos() {
     st_sshgo="${RED}[OFF]${NC}"; st_wg="${RED}[OFF]${NC}"
 
     # Resumen (ordenado)
-    echo -e " ${CYAN}SSH:${WHITE} $P_SSH  ${CYAN}DROB:${WHITE} $P_DROP  ${CYAN}PROXY:${WHITE} $P_PROXY${NC}"
-    echo -e " ${CYAN}SSL:${WHITE} $P_STUN  ${CYAN}UDPG:${WHITE} $P_BAD${NC}"
-    echo -e " ${CYAN}UDP-C:${WHITE} $P_UDPC  ${CYAN}HYST:${WHITE} $P_HY${NC}"
-    echo -e " ${CYAN}OVPN:${WHITE} $P_OVPN${NC}"
+    echo -e " ${CYAN}SSH:${WHITE} $P_SSH  ${CYAN}DROB:${WHITE} $P_DROP  ${CYAN}PROXY:${WHITE} $P_PROXY  ${CYAN}SSL:${WHITE} $P_STUN${NC}"
+    echo -e " ${CYAN}UDPG:${WHITE} $P_BAD  ${CYAN}UDPC:${WHITE} $P_UDPC  ${CYAN}HYST:${WHITE} $P_HY  ${CYAN}OVPN:${WHITE} $P_OVPN${NC}"
     ui_hr
-    printf " ${CYAN}[1]>${WHITE} %-14s%b   ${CYAN}[10]>${WHITE} %-16s%b\n" "AJUSTES SSH" "$st_ssh" "SQUID" "$st_squid"
-    printf " ${CYAN}[2]>${WHITE} %-14s%b   ${CYAN}[11]>${WHITE} %-16s%b\n" "DROPBEAR" "$st_drop" "OPENVPN" "$st_ovpn"
-    printf " ${CYAN}[3]>${WHITE} %-14s%b   ${CYAN}[12]>${WHITE} %-16s%b\n" "SOCKS PYTHON" "$st_proxy" "CHECKUSER ONLINE" "$st_chk"
-    printf " ${CYAN}[4]>${WHITE} %-14s%b   ${CYAN}[13]>${WHITE} %-16s%b\n" "STUNNEL (SSL)" "$st_stun" "ATKEN and HASH" "$st_atken"
-    printf " ${CYAN}[5]>${WHITE} %-14s%b   ${CYAN}[14]>${WHITE} %-16s%b\n" "SLOWDNS" "$st_dns" "FILEBROWSER" "$st_file"
-    printf " ${CYAN}[6]>${WHITE} %-14s%b   ${CYAN}[15]>${WHITE} %-16s%b\n" "WS-EPRO" "$st_ws" "PANEL X-UI" "$st_xui"
-    printf " ${CYAN}[7]>${WHITE} %-14s%b   ${CYAN}[16]>${WHITE} %-16s%b\n" "UDP-CUSTOM" "$st_udpc" "SSHGO" "$st_sshgo"
-    printf " ${CYAN}[8]>${WHITE} %-14s%b   ${CYAN}[17]>${WHITE} %-16s%b\n" "UDP-HYSTERIA" "$st_udph" "WIREGUARD" "$st_wg"
-    printf " ${CYAN}[9]>${WHITE} %-14s%b\n" "BADVPN-UDPGW" "$st_udp"
+    printf "  ${CYAN}[1] ${WHITE}%-15s %b  ${CYAN}[10] ${WHITE}%-15s %b\n" "SSH" "$st_ssh" "SQUID" "$st_squid"
+    printf "  ${CYAN}[2] ${WHITE}%-15s %b  ${CYAN}[11] ${WHITE}%-15s %b\n" "DROPBEAR" "$st_drop" "OPENVPN" "$st_ovpn"
+    printf "  ${CYAN}[3] ${WHITE}%-15s %b  ${CYAN}[12] ${WHITE}%-15s %b\n" "PYTHON PROXY" "$st_proxy" "CHECKUSER" "$st_chk"
+    printf "  ${CYAN}[4] ${WHITE}%-15s %b  ${CYAN}[13] ${WHITE}%-15s %b\n" "STUNNEL4" "$st_stun" "ATKEN/HASH" "$st_atken"
+    printf "  ${CYAN}[5] ${WHITE}%-15s %b  ${CYAN}[14] ${WHITE}%-15s %b\n" "SLOWDNS" "$st_dns" "FILEBROWSER" "$st_file"
+    printf "  ${CYAN}[6] ${WHITE}%-15s %b  ${CYAN}[15] ${WHITE}%-15s %b\n" "WS-EPRO" "$st_ws" "PANEL X-UI" "$st_xui"
+    printf "  ${CYAN}[7] ${WHITE}%-15s %b  ${CYAN}[16] ${WHITE}%-15s %b\n" "UDP-CUSTOM" "$st_udpc" "SSHGO" "$st_sshgo"
+    printf "  ${CYAN}[8] ${WHITE}%-15s %b  ${CYAN}[17] ${WHITE}%-15s %b\n" "HYSTERIA v2" "$st_udph" "WIREGUARD" "$st_wg"
+    printf "  ${CYAN}[9] ${WHITE}%-15s %b  ${CYAN}[18] ${WHITE}%-15s %b\n" "BADVPN" "$st_udp" "REINICIAR T." ""
     ui_hr
-    echo -e "${CYAN}[0]${RED} Volver             ${CYAN}[18]${WHITE} ⟳ Reiniciar Todos los Módulos${NC}"
+    echo -e "  ${WHITE}[0] VOLVER AL MENÚ PRINCIPAL${NC}"
     ui_hr
-    ui_prompt "Ingresa una opción: "
+    ui_prompt " Selecciona una opción: "
     read opt_prot
     
     case $opt_prot in
@@ -955,23 +944,21 @@ menu_protocolos() {
 
 # --- SUBMENÚ DE SISTEMA ---
 menu_sistema() {
-    ui_header "HERRAMIENTAS EXTRAS"
+    ui_header "H E R R A M I E N T A S   Y   S I S T E M A"
     ufw status | grep -q "active" && fw_st="${GREEN}[Activo]${NC}" || fw_st="${RED}[Inactivo]${NC}"
-    
-    # Detectar estado de Cloudflare DDNS
-    crontab -l 2>/dev/null | grep -q "cloudflare-ddns" && cf_st="${GREEN}[Activo cada 5min]${NC}" || cf_st="${RED}[Inactivo]${NC}"
+    crontab -l 2>/dev/null | grep -q "cloudflare-ddns" && cf_st="${GREEN}[Activo]${NC}" || cf_st="${RED}[Inactivo]${NC}"
 
-    echo -e "${CYAN}[1]> ${WHITE}Optimizar VPS (Limpiar RAM y Caché)${NC}"
-    echo -e "${CYAN}[2]> ${WHITE}Editor de Banner Personal (Mensaje Global)${NC}"
-    echo -e "${CYAN}[3]> ${WHITE}Respaldar Usuarios Localmente (Backup)${NC}"
-    echo -e "${CYAN}[4]> ${WHITE}Gestor de Red y Transferencias (vnstat)${NC}"
+    echo -e "  ${CYAN}[1]>${WHITE} Optimizar VPS (Limpiar RAM y Caché)${NC}"
+    echo -e "  ${CYAN}[2]>${WHITE} Editor de Banner Global (SSH/Issue)${NC}"
+    echo -e "  ${CYAN}[3]>${WHITE} Respaldar Cuentas Localmente${NC}"
+    echo -e "  ${CYAN}[4]>${WHITE} Monitor de Tráfico (vnstat)${NC}"
     ui_subhr
-    echo -e "${CYAN}[5]> ${WHITE}Activar/Desactivar Firewall UFW   | $fw_st${NC}"
-    echo -e "${CYAN}[6]> ${WHITE}☁️ Cloudflare DDNS (IP Dinámica)  | $cf_st${NC}"
+    echo -e "  ${CYAN}[5]>${WHITE} Firewall UFW Config          | $fw_st${NC}"
+    echo -e "  ${CYAN}[6]>${WHITE} Cloudflare DDNS              | $cf_st${NC}"
     ui_hr
-    echo -e "${WHITE}[0] VOLVER AL MENÚ PRINCIPAL${NC}"
+    echo -e "  ${WHITE}[0] VOLVER AL MENÚ PRINCIPAL${NC}"
     ui_hr
-    ui_prompt "Ingresa una opción: "
+    ui_prompt " Selecciona una opción: "
     read opt_sys
     
     case $opt_sys in
@@ -1138,15 +1125,15 @@ CFEOF
 
 # --- SUBMENÚ DE REINSTALACIÓN / ACTUALIZACIÓN ---
 menu_mantenimiento() {
-    ui_header "MANTENIMIENTO / ACTUALIZACIÓN"
-    echo -e "${CYAN}[1]>${WHITE} ACTUALIZACION INTELIGENTE (Mantiene Datos)${NC}"
+    ui_header "MANTENIMIENTO Y ACTUALIZACIÓN"
+    echo -e "  ${CYAN}[1]>${WHITE} ACTUALIZACIÓN INTELIGENTE (Mantiene Datos)${NC}"
     echo -e "      ${WHITE}→ Respalda usuarios y configuraciones.${NC}"
-    echo -e "${CYAN}[2]>${RED} REINSTALACION LIMPIA (Borra Todo)${NC}"
+    echo -e "  ${CYAN}[2]>${RED} REINSTALACIÓN LIMPIA (Borra Todo)${NC}"
     echo -e "      ${WHITE}→ Deja el panel como nuevo de fábrica.${NC}"
     ui_subhr
-    echo -e "${CYAN}[0]${WHITE} Volver al Menú Principal${NC}"
+    echo -e "  ${CYAN}[0]${WHITE} Volver al Menú Principal${NC}"
     ui_hr
-    ui_prompt "Selecciona una opción: "
+    ui_prompt " Selecciona una opción: "
     read mant_opt
 
     case $mant_opt in
@@ -1219,14 +1206,15 @@ menu_mantenimiento() {
 menu_ajustes_script() {
     while true; do
         ui_header "CONFIGURACIÓN DEL SCRIPT"
-        echo -e "${CYAN} [1] ACTUALIZAR PANEL (GitHub Sync)${NC}"
-        echo -e "${CYAN} [2] REINSTALAR PANEL (Forzar Limpieza)${NC}"
-        echo -e "${CYAN} [3] CAMBIAR BANNER SSH (issue.net/Dropbear)${NC}"
+        echo -e "  ${CYAN}[1]>${WHITE} ACTUALIZAR PANEL (GitHub Sync)${NC}"
+        echo -e "  ${CYAN}[2]>${WHITE} REINSTALAR PANEL (Forzar Limpieza)${NC}"
+        echo -e "  ${CYAN}[3]>${WHITE} CAMBIAR BANNER SSH (issue.net/Dropbear)${NC}"
         ui_subhr
-        echo -e "${CYAN} [0] VOLVER${NC}"
+        echo -e "  ${WHITE}[0] VOLVER AL MENÚ ANTERIOR${NC}"
         ui_hr
-        read -p " Selecciona una opción: " opt_aj
-        
+        ui_prompt " Selecciona una opción: "
+        read opt_aj
+
         case $opt_aj in
             1) menu_mantenimiento ;;
             2) 
@@ -1268,37 +1256,35 @@ menu_ajustes_script() {
 # --- MENÚ PRINCIPAL ---
 main_menu() {
     get_telemetry
-    ui_header "PANEL PRINCIPAL"
-    printf "${CYAN}S.O:    ${WHITE}%-25s ${CYAN}Fecha: ${WHITE}%-10s${NC}\n" "$OS" "$FECHA"
-    printf "${CYAN}IP:     ${WHITE}%-25s ${CYAN}Hora:  ${WHITE}%-10s${NC}\n" "$IP" "$HORA"
+    ui_header "P A N E L   P R I N C I P A L"
+    printf "${CYAN} S.O:    ${WHITE}%-25s ${CYAN}Fecha: ${WHITE}%-10s${NC}\n" "$OS" "$FECHA"
+    printf "${CYAN} IP:     ${WHITE}%-25s ${CYAN}Hora:  ${WHITE}%-10s${NC}\n" "$IP" "$HORA"
     ui_subhr
-    echo -e "${CYAN}Disco / CPU${NC}"
-    printf "${CYAN}Total:  ${WHITE}%-9s ${CYAN}Dispo: ${WHITE}%-9s ${CYAN}Cores:  ${WHITE}%-9s${NC}\n" "$DISC_TOTAL" "$DISC_DISP" "$CORES"
-    printf "${CYAN}En Uso: ${WHITE}%-9s ${CYAN}Libre: ${WHITE}%-9s ${CYAN}En Uso: ${WHITE}%-9s${NC}\n" "$DISC_USO" "$DISC_FREE" "$CPU_USE"
+    echo -e " ${CYAN}Disco / CPU${NC}"
+    printf " ${CYAN}Total:  ${WHITE}%-9s ${CYAN}Dispo: ${WHITE}%-9s ${CYAN}Cores:  ${WHITE}%-9s${NC}\n" "$DISC_TOTAL" "$DISC_DISP" "$CORES"
+    printf " ${CYAN}En Uso: ${WHITE}%-9s ${CYAN}Libre: ${WHITE}%-9s ${CYAN}En Uso: ${WHITE}%-9s${NC}\n" "$DISC_USO" "$DISC_FREE" "$CPU_USE"
     ui_subhr
-    echo -e "${CYAN}RAM${NC}"
-    printf "${CYAN}Total:  ${WHITE}%-9s ${CYAN}En Uso: ${WHITE}%-9s ${CYAN}Libre: ${WHITE}%-9s${NC}\n" "$RAM_TOTAL" "$RAM_USO" "$RAM_FREE"
-    printf "${CYAN}Buffer: ${WHITE}%-9s ${CYAN}Cache:  ${WHITE}%-9s${NC}\n" "$RAM_BUFF" "$RAM_CACHE"
+    echo -e " ${CYAN}Memoria RAM${NC}"
+    printf " ${CYAN}Total:  ${WHITE}%-9s ${CYAN}En Uso: ${WHITE}%-9s ${CYAN}Libre: ${WHITE}%-9s${NC}\n" "$RAM_TOTAL" "$RAM_USO" "$RAM_FREE"
+    printf " ${CYAN}Buffer: ${WHITE}%-9s ${CYAN}Cache:  ${WHITE}%-9s${NC}\n" "$RAM_BUFF" "$RAM_CACHE"
     ui_hr
-    printf "   ${CYAN}ACTIVOS: ${WHITE}%-4s ${RED}EXPIRADOS: ${WHITE}%-4s ${CYAN}TOTAL: ${WHITE}%-4s${NC}\n" "$ACTIVA" "$EXPIRADA" "$TOTAL"
+    printf "    ${CYAN}ACTIVOS: ${WHITE}%-3s  ${RED}EXPIRADOS: ${WHITE}%-3s  ${CYAN}TOTAL: ${WHITE}%-3s${NC}\n" "$ACTIVA" "$EXPIRADA" "$TOTAL"
     ui_hr
-    echo -e "${CYAN}[1]> ${WHITE}USUARIOS / CUENTAS (SSH, OPENVPN, HYSTERIA, X-UI)${NC}"
+    echo -e "  ${CYAN}[1]>${WHITE} USUARIOS / CUENTAS (SSH, OVPN, HYST, XUI)${NC}"
     ui_subhr
-    echo -e "${CYAN}[2]> ${WHITE}CONFIGURACION DE PROTOCOLOS${NC}"
-    echo -e "${CYAN}[3]> ${WHITE}HERRAMIENTAS EXTRAS${NC}"
+    echo -e "  ${CYAN}[2]>${WHITE} CONFIGURACIÓN DE PROTOCOLO / SERVICIOS${NC}"
+    echo -e "  ${CYAN}[3]>${WHITE} HERRAMIENTAS EXTRAS / SISTEMA${NC}"
     ui_subhr
-    echo -e "${CYAN}[4]> ${WHITE}CONFIGURACION DEL SCRIPT${NC}"
-    echo -e "${CYAN}[5]> ${WHITE}IDIOMA / LANGUAGE${NC}"
+    echo -e "  ${CYAN}[4]>${WHITE} CONFIGURACIÓN DEL SCRIPT${NC}"
+    echo -e "  ${CYAN}[5]>${WHITE} IDIOMA / LANGUAGE${NC}"
     ui_subhr
-    echo -e "${CYAN}[6]> ${RED}[!] DESINSTALAR PANEL${NC}"
+    echo -e "  ${CYAN}[6]>${RED} [!] DESINSTALAR PANEL${NC}"
     ui_subhr
-    echo -e "${CYAN}[9]> ${GREEN}ACTUALIZAR / REINSTALAR PANEL${NC}"
+    echo -e "  ${CYAN}[9]>${GREEN} ACTUALIZAR / REINSTALAR PANEL${NC}"
     ui_hr
-    echo -e "${WHITE}[0] SALIR DEL VPS     [7] SALIR SCRIPT    [8] REINICIAR${NC}"
+    echo -e "  ${WHITE}[0] SALIR DEL VPS     [7] SALIR SCRIPT    [8] REINICIAR${NC}"
     ui_hr
-    
-    # Imprimiendo el prompt sin salto de linea
-    ui_prompt "Ingresa una opción: "
+    ui_prompt " Selecciona una opción: "
     read main_opt
 
     case $main_opt in
