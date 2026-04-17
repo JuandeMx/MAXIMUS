@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAXIMUS WEB PANEL | Premium Control</title>
+    <!-- Google Fonts: Inter & Outfit -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Outfit:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome para iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="dark-theme">
+    
+    <!-- Fondo Animado (Nebulosa/Efecto Alien) -->
+    <div class="bg-glow"></div>
+    <div class="stars"></div>
+
+    <header class="navbar">
+        <div class="container">
+            <div class="logo">
+                <span class="logo-icon"><i class="fa-solid fa-ghost"></i></span>
+                <span class="logo-text">MAXIMUS<span>MX</span></span>
+            </div>
+            <nav>
+                <ul class="nav-links">
+                    <li><a href="#" class="active">Inicio</a></li>
+                    <li><a href="#">Soporte</a></li>
+                    <li><a href="#" class="btn-login"><i class="fa-solid fa-user"></i> Login</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container main-content">
+        <section class="hero-section">
+            <h1 class="glitch-text">GENERADOR DE CUENTAS <span>PREMIUM</span></h1>
+            <p class="hero-subtitle">Crea túneles de alta velocidad en segundos. Estable, rápido y seguro.</p>
+        </section>
+
+        <section class="protocol-grid">
+            <!-- SSH / UDP Tarjeta -->
+            <div class="protocol-card" onclick="openModal('ssh')">
+                <div class="card-glow"></div>
+                <div class="card-icon"><i class="fa-solid fa-shield-halved"></i></div>
+                <h3>SSH / UDP CUSTOM</h3>
+                <p>Navegación segura y estable para juegos y redes sociales.</p>
+                <button class="btn-action">Generar Cuenta</button>
+            </div>
+
+            <!-- Hysteria v2 Tarjeta -->
+            <div class="protocol-card" onclick="openModal('hysteria')">
+                <div class="card-glow"></div>
+                <div class="card-icon"><i class="fa-solid fa-bolt"></i></div>
+                <h3>HYSTERIA v2</h3>
+                <p>Protocolo basado en QUIC para máxima velocidad y baja latencia.</p>
+                <button class="btn-action">Generar Cuenta</button>
+            </div>
+
+            <!-- OpenSSH Tarjeta -->
+            <div class="protocol-card disabled">
+                <div class="card-icon"><i class="fa-solid fa-key"></i></div>
+                <h3>OPENVPN / TLS</h3>
+                <p>Próximamente disponible en la versión Web v1.1</p>
+                <button class="btn-action">Próximamente</button>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2026 <span>MaximusVpsMx</span> - Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+    <!-- MODAL DE GENERACIÓN -->
+    <div id="createModal" class="modal-overlay">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2 id="modalTitle">Crear Cuenta <span>SSH</span></h2>
+                <button class="btn-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="createForm" onsubmit="handleCreate(event)">
+                    <input type="hidden" id="protocolType">
+                    <div class="form-group">
+                        <label for="username">Usuario</label>
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-user-ninja"></i>
+                            <input type="text" id="username" placeholder="Escribe un usuario..." required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Contraseña</label>
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-lock"></i>
+                            <input type="password" id="password" placeholder="Tu contraseña..." required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="days">Vencimiento (Días)</label>
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-calendar-days"></i>
+                            <input type="number" id="days" value="30" min="1" max="365">
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn-submit">
+                        <span class="btn-text">CREAR CUENTA</span>
+                        <div class="loader"></div>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE RESULTADO -->
+    <div id="resultModal" class="modal-overlay">
+        <div class="modal-container success-modal">
+            <div class="modal-header">
+                <h2>🎉 ¡Cuenta Creada!</h2>
+                <button class="btn-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="result-box">
+                    <pre id="resultData"></pre>
+                </div>
+                <button class="btn-copy" onclick="copyResult()">
+                    <i class="fa-solid fa-copy"></i> Copiar Datos
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

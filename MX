@@ -397,6 +397,29 @@ purgar_sistema_total() {
     sleep 2
 }
 
+# --- GESTOR DE PANEL WEB ---
+sub_webpanel() {
+    while true; do
+        ui_header "WEB PANEL (PREMIUM EDITION)"
+        systemctl is-active --quiet mx-webpanel && st="${GREEN}[ON]${NC}" || st="${RED}[OFF]${NC}"
+        echo -e " Estado: $st | Puerto: ${YELLOW}8082${NC}"
+        ui_subhr
+        echo -e "${CYAN} ├─ [1] Instalar / Activar Panel Web${NC}"
+        echo -e "${CYAN} ├─ [2] Detener Panel Web${NC}"
+        echo -e "${CYAN} ├─ [3] Desinstalar Panel Web${NC}"
+        echo -e "${CYAN} └─ [0] Volver${NC}"
+        ui_hr
+        ui_prompt "Selecciona: "
+        read wp_opt
+        case $wp_opt in
+            1) bash /etc/MaximusVpsMx/modules/install_web-panel.sh ;;
+            2) systemctl stop mx-webpanel; echo -e "${RED}⚠️ Detenido.${NC}"; sleep 1 ;;
+            3) bash /etc/MaximusVpsMx/modules/install_web-panel.sh --uninstall ;;
+            0) break ;;
+        esac
+    done
+}
+
 # --- GESTOR DINÁMICO DE SERVICIOS ---
 gestor_servicio() {
     local title="$1"
@@ -954,7 +977,7 @@ menu_sistema() {
     echo -e "  ${CYAN}[4]>${WHITE} Monitor de Tráfico (vnstat)${NC}"
     ui_subhr
     echo -e "  ${CYAN}[5]>${WHITE} Firewall UFW Config          | $fw_st${NC}"
-    echo -e "  ${CYAN}[6]>${WHITE} Cloudflare DDNS              | $cf_st${NC}"
+    echo -e "  ${CYAN}[7]>${WHITE} PANEL WEB (Premium Edition)  | ${GREEN}[OFF]${NC}"
     ui_hr
     echo -e "  ${WHITE}[0] VOLVER AL MENÚ PRINCIPAL${NC}"
     ui_hr
@@ -1096,6 +1119,10 @@ CFEOF
                         echo -e "${RED}No configurado aún.${NC}"
                     fi
                     ui_pause ; menu_sistema ;;
+                5)
+                    sub_webpanel ;;
+                6)
+                    sub_webpanel ;;
                 *) menu_sistema ;;
             esac
             ;;
