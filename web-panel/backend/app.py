@@ -27,7 +27,8 @@ def create_ssh():
     data = request.json
     username = data.get('username')
     password = data.get('password')
-    days = data.get('days', 30)
+    # Force 3 days for web-created accounts
+    days = 3
 
     if not username or not password:
         return jsonify({"error": "Faltan datos"}), 400
@@ -51,11 +52,15 @@ def create_ssh():
     with open(USERS_DB, "a") as db:
         db.write(f"{username}:{password}:{exp_date}\n")
     
+    # Obtener IP del servidor
+    server_ip, _, _ = run_command("wget -qO- ipv4.icanhazip.com")
+
     return jsonify({
         "message": "Usuario SSH creado correctamente",
         "username": username,
         "password": password,
-        "expiry": exp_date
+        "expiry": exp_date,
+        "server_ip": server_ip
     })
 
 @app.route('/api/create/hysteria', methods=['POST'])
@@ -63,7 +68,9 @@ def create_hysteria():
     data = request.json
     username = data.get('username')
     password = data.get('password')
-    days = data.get('days', 30)
+    # Force 3 days for web-created accounts
+    days = 3
+    sni = data.get('sni', 'bing.com')
     limit_up = data.get('limit_up', 100)
     limit_down = data.get('limit_down', 100)
 
@@ -83,12 +90,16 @@ def create_hysteria():
     # Obtener puerto de Hysteria (por defecto 443 si no se encuentra)
     hy_port = "443" # Debería detectarse dinámicamente en producción
     
+    # Obtener contraseña obfs de la configuración
+    obfs_password = "maximus_obfs_maestra" # Valor por defecto
+    
     return jsonify({
         "message": "Usuario Hysteria creado correctamente",
         "username": username,
         "password": password,
         "expiry": exp_date,
-        "link": f"hy2://{password}@{server_ip}:{hy_port}?insecure=1&sni=bing.com#({username})"
+        "server_ip": server_ip,
+        "link": f"hy2://{password}@{server_ip}:{hy_port}?insecure=1&sni={sni}&obfs=salamander&obfs-password={obfs_password}#({username})"
     })
 
 if __name__ == '__main__':

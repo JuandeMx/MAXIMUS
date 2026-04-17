@@ -38,31 +38,35 @@
             <p class="hero-subtitle">Crea túneles de alta velocidad en segundos. Estable, rápido y seguro.</p>
         </section>
 
-        <section class="protocol-grid">
+        <section class="protocol-list">
             <!-- SSH / UDP Tarjeta -->
-            <div class="protocol-card" onclick="openModal('ssh')">
-                <div class="card-glow"></div>
-                <div class="card-icon"><i class="fa-solid fa-shield-halved"></i></div>
-                <h3>SSH / UDP CUSTOM</h3>
-                <p>Navegación segura y estable para juegos y redes sociales.</p>
-                <button class="btn-action">Generar Cuenta</button>
+            <div class="list-item" onclick="openModal('ssh')">
+                <div class="item-icon"><i class="fa-solid fa-shield-halved"></i></div>
+                <div class="item-info">
+                    <h3>SSH / HTTP / SSL</h3>
+                    <p>Puertos: 443, 80, 22</p>
+                </div>
+                <button class="btn-item-action">Generar</button>
+            </div>
+
+            <!-- UDP Custom Tarjeta -->
+            <div class="list-item" onclick="openModal('udp')">
+                <div class="item-icon"><i class="fa-solid fa-cloud-bolt"></i></div>
+                <div class="item-info">
+                    <h3>UDP CUSTOM</h3>
+                    <p>Optimizado para Juegos y Llamadas</p>
+                </div>
+                <button class="btn-item-action">Generar</button>
             </div>
 
             <!-- Hysteria v2 Tarjeta -->
-            <div class="protocol-card" onclick="openModal('hysteria')">
-                <div class="card-glow"></div>
-                <div class="card-icon"><i class="fa-solid fa-bolt"></i></div>
-                <h3>HYSTERIA v2</h3>
-                <p>Protocolo basado en QUIC para máxima velocidad y baja latencia.</p>
-                <button class="btn-action">Generar Cuenta</button>
-            </div>
-
-            <!-- OpenSSH Tarjeta -->
-            <div class="protocol-card disabled">
-                <div class="card-icon"><i class="fa-solid fa-key"></i></div>
-                <h3>OPENVPN / TLS</h3>
-                <p>Próximamente disponible en la versión Web v1.1</p>
-                <button class="btn-action">Próximamente</button>
+            <div class="list-item" onclick="openModal('hysteria')">
+                <div class="item-icon"><i class="fa-solid fa-bolt"></i></div>
+                <div class="item-info">
+                    <h3>HYSTERIA v2</h3>
+                    <p>Basado en QUIC - Ultra rápido</p>
+                </div>
+                <button class="btn-item-action">Generar</button>
             </div>
         </section>
     </main>
@@ -97,11 +101,11 @@
                             <input type="password" id="password" placeholder="Tu contraseña..." required>
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label for="days">Vencimiento (Días)</label>
+                    <div class="form-group" id="sniGroup" style="display: none;">
+                        <label for="sni">SNI / Host</label>
                         <div class="input-wrapper">
-                            <i class="fa-solid fa-calendar-days"></i>
-                            <input type="number" id="days" value="30" min="1" max="365">
+                            <i class="fa-solid fa-globe"></i>
+                            <input type="text" id="sni" placeholder="ej: bing.com" value="bing.com">
                         </div>
                     </div>
                     

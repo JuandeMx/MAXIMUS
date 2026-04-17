@@ -10,6 +10,15 @@ const resultData = document.getElementById('resultData');
 function openModal(type) {
     protocolInput.value = type;
     modalTitle.innerHTML = `Crear Cuenta <span>${type.toUpperCase()}</span>`;
+    
+    // Toggle SNI field for Hysteria
+    const sniGroup = document.getElementById('sniGroup');
+    if (type === 'hysteria') {
+        sniGroup.style.display = 'block';
+    } else {
+        sniGroup.style.display = 'none';
+    }
+
     modal.style.display = 'flex';
     document.body.style.overflow = 'hidden';
 }
@@ -33,7 +42,10 @@ async function handleCreate(e) {
     const protocol = protocolInput.value;
     const username = document.getElementById('username').value;
     const password = document.getElementById('password').value;
-    const days = document.getElementById('days').value;
+    const sni = document.getElementById('sni').value;
+    
+    // If protocol is UDP, we use the SSH endpoint logic on backend
+    const apiEndpoint = (protocol === 'udp') ? '/api/create/ssh' : `/api/create/${protocol}`;
     
     const submitBtn = e.target.querySelector('.btn-submit');
     const loader = submitBtn.querySelector('.loader');
@@ -45,10 +57,10 @@ async function handleCreate(e) {
     submitBtn.disabled = true;
 
     try {
-        const response = await fetch(`/api/create/${protocol}`, {
+        const response = await fetch(apiEndpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password, days })
+            body: JSON.stringify({ username, password, sni })
         });
 
         const data = await response.json();
@@ -72,12 +84,24 @@ function showResult(data, protocol) {
     modal.style.display = 'none';
     resultModal.style.display = 'flex';
     
-    let info = `USUARIO: ${data.username}\n`;
-    info += `PASSWORD: ${data.password}\n`;
-    info += `EXPIRACIÓN: ${data.expiry}\n`;
+    let info = "";
     
-    if (data.link) {
-        info += `\nENLACE CONFIG:\n${data.link}`;
+    if (protocol === 'ssh') {
+        info = `--- DATOS DE CUENTA SSH ---\n`;
+        info += `IP: ${data.server_ip}\n`;
+        info += `Usuario: ${data.username}\n`;
+        info += `Contraseña: ${data.password}\n`;
+        info += `Vencimiento: ${data.expiry}\n`;
+        info += `Puertos: 443, 80, 22, 7300\n`;
+        info += `---------------------------`;
+    } else if (protocol === 'udp') {
+        info = `${data.server_ip}:1-65535@${data.username}:${data.password}`;
+    } else if (protocol === 'hysteria') {
+        info = `--- DATOS HYSTERIA v2 ---\n`;
+        info += `Usuario: ${data.username}\n`;
+        info += `Password: ${data.password}\n`;
+        info += `Vencimiento: ${data.expiry}\n\n`;
+        info += `LINK DE CONFIGURACIÓN:\n${data.link}`;
     }
     
     resultData.textContent = info;
