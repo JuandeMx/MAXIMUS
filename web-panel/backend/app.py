@@ -38,12 +38,17 @@ def create_ssh():
     # Limpiar posibles locks de sistema
     run_command("rm -f /etc/passwd.lock /etc/shadow.lock")
     
-    # Crear usuario en el sistema
+    # 1. Verificar si el usuario ya existe en el sistema
+    stdout_check, _, _ = run_command(f"id {username}")
+    if stdout_check:
+        return jsonify({"error": f"El usuario '{username}' ya existe en el servidor."}), 400
+
+    # 2. Crear usuario en el sistema
     cmd_user = f"useradd -e {exp_date} -s /bin/false -M {username}"
     stdout, stderr, code = run_command(cmd_user)
     
     if code != 0:
-        return jsonify({"error": "No se pudo crear el usuario", "details": stderr}), 500
+        return jsonify({"error": "No se pudo crear el usuario", "details": stderr}), 400
     
     # Configurar password
     run_command(f"echo '{username}:{password}' | chpasswd")
