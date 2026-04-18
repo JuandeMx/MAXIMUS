@@ -1,112 +1,138 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, session
 import subprocess
 import os
 import datetime
+import time
 
 # Configuración de Frontend
 FRONTEND_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../frontend")
 app = Flask(__name__, static_folder=FRONTEND_DIR, static_url_path='')
+app.secret_key = "maximus_ultra_secret_key_2026"
 
-@app.route('/')
-def index():
-    return app.send_static_file('index.html')
+# Credenciales Admin
+ADMIN_USER = "admin"
+ADMIN_PASS = "admin"
 
-# Configuración de Rutas
+# Rutas de Archivos
 USERS_DB = "/etc/MaximusVpsMx/users.db"
 HYSTERIA_DB = "/etc/MaximusVpsMx/hysteria_users.db"
 
 def run_command(cmd):
     try:
         result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-        return result.stdout.strip(), result.stderr.strip(), result.returncode
-    except Exception as e:
-        return "", str(e), 1
+        return result.stdout.strip()
+    except:
+        return ""
+
+def get_system_stats():
+    # RAM
+    ram_total = run_command("free -m | awk 'NR==2 {print $2}'")
+    ram_used = run_command("free -m | awk 'NR==2 {print $3}'")
+    
+    # CPU Load
+    cpu_load = run_command("top -bn1 | grep 'Cpu(s)' | awk '{print $2 + $4}'")
+    
+    # Disco
+    disk_total = run_command("df -h / | awk 'NR==2 {print $2}'")
+    disk_used = run_command("df -h / | awk 'NR==2 {print $3}'")
+    disk_perc = run_command("df -h / | awk 'NR==2 {print $5}'")
+    
+    # Uptime
+    uptime = run_command("uptime -p")
+    
+    # Usuarios Online (SSH/ESTABLISHED)
+    online = run_command("netstat -antp | grep -E 'sshd|dropbear' | grep ESTABLISHED | wc -l")
+    
+    return {
+        "ram": {"total": ram_total, "used": ram_used},
+        "cpu": cpu_load,
+        "disk": {"total": disk_total, "used": disk_used, "percent": disk_perc},
+        "uptime": uptime,
+        "online": online
+    }
+
+@app.route('/')
+def index():
+    if 'logged_in' not in session:
+        return app.send_static_file('login.html')
+    return app.send_static_file('index.html')
+
+@app.route('/login.html')
+def login_page():
+    return app.send_static_file('login.html')
+
+@app.route('/api/login', methods=['POST'])
+def login():
+    data = request.json
+    if data.get('username') == ADMIN_USER and data.get('password') == ADMIN_PASS:
+        session['logged_in'] = True
+        return jsonify({"success": True})
+    return jsonify({"success": False, "message": "Credenciales inválidas"}), 401
+
+@app.route('/api/logout')
+def logout():
+    session.pop('logged_in', None)
+    return jsonify({"success": True})
+
+@app.route('/api/stats')
+def stats():
+    if 'logged_in' not in session:
+        return jsonify({"error": "No autorizado"}), 401
+    return jsonify(get_system_stats())
+
+@app.route('/api/users/list')
+def list_users():
+    if 'logged_in' not in session:
+        return jsonify({"error": "No autorizado"}), 401
+    
+    users = []
+    if os.path.exists(USERS_DB):
+        with open(USERS_DB, "r") as f:
+            for line in f:
+                parts = line.strip().split(':')
+                if len(parts) >= 3:
+                     users.append({
+                         "username": parts[0],
+                         "expiry": parts[2],
+                         "type": "SSH/SSL",
+                         "status": "Active" # Simplificado
+                     })
+    return jsonify(users)
 
 @app.route('/api/create/ssh', methods=['POST'])
 def create_ssh():
+    if 'logged_in' not in session:
+        return jsonify({"error": "No autorizado"}), 401
+    
     data = request.json
     username = data.get('username')
     password = data.get('password')
-    # Force 3 days for web-created accounts
     days = 3
-
-    if not username or not password:
-        return jsonify({"error": "Faltan datos"}), 400
-
     exp_date = (datetime.datetime.now() + datetime.timedelta(days=int(days))).strftime("%Y-%m-%d")
     
-    # Limpiar posibles locks de sistema
     run_command("rm -f /etc/passwd.lock /etc/shadow.lock")
-    
-    # 1. Verificar si el usuario ya existe en el sistema
-    stdout_check, _, _ = run_command(f"id {username}")
-    if stdout_check:
-        return jsonify({"error": f"El usuario '{username}' ya existe en el servidor."}), 400
-
-    # 2. Crear usuario en el sistema
-    cmd_user = f"useradd -e {exp_date} -s /bin/false -M {username}"
-    stdout, stderr, code = run_command(cmd_user)
-    
-    if code != 0:
-        return jsonify({"error": "No se pudo crear el usuario", "details": stderr}), 400
-    
-    # Configurar password
+    run_command(f"useradd -e {exp_date} -s /bin/false -M {username}")
     run_command(f"echo '{username}:{password}' | chpasswd")
     
-    # Registrar en base de datos de Maximus
     with open(USERS_DB, "a") as db:
         db.write(f"{username}:{password}:{exp_date}\n")
     
-    # Obtener IP del servidor
-    server_ip, _, _ = run_command("wget -qO- ipv4.icanhazip.com")
+    return jsonify({"message": "Usuario creado", "expiry": exp_date})
 
-    return jsonify({
-        "message": "Usuario SSH creado correctamente",
-        "username": username,
-        "password": password,
-        "expiry": exp_date,
-        "server_ip": server_ip
-    })
-
-@app.route('/api/create/hysteria', methods=['POST'])
-def create_hysteria():
-    data = request.json
-    username = data.get('username')
-    password = data.get('password')
-    # Force 3 days for web-created accounts
-    days = 3
-    sni = data.get('sni', 'bing.com')
-    limit_up = data.get('limit_up', 100)
-    limit_down = data.get('limit_down', 100)
-
-    if not username or not password:
-        return jsonify({"error": "Faltan datos"}), 400
-
-    exp_date = (datetime.datetime.now() + datetime.timedelta(days=int(days))).strftime("%Y-%m-%d")
+@app.route('/api/service/status')
+def services_status():
+    if 'logged_in' not in session:
+        return jsonify({"error": "No autorizado"}), 401
     
-    # Registrar en base de datos de Hysteria
-    # Formato: user:pass:expiry:up_m:down_m
-    with open(HYSTERIA_DB, "a") as db:
-        db.write(f"{username}:{password}:{exp_date}:{limit_up}:{limit_down}\n")
-    
-    # Obtener IP del servidor
-    server_ip, _, _ = run_command("wget -qO- ipv4.icanhazip.com")
-    
-    # Obtener puerto de Hysteria: Usaremos Port-Hopping
-    hy_port = "2000-5000"
-    
-    # Obtener contraseña obfs de la configuración
-    obfs_password = "maximus_obfs_maestra" # Valor por defecto
-    
-    return jsonify({
-        "message": "Usuario Hysteria creado correctamente",
-        "username": username,
-        "password": password,
-        "expiry": exp_date,
-        "server_ip": server_ip,
-        "link": f"hy2://{password}@{server_ip}:{hy_port}?insecure=1&sni={sni}&obfs=salamander&obfs-password={obfs_password}#({username})"
-    })
+    services = [
+        {"name": "SSH", "active": subprocess.run("systemctl is-active ssh", shell=True).returncode == 0},
+        {"name": "Dropbear", "active": subprocess.run("systemctl is-active dropbear", shell=True).returncode == 0},
+        {"name": "Python Proxy", "active": subprocess.run("systemctl is-active mx-proxy", shell=True).returncode == 0},
+        {"name": "Stunnel4", "active": subprocess.run("systemctl is-active stunnel4", shell=True).returncode == 0},
+        {"name": "Hysteria v2", "active": subprocess.run("systemctl is-active hysteria", shell=True).returncode == 0},
+        {"name": "X-UI", "active": subprocess.run("systemctl is-active x-ui", shell=True).returncode == 0},
+    ]
+    return jsonify(services)
 
 if __name__ == '__main__':
-    # El servidor corre internamente, se recomienda usar Gunicorn o similar en producción
     app.run(host='0.0.0.0', port=8082)

@@ -1,161 +1,154 @@
-/* Maximus Web Panel - Interaction v1.0 */
+let resourceChart;
 
-const modal = document.getElementById('createModal');
-const resultModal = document.getElementById('resultModal');
-const createForm = document.getElementById('createForm');
-const modalTitle = document.getElementById('modalTitle');
-const protocolInput = document.getElementById('protocolType');
-const resultData = document.getElementById('resultData');
+document.addEventListener('DOMContentLoaded', () => {
+    checkAuth();
+    initChart();
+    startPolling();
+    switchTab('dashboard');
+});
 
-function openModal(type) {
-    protocolInput.value = type;
-    modalTitle.innerHTML = `Crear Cuenta <span>${type.toUpperCase()}</span>`;
+async function checkAuth() {
+    // Si estamos en index.html, el backend ya valida la sesión. 
+    // Si falla una API, nos redirigirá al login.
+}
+
+function switchTab(tabName) {
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     
-    // Toggle SNI field for Hysteria
-    const sniGroup = document.getElementById('sniGroup');
-    if (type === 'hysteria') {
-        sniGroup.style.display = 'block';
-    } else {
-        sniGroup.style.display = 'none';
-    }
+    document.getElementById(`tab-${tabName}`).classList.add('active');
+    event.currentTarget.classList.add('active');
+    
+    document.getElementById('pageTitle').innerText = tabName.charAt(0).toUpperCase() + tabName.slice(1);
+    
+    if (tabName === 'users') fetchUsers();
+    if (tabName === 'services') fetchServices();
+}
 
-    modal.style.display = 'flex';
-    document.body.style.overflow = 'hidden';
+async function startPolling() {
+    setInterval(updateStats, 3000);
+    updateStats();
+}
+
+async function updateStats() {
+    try {
+        const res = await fetch('/api/stats');
+        const data = await res.json();
+        
+        document.getElementById('cpu-val').innerText = `${data.cpu}%`;
+        document.getElementById('ram-val').innerText = `${data.ram.used} / ${data.ram.total} MB`;
+        document.getElementById('disk-val').innerText = `${data.disk.percent}`;
+        document.getElementById('online-val').innerText = data.online;
+        document.getElementById('uptime-val').innerText = data.uptime;
+        
+        updateChart(data.cpu, (parseInt(data.ram.used) / parseInt(data.ram.total)) * 100);
+    } catch (err) {
+        console.error("Stats error", err);
+    }
+}
+
+async function fetchUsers() {
+    const list = document.getElementById('userListBody');
+    list.innerHTML = '<tr><td colspan="5">Cargando usuarios...</td></tr>';
+    
+    try {
+        const res = await fetch('/api/users/list');
+        const users = await res.json();
+        list.innerHTML = '';
+        
+        users.forEach(u => {
+            const row = `<tr>
+                <td style="font-weight:700">${u.username}</td>
+                <td><span class="badge">${u.type}</span></td>
+                <td>${u.expiry}</td>
+                <td><span class="status-on">Active</span></td>
+                <td>
+                    <button class="btn-sm" onclick="deleteUser('${u.username}')"><i class="fa-solid fa-trash"></i></button>
+                </td>
+            </tr>`;
+            list.innerHTML += row;
+        });
+    } catch (err) {
+        list.innerHTML = '<tr><td colspan="5">Error al cargar listado.</td></tr>';
+    }
+}
+
+async function fetchServices() {
+    const grid = document.getElementById('servicesGrid');
+    grid.innerHTML = 'Cargando servicios...';
+    
+    try {
+        const res = await fetch('/api/service/status');
+        const services = await res.json();
+        grid.innerHTML = '';
+        
+        services.forEach(s => {
+            const card = `<div class="card service-card ${s.active ? 'active' : 'inactive'}">
+                <div class="s-info">
+                    <h4>${s.name}</h4>
+                    <span class="s-status">${s.active ? 'ONLINE' : 'OFFLINE'}</span>
+                </div>
+                <div class="s-action">
+                    <button onclick="toggleService('${s.name}')">
+                        <i class="fa-solid ${s.active ? 'fa-rotate' : 'fa-play'}"></i>
+                    </button>
+                </div>
+            </div>`;
+            grid.innerHTML += card;
+        });
+    } catch (err) {
+        grid.innerHTML = 'Error al cargar servicios.';
+    }
+}
+
+function initChart() {
+    const ctx = document.getElementById('resourceChart').getContext('2d');
+    resourceChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: Array(10).fill(''),
+            datasets: [{
+                label: 'CPU %',
+                data: Array(10).fill(0),
+                borderColor: '#22d3ee',
+                tension: 0.4,
+                fill: true,
+                backgroundColor: 'rgba(34, 211, 238, 0.1)'
+            }, {
+                label: 'RAM %',
+                data: Array(10).fill(0),
+                borderColor: '#f59e0b',
+                tension: 0.4,
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: { y: { beginAtZero: true, max: 100 } }
+        }
+    });
+}
+
+function updateChart(cpu, ram) {
+    if (!resourceChart) return;
+    resourceChart.data.datasets[0].data.shift();
+    resourceChart.data.datasets[0].data.push(cpu);
+    resourceChart.data.datasets[1].data.shift();
+    resourceChart.data.datasets[1].data.push(ram);
+    resourceChart.update();
+}
+
+function openGen(type) {
+    document.getElementById('genType').value = type;
+    document.getElementById('genTitle').innerText = `Crear Cuenta ${type.toUpperCase()}`;
+    document.getElementById('genModal').style.display = 'flex';
 }
 
 function closeModal() {
-    modal.style.display = 'none';
-    resultModal.style.display = 'none';
-    document.body.style.overflow = 'auto';
-    resetForm();
+    document.getElementById('genModal').style.display = 'none';
 }
 
-function resetForm() {
-    createForm.reset();
-    document.querySelector('.loader').style.display = 'none';
-    document.querySelector('.btn-text').style.display = 'block';
-}
-
-async function handleCreate(e) {
-    e.preventDefault();
-    
-    const protocol = protocolInput.value;
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
-    const sni = document.getElementById('sni').value;
-    
-    // If protocol is UDP, we use the SSH endpoint logic on backend
-    const apiEndpoint = (protocol === 'udp') ? '/api/create/ssh' : `/api/create/${protocol}`;
-    
-    const submitBtn = e.target.querySelector('.btn-submit');
-    const loader = submitBtn.querySelector('.loader');
-    const btnText = submitBtn.querySelector('.btn-text');
-    
-    // Show Loading
-    loader.style.display = 'block';
-    btnText.style.display = 'none';
-    submitBtn.disabled = true;
-
-    try {
-        const response = await fetch(apiEndpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password, sni })
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-            showResult(data, protocol);
-        } else {
-            alert(`Error: ${data.error || 'No se pudo crear la cuenta'}`);
-        }
-    } catch (err) {
-        console.error(err);
-        alert('Error de conexión con el servidor.');
-    } finally {
-        loader.style.display = 'none';
-        btnText.style.display = 'block';
-        submitBtn.disabled = false;
-    }
-}
-
-function showResult(data, protocol) {
-    console.log("Mostrando resultado para:", protocol, data);
-    modal.style.display = 'none';
-    resultModal.style.display = 'flex';
-    
-    let info = "";
-    
-    try {
-        if (protocol === 'ssh') {
-            info = `--- DATOS DE CUENTA SSH ---\n`;
-            info += `IP: ${data.server_ip || 'No detectada'}\n`;
-            info += `Usuario: ${data.username}\n`;
-            info += `Contraseña: ${data.password}\n`;
-            info += `Vencimiento: ${data.expiry}\n`;
-            info += `Puertos: 443, 80, 22, 7300\n`;
-            info += `---------------------------`;
-        } else if (protocol === 'udp') {
-            info = `${data.server_ip || 'IP_LOCAL'}:7100-7300@${data.username}:${data.password}`;
-        } else if (protocol === 'hysteria') {
-            info = `--- DATOS HYSTERIA v2 ---\n`;
-            info += `Usuario: ${data.username}\n`;
-            info += `Password: ${data.password}\n`;
-            info += `Vencimiento: ${data.expiry}\n\n`;
-            info += `LINK DE CONFIGURACIÓN:\n${data.link}`;
-        } else {
-            info = JSON.stringify(data, null, 2);
-        }
-    } catch (e) {
-        console.error("Error al formatear resultado:", e);
-        info = "Error al procesar la respuesta del servidor.";
-    }
-    
-    resultData.textContent = info;
-}
-
-function copyResult() {
-    const text = resultData.textContent;
-    
-    const fallbackCopy = (content) => {
-        const textArea = document.createElement("textarea");
-        textArea.value = content;
-        document.body.appendChild(textArea);
-        textArea.select();
-        try {
-            document.execCommand('copy');
-            updateCopyButton();
-        } catch (err) {
-            console.error('Fallback copy failed', err);
-        }
-        document.body.removeChild(textArea);
-    };
-
-    const updateCopyButton = () => {
-        const copyBtn = document.querySelector('.btn-copy');
-        const originalHtml = copyBtn.innerHTML;
-        copyBtn.innerHTML = '<i class="fa-solid fa-check"></i> ¡Copiado!';
-        copyBtn.style.color = '#00ff00';
-        copyBtn.style.borderColor = '#00ff00';
-        
-        setTimeout(() => {
-            copyBtn.innerHTML = originalHtml;
-            copyBtn.style.color = 'var(--primary)';
-            copyBtn.style.borderColor = 'var(--primary)';
-        }, 2000);
-    };
-
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(updateCopyButton).catch(() => fallbackCopy(text));
-    } else {
-        fallbackCopy(text);
-    }
-}
-
-// Close modal when clicking outside
-window.onclick = function(event) {
-    if (event.target == modal || event.target == resultModal) {
-        closeModal();
-    }
+async function logout() {
+    await fetch('/api/logout');
+    window.location.reload();
 }
