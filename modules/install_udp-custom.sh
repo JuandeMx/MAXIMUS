@@ -28,17 +28,17 @@ case $ARCH in
     *)       echo -e "${RED}❌ Arquitectura $ARCH no soportada.${NC}"; exit 1 ;;
 esac
 
-# Directorio de trabajo
-UDP_DIR="/root/udp"
+# Directorio de trabajo y binario
+UDP_DIR="/etc/udp-custom"
 mkdir -p "$UDP_DIR"
 
 # Descargar el binario Real de Haris131
 echo -e "${YELLOW}[+] Descargando UDP-Custom Real desde Haris131 ($BIN_ARCH)...${NC}"
-if curl -sL -o "$UDP_DIR/udp-custom" "https://github.com/Haris131/UDP-Custom/raw/main/udp-custom-linux-${BIN_ARCH}"; then
+if curl -sL -o "/usr/local/bin/udp-custom" "https://github.com/Haris131/UDP-Custom/raw/main/udp-custom-linux-${BIN_ARCH}"; then
     echo -e "${GREEN}[✔] Descarga primaria exitosa (Haris Real).${NC}"
 else
     # Mirror estable propio
-    wget -q -O "$UDP_DIR/udp-custom" "https://raw.githubusercontent.com/JuandeMx/MAXIMUS/main/bin/udp-custom-linux-${BIN_ARCH}"
+    wget -q -O "/usr/local/bin/udp-custom" "https://raw.githubusercontent.com/JuandeMx/MAXIMUS/main/bin/udp-custom-linux-${BIN_ARCH}"
     echo -e "${GREEN}[✔] Descarga desde mirror oficial Maximus.${NC}"
 fi
 
@@ -53,7 +53,7 @@ chmod +x "$UDP_DIR/udp-custom"
 echo -e "${GREEN}[+] Generando configuración de escucha directa (Puerto :36712)...${NC}"
 cat > "$UDP_DIR/config.json" << UDPEOF
 {
-    "listen": ":36712",
+    "listen": "0.0.0.0:36712",
     "stream_buffer": 33554432,
     "receive_buffer": 83886080,
     "auth": {
@@ -79,9 +79,9 @@ After=network.target
 Type=simple
 User=root
 WorkingDirectory=$UDP_DIR
-ExecStart=${UDP_DIR}/udp-custom server
+ExecStart=/usr/local/bin/udp-custom -config $UDP_DIR/config.json server
 Restart=always
-RestartSec=3
+RestartSec=5
 LimitNOFILE=infinity
 StandardOutput=append:/var/log/MaximusVpsMx/udp-custom.log
 StandardError=append:/var/log/MaximusVpsMx/udp-custom.log
@@ -101,8 +101,9 @@ echo -e "${GREEN} [OK]${NC}"
 echo -e "${GREEN}[+] Configurando Rango Estratégico UDP (7100-7300 -> 36712)...${NC}"
 ufw allow 7100:7300/udp 2>/dev/null
 
-# Limpiar todas las reglas NAT previas para evitar conflictos
-iptables -t nat -F PREROUTING 2>/dev/null
+# Limpiar reglas previas específicas de este rango para evitar duplicados
+iptables -t nat -D PREROUTING -p udp --dport 7100:7300 -j REDIRECT --to-port 36712 2>/dev/null
+ip6tables -t nat -D PREROUTING -p udp --dport 7100:7300 -j REDIRECT --to-port 36712 2>/dev/null
 
 # Aplicar Redirección (IPv4 e IPv6)
 iptables -t nat -A PREROUTING -p udp --dport 7100:7300 -j REDIRECT --to-port 36712
@@ -140,6 +141,8 @@ else
     echo -e "\n${RED}=========================================================${NC}"
     echo -e "${RED} ⚠️ UDP-CUSTOM no arrancó. Verifica con:${NC}"
     echo -e "${YELLOW} systemctl status udp-custom${NC}"
+    echo -e "\n${CYAN}----- ÚLTIMOS LOGS DE ERROR -----${NC}"
+    tail -n 10 /var/log/MaximusVpsMx/udp-custom.log 2>/dev/null || echo "Sin registros disponibles."
     echo -e "${RED}=========================================================${NC}"
 fi
 sleep 3
