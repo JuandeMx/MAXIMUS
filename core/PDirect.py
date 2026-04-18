@@ -1,9 +1,4 @@
-import socket, threading, select, sys, time, datetime, os
-try:
-    import maximus_auth
-except:
-    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-    import maximus_auth
+import socket, threading, select, sys, time, datetime
 
 # Config
 LISTENING_ADDR = '0.0.0.0'
@@ -103,15 +98,6 @@ class ConnectionHandler(threading.Thread):
                 is_ws = b'upgrade: websocket' in client_buffer.lower()
                 is_split = b'100-continue' in client_buffer.lower()
 
-                # --- Maximus Elite Validation ---
-                headers_str = client_buffer.decode('utf-8', errors='ignore')
-                ok, msg = maximus_auth.authenticate_elite(headers_str)
-                if not ok:
-                    err_msg = f"HTTP/1.1 403 Forbidden\r\nContent-Type: text/plain\r\n\r\nMaximus Auth Error: {msg}\r\n"
-                    self.client.sendall(err_msg.encode())
-                    self.client.close()
-                    return
-
                 if is_split:
                     self.client.sendall(RESPONSE_CONTINUE)
                     second_buffer = b''
@@ -128,7 +114,7 @@ class ConnectionHandler(threading.Thread):
                 # Sincronización pequeña para separar cabeceras del flujo SSH
                 time.sleep(0.1)
 
-            # Conexión al Backend local (Detección Multinivel)
+            # Conexión al Backend local (OpenSSH 22 o Dropbear paramétrico)
             drop_port = 44
             try:
                 import os
@@ -139,20 +125,9 @@ class ConnectionHandler(threading.Thread):
                                 drop_port = int(line.split('=')[1].strip())
             except: pass
 
-            # Intentamos primero el puerto que el cliente pida, luego el estándar
-            requested_port = None
-            if b':' in client_buffer.split(b' ')[1] if len(client_buffer.split(b' ')) > 1 else b'':
+            for port in [22, drop_port]:
                 try:
-                    requested_port = int(client_buffer.split(b' ')[1].split(b':')[1])
-                except: pass
-
-            backend_ports = [22, drop_port, 2222]
-            if requested_port and requested_port not in backend_ports:
-                backend_ports.insert(0, requested_port)
-
-            for port in backend_ports:
-                try:
-                    target = socket.create_connection(('127.0.0.1', port), timeout=3)
+                    target = socket.create_connection(('127.0.0.1', port), timeout=5)
                     target.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
                     target.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
                     break
