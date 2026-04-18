@@ -896,9 +896,8 @@ menu_protocolos() {
 
     # Hysteria v2
     if [ -f /etc/hysteria/hysteria ]; then
-        if ps -ef | grep -q "[h]ysteria"; then
-            P_HY=$(grep 'listen:' /etc/hysteria/config.yaml 2>/dev/null | grep -o '[0-9]*')
-            [ -z "$P_HY" ] && P_HY="443"
+        if systemctl is-active --quiet hysteria 2>/dev/null; then
+            P_HY="2000-5000"
             st_udph="${GREEN}[ON]${NC}"
         else
             P_HY="--"; st_udph="${RED}[OFF]${NC}"

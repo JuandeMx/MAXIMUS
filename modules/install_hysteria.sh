@@ -13,15 +13,12 @@ echo -e "${CYAN}=========================================================${NC}"
 echo -e "${YELLOW}          INSTALADOR HYSTERIA v2 (QUIC/UDP)${NC}"
 echo -e "${CYAN}=========================================================${NC}"
 
-# Puerto configurable y Rango de Port-Hopping
-read -p " Rango de puertos UDP para Hysteria (Default: 2000:5000): " hy_range
-[ -z "$hy_range" ] && hy_range="2000:5000"
-
+# Puerto configurable y Rango de Port-Hopping (Instalación automática)
+hy_range="2000:5000"
 hy_port=36713
 
-# Contraseña de autenticación
-read -p " Contraseña de autenticación (Default: maximus): " hy_pass
-[ -z "$hy_pass" ] && hy_pass="maximus"
+# Contraseña de autenticación por defecto (Automática)
+hy_pass="maximus"
 
 echo -e "\n${GREEN}[+] Preparando entorno e instalando dependencias...${NC}"
 apt-get update -y && apt-get install -y python3 wget openssl 2>/dev/null
@@ -39,20 +36,14 @@ esac
 HY_DIR="/etc/hysteria"
 mkdir -p "$HY_DIR"
 
-# Descargar binario oficial de Hysteria 2
-echo -e "${YELLOW}[+] Descargando Hysteria v2 ($BIN_ARCH)...${NC}"
-LATEST_URL=$(wget -qO- "https://api.github.com/repos/apernet/hysteria/releases/latest" | grep "browser_download_url.*hysteria-linux-${BIN_ARCH}\"" | cut -d '"' -f 4)
+# Descargar el binario directamente desde la Bóveda de MAXIMUS (Binario blindado estable)
+echo -e "${YELLOW}[+] Descargando Hysteria v2 desde la Bóveda Local Maximus...${NC}"
+LATEST_URL="https://raw.githubusercontent.com/JuandeMx/MAXIMUS/main/bin/hysteria-linux-${BIN_ARCH}"
 
-if [ -z "$LATEST_URL" ]; then
-    # Fallback a versión conocida
-    LATEST_URL="https://github.com/apernet/hysteria/releases/download/app%2Fv2.6.1/hysteria-linux-${BIN_ARCH}"
-fi
-
-wget -qO "$HY_DIR/hysteria" "$LATEST_URL" 2>/dev/null
-
-if [ ! -f "$HY_DIR/hysteria" ] || [ ! -s "$HY_DIR/hysteria" ]; then
-    echo -e "${RED}❌ Error: No se pudo descargar Hysteria. Verifica tu conexión.${NC}"
-    sleep 3
+if curl -sL -f --connect-timeout 10 --max-time 60 -o "$HY_DIR/hysteria" "$LATEST_URL"; then
+    echo -e "${GREEN}[✔] Descarga segura exitosa (Bóveda MAXIMUS).${NC}"
+else
+    echo -e "${RED}❌ Error: No se pudo conectar a la Bóveda MAXIMUS para Hysteria.${NC}"
     exit 1
 fi
 
