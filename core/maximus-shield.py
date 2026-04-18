@@ -44,46 +44,56 @@ class Proxy(threading.Thread):
     def run(self):
         target = None
         try:
-            self.client.settimeout(2.5)
+            self.client.settimeout(0.8)
             client_buffer = b''
             
-            # Recolectar Handshake
-            while True:
+            # Recolectar Handshake con soporte para Split
+            for _ in range(15): # Máximo 15 intentos de lectura
                 try:
                     chunk = self.client.recv(BUFLEN)
                     if not chunk: break
                     client_buffer += chunk
-                    if b'\r\n\r\n' in client_buffer or b'\n\n' in client_buffer: break
+                    
+                    # Si ya tenemos un token válido, podemos dejar de esperar
+                    if b'MAX-' in client_buffer or b'X-Shield-Token:' in client_buffer:
+                        # Si además ya tiene el cierre de cabeceras de la SEGUNDA parte
+                        if client_buffer.count(b'\r\n\r\n') >= 2 or client_buffer.count(b'\n\n') >= 2:
+                            break
+                        # Si no hay split pero hay token y cierre normal
+                        if b'\r\n\r\n' in client_buffer:
+                            break
                 except socket.timeout:
-                    break
-
+                    if len(client_buffer) > 0: break
+                    else: continue
+            
             if not client_buffer:
                 self.client.close()
                 return
 
-            # --- VALIDACIÓN SHIELD ---
-            # Buscamos el Token en los Headers (Host o X-Shield-Token)
+            # --- VALIDACIÓN SHIELD (Deep Scan) ---
             is_valid = False
             found_host = None
             
-            # 1. Chequeo de Token X-Shield
+            # 1. Búsqueda de X-Shield-Token en todo el buffer
             if b'X-Shield-Token:' in client_buffer:
-                parts = client_buffer.split(b'X-Shield-Token:')
-                if len(parts) > 1:
-                    token = parts[1].split(b'\r\n')[0].strip().decode('utf-8')
-                    found_host = decrypt_token(token)
-                    if found_host: is_valid = True
+                token = client_buffer.split(b'X-Shield-Token:')[1].split(b'\r\n')[0].strip().decode('utf-8')
+                found_host = decrypt_token(token)
+                if found_host: is_valid = True
 
-            # 2. Chequeo de Host Ofuscado (Inicia con MAX-)
-            if not is_valid and b'Host:' in client_buffer:
-                parts = client_buffer.split(b'Host:')
-                host_val = parts[1].split(b'\r\n')[0].strip().decode('utf-8')
-                if host_val.startswith("MAX-"):
-                    found_host = decrypt_token(host_val[4:])
-                    if found_host: is_valid = True
+            # 2. Búsqueda de Host: MAX- en todo el buffer
+            if not is_valid and b'Host: MAX-' in client_buffer:
+                token = client_buffer.split(b'Host: MAX-')[1].split(b'\r\n')[0].strip().decode('utf-8')
+                found_host = decrypt_token(token)
+                if found_host: is_valid = True
+            
+            # 3. Fallback: buscar cualquier MAX- oculto
+            if not is_valid and b'MAX-' in client_buffer:
+                try:
+                   token = client_buffer.split(b'MAX-')[1].split(b'\r\n')[0].split(b' ')[0].strip().decode('utf-8')
+                   found_host = decrypt_token(token)
+                   if found_host: is_valid = True
+                except: pass
 
-            # Si no hay SHIELD, pero es un WebSocket estándar, permitimos solo si no es modo estricto
-            # (En Maximus-Shield somos estrictos por defecto para elitismo)
             if not is_valid:
                 self.client.send(RESPONSE_403)
                 self.client.close()
