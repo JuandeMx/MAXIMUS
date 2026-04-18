@@ -56,14 +56,15 @@ class Proxy(threading.Thread):
                 return
 
             if b'HTTP' in client_buffer:
-                # --- Maximus Elite Validation ---
+                # --- Maximus Elite Validation (Opcional) ---
                 headers_str = client_buffer.decode('utf-8', errors='ignore')
-                ok, msg = maximus_auth.authenticate_elite(headers_str)
-                if not ok:
-                    err_msg = f"HTTP/1.1 403 Forbidden\r\nContent-Type: text/plain\r\n\r\nMaximus Auth Error: {msg}\r\n"
-                    self.client.send(err_msg.encode())
-                    self.client.close()
-                    return
+                if "X-User:" in headers_str:
+                    ok, msg = maximus_auth.authenticate_elite(headers_str)
+                    if not ok:
+                        err_msg = f"HTTP/1.1 403 Forbidden\r\nContent-Type: text/plain\r\nServer: Maximus-WSEngine\r\n\r\nMaximus Auth Error: {msg}\r\n"
+                        self.client.send(err_msg.encode())
+                        self.client.close()
+                        return
 
                 # Responder con 101 Switching Protocols sin importar qué headers traiga (Payload Inyectado)
                 self.client.send(RESPONSE_WS)
