@@ -84,8 +84,10 @@ grep -q "^Banner /etc/issue.net" /etc/ssh/sshd_config || echo "Banner /etc/issue
 systemctl restart ssh 2>/dev/null || systemctl restart sshd 2>/dev/null
 
 # 7. Menu Link Setup
-echo -e "\e[1;32m[+] Preparando alias global 'MX'...\e[0m"
+echo -e "\e[1;32m[+] Preparando accesos globales (menu / MENU / MX)...\e[0m"
 ln -sf /etc/MaximusVpsMx/MX /usr/local/bin/MX
+ln -sf /etc/MaximusVpsMx/MX /usr/local/bin/menu
+ln -sf /etc/MaximusVpsMx/MX /usr/local/bin/MENU
 chmod 700 /etc/MaximusVpsMx/MX
 chmod 700 /etc/MaximusVpsMx/core/PDirect.py
 chmod 700 /etc/MaximusVpsMx/modules/cloudflare-ddns.sh 2>/dev/null
