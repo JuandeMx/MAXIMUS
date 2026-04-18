@@ -97,7 +97,7 @@ function showResult(data, protocol) {
             info += `Puertos: 443, 80, 22, 7300\n`;
             info += `---------------------------`;
         } else if (protocol === 'udp') {
-            info = `${data.server_ip || 'IP_LOCAL'}:1-65535@${data.username}:${data.password}`;
+            info = `${data.server_ip || 'IP_LOCAL'}:7100-7300@${data.username}:${data.password}`;
         } else if (protocol === 'hysteria') {
             info = `--- DATOS HYSTERIA v2 ---\n`;
             info += `Usuario: ${data.username}\n`;

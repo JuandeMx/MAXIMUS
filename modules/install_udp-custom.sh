@@ -13,8 +13,8 @@ NC='\033[0m'
 echo -e "${CYAN}=========================================================${NC}"
 echo -e "${YELLOW}         INSTALADOR UDP-CUSTOM (TUNNELING UDP)${NC}"
 echo -e "${CYAN}=========================================================${NC}"
-echo -e "${WHITE} Los clientes usan sus credenciales SSH del panel.${NC}"
-echo -e "${CYAN} Formato: IP:1-65535@usuarioSSH:contraseñaSSH${NC}"
+echo -e "${WHITE} Los clientes usan sus credenciales SSH locales.${NC}"
+echo -e "${CYAN} Formato: IP:7100-7300@usuarioSSH:contraseñaSSH${NC}"
 echo -e "${CYAN}=========================================================${NC}"
 
 echo -e "\n${GREEN}[+] Preparando entorno...${NC}"
@@ -57,8 +57,7 @@ cat > "$UDP_DIR/config.json" << UDPEOF
     "stream_buffer": 33554432,
     "receive_buffer": 83886080,
     "auth": {
-        "mode": "passwords",
-        "passwords": ["volviamorir"]
+        "mode": "system"
     }
 }
 UDPEOF
@@ -98,16 +97,16 @@ sed -i '/net.ipv4.ip_forward/d' /etc/sysctl.conf
 echo "net.ipv4.ip_forward=1" >> /etc/sysctl.conf
 echo -e "${GREEN} [OK]${NC}"
 
-# Abrir puertos en firewall y configurar REDIRECCIÓN MAESTRA (NAT)
-echo -e "${GREEN}[+] Configurando Rango Total UDP (1-65535 -> 36712)...${NC}"
-ufw allow 1:65535/udp 2>/dev/null
+# Abrir puertos en firewall y configurar REDIRECCIÓN ESTRATÉGICA (NAT)
+echo -e "${GREEN}[+] Configurando Rango Estratégico UDP (7100-7300 -> 36712)...${NC}"
+ufw allow 7100:7300/udp 2>/dev/null
 
 # Limpiar todas las reglas NAT previas para evitar conflictos
 iptables -t nat -F PREROUTING 2>/dev/null
 
-# Aplicar Redirección Maestra (IPv4 e IPv6)
-iptables -t nat -A PREROUTING -p udp --dport 1:65535 -j REDIRECT --to-port 36712
-ip6tables -t nat -A PREROUTING -p udp --dport 1:65535 -j REDIRECT --to-port 36712
+# Aplicar Redirección (IPv4 e IPv6)
+iptables -t nat -A PREROUTING -p udp --dport 7100:7300 -j REDIRECT --to-port 36712
+ip6tables -t nat -A PREROUTING -p udp --dport 7100:7300 -j REDIRECT --to-port 36712
 
 # Guardar reglas para que sean permanentes
 if command -v iptables-save > /dev/null; then
@@ -131,11 +130,11 @@ if systemctl is-active --quiet udp-custom; then
     echo -e "\n${GREEN}=========================================================${NC}"
     echo -e "${GREEN} ✅ UDP-CUSTOM INSTALADO CORRECTAMENTE${NC}"
     echo -e "${GREEN}=========================================================${NC}"
-    echo -e "${CYAN} Rango de puertos: 1-65535${NC}"
-    echo -e "${CYAN} Autenticación:    Usuarios SSH del Panel${NC}"
+    echo -e "${CYAN} Rango de puertos: 7100-7300${NC}"
+    echo -e "${CYAN} Autenticación:    Segura (Usuarios SSH)${NC}"
     echo -e "${GREEN}---------------------------------------------------------${NC}"
     echo -e "${YELLOW} 📋 CONFIGURACIÓN PARA EL CLIENTE:${NC}"
-    echo -e "${WHITE} ${SERVER_IP}:1-65535@USUARIO_SSH:CONTRASEÑA_SSH${NC}"
+    echo -e "${WHITE} ${SERVER_IP}:7100-7300@USUARIO:CONTRASEÑA${NC}"
     echo -e "${GREEN}=========================================================${NC}"
 else
     echo -e "\n${RED}=========================================================${NC}"
