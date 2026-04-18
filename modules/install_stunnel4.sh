@@ -22,7 +22,16 @@ echo -e "     ${YELLOW}* Optimizado para Payloads y aplicaciones HTTP.${NC}"
 echo -e " [3] HÍBRIDO UNIVERSAL (BETA)"
 echo -e "     ${YELLOW}* El puerto 443 detecta y acepta TODO automáticamente.${NC}"
 echo -ne "${RED}-------------------------------------------------------${NC}\n"
-read -p " Selecciona una opción [1-3]: " mode_opt
+echo -e " [0] DESACTIVAR Y BORRAR TODO EL SSL${NC}"
+echo -ne "${RED}-------------------------------------------------------${NC}\n"
+read -p " Selecciona una opción [0-3]: " mode_opt
+
+# --- Fase de Limpieza Automática (Garantizar pizarra limpia) ---
+if [[ "$mode_opt" != "0" ]]; then
+    echo -e "${YELLOW}[+] Limpiando cualquier configuración SSL residual...${NC}"
+    systemctl stop stunnel4 2>/dev/null
+    rm -f /etc/stunnel/stunnel.conf 2>/dev/null
+fi
 
 # Variables por defecto
 SSL_PORT=443
@@ -68,6 +77,17 @@ case $mode_opt in
         bash /etc/MaximusVpsMx/modules/install_mx-proxy.sh $PROXY_PORT > /dev/null 2>&1
 
         CONNECT_TARGET="127.0.0.1:$PROXY_PORT"
+        ;;
+    0)
+        # --- DESACTIVAR Y BORRAR TODO ---
+        echo -e "\n${RED}▶ DESACTIVANDO Y BORRANDO SSL...${NC}"
+        systemctl stop stunnel4 2>/dev/null
+        systemctl disable stunnel4 2>/dev/null
+        ufw delete allow 443/tcp 2>/dev/null
+        rm -rf /etc/stunnel/stunnel.conf /etc/stunnel/stunnel.pem 2>/dev/null
+        echo -e "${GREEN}✅ Stunnel desinstalado y configuraciones borradas.${NC}"
+        sleep 2
+        exit 0
         ;;
     *)
         echo -e "${RED}Opción inválida.${NC}"

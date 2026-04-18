@@ -888,7 +888,22 @@ menu_protocolos() {
         if [ -f /etc/stunnel/stunnel.conf ] && dpkg -l stunnel4 2>/dev/null | grep -q "^ii"; then
             P_STUN=$(grep "accept =" /etc/stunnel/stunnel.conf 2>/dev/null | awk '{print $3}' | head -1)
             [ -z "$P_STUN" ] && P_STUN="443"
-            if netstat -tuln 2>/dev/null | grep -q ":${P_STUN} "; then st_stun="${GREEN}[ON] ${NC}"; else st_stun="${RED}[OFF]${NC}"; P_STUN="--"; fi
+            target_stun=$(grep "connect =" /etc/stunnel/stunnel.conf 2>/dev/null | awk '{print $3}' | head -1)
+            
+            # Detección de Modo
+            if [[ "$target_stun" == "127.0.0.1:80" ]] || [[ "$target_stun" == "localhost:80" ]]; then
+                m_stun="(Proxy)"
+            elif [[ "$target_stun" == "127.0.0.1:8080" ]] || [[ "$target_stun" == "localhost:8080" ]]; then
+                m_stun="(Uni)"
+            else
+                m_stun="(Direct)"
+            fi
+
+            if netstat -tuln 2>/dev/null | grep -q ":${P_STUN} "; then 
+                st_stun="${GREEN}[ON] ${CYAN}${m_stun}${NC}"
+            else 
+                st_stun="${RED}[OFF]${NC}"; P_STUN="--"; 
+            fi
         else P_STUN="--"; st_stun="${RED}[OFF]${NC}"; fi
 
         if [ -f /usr/local/bin/badvpn-udpgw ]; then
