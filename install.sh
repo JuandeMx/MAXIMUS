@@ -11,11 +11,22 @@ echo -e "\n\e[1;36m=========================================================\e[0
 echo -e "\e[1;36m          Iniciando Instalación de MaximusVpsMx          \e[0m"
 echo -e "\e[1;36m=========================================================\e[0m\n"
 
-# 0. Limpieza de Seguridad Previa (Evitar conflictos)
-echo -e "\e[1;32m[+] Detectando y deteniendo servicios conflictivos...\e[0m"
-systemctl stop badvpn hysteria udp-custom mx-proxy mx-slowdns 2>/dev/null
-killall -9 badvpn-udpgw hysteria udp-custom python3 2>/dev/null
-rm -f /etc/systemd/system/badvpn.service /etc/systemd/system/hysteria.service /etc/systemd/system/udp-custom.service 2>/dev/null
+# 0. Limpieza y Preparación de Terreno (v6.2 Residual Fix)
+echo -e "\e[1;32m[+] Detectando y deteniendo servicios para una instalación limpia...\e[0m"
+SERVICES=("stunnel4" "ws-epro" "mx-proxy" "badvpn" "hysteria" "udp-custom" "mx-slowdns" "dropbear")
+for srv in "${SERVICES[@]}"; do
+    if systemctl is-active --quiet "$srv" || systemctl is-enabled --quiet "$srv" 2>/dev/null; then
+        echo -e "\e[1;33m    - Deteniendo $srv...\e[0m"
+        systemctl stop "$srv" 2>/dev/null
+        systemctl disable "$srv" 2>/dev/null
+    fi
+    # Eliminar definición de servicio antigua para evitar falsos positivos
+    rm -f /etc/systemd/system/${srv}.service 2>/dev/null
+done
+
+# Matar procesos por nombre (Limpieza Nuclear)
+killall -9 badvpn-udpgw hysteria udp-custom python3 stunnel4 2>/dev/null
+systemctl daemon-reload
 
 
 # 1. Update and Dependencies

@@ -378,21 +378,23 @@ menu_cuentas() {
 # --- PURGA NUCLEAR DEL SISTEMA ---
 purgar_sistema_total() {
     clear
-    echo -e "${RED}☢️ INICIANDO PURGA NUCLEAR REFORZADA v4.4.2...${NC}"
+    echo -e "${RED}☢️ INICIANDO PURGA NUCLEAR REFORZADA v6.2 (Residual Fix)...${NC}"
     echo -e "${YELLOW}Limpieza total de servicios, binarios y reglas de red.${NC}"
     sleep 2
 
     # 1. Detener y Deshabilitar Servicios Systemd
     echo -e "${CYAN}[+] Fulminando servicios systemd...${NC}"
-    local services=("stunnel4" "dropbear" "mx-proxy" "badvpn" "mx-slowdns" "udp-custom" "hysteria" "ws-epro" "sshd" "ssh")
+    local services=("stunnel4" "dropbear" "mx-proxy" "badvpn" "mx-slowdns" "udp-custom" "hysteria" "ws-epro" "sshd" "ssh" "mx-webpanel")
     for srv in "${services[@]}"; do
+        echo -e "    - Limpiando $srv..."
         systemctl stop "$srv" 2>/dev/null
         systemctl disable "$srv" 2>/dev/null
+        rm -f "/etc/systemd/system/${srv}.service" 2>/dev/null
     done
 
     # 2. Matar procesos por socket (Puertos críticos)
     echo -e "${CYAN}[+] Cerrando sockets ocupados...${NC}"
-    local ports=("443/udp" "7300/udp" "36712/udp" "80/tcp" "443/tcp" "8080/tcp")
+    local ports=("443/udp" "7300/udp" "36712/udp" "80/tcp" "443/tcp" "8080/tcp" "8082/tcp")
     for p in "${ports[@]}"; do
         fuser -k -n "$p" 2>/dev/null
     done
@@ -407,47 +409,28 @@ purgar_sistema_total() {
 
     # 4. Eliminar Binarios de Rutas Globales
     echo -e "${CYAN}[+] Eliminando binarios del sistema...${NC}"
-    rm -f /usr/local/bin/badvpn-udpgw 2>/dev/null
-    rm -f /usr/bin/badvpn-udpgw 2>/dev/null
-    rm -f /usr/bin/hysteria 2>/dev/null
-    rm -f /usr/local/bin/udp-custom 2>/dev/null
-    rm -f /usr/local/bin/MX 2>/dev/null
+    rm -f /usr/local/bin/badvpn-udpgw /usr/bin/badvpn-udpgw /usr/bin/hysteria /usr/local/bin/udp-custom /usr/local/bin/MX /usr/local/bin/menu /usr/local/bin/MENU 2>/dev/null
 
     # 5. Limpiar Firewall UFW
     echo -e "${CYAN}[+] Limpiando reglas de Firewall...${NC}"
-    local tcp_ports=(22 44 80 443 8080 8443)
-    for p in "${tcp_ports[@]}"; do ufw delete allow "$p/tcp" 2>/dev/null; done
-    local udp_ports=(443 7300 36712 53)
-    for p in "${udp_ports[@]}"; do ufw delete allow "$p/udp" 2>/dev/null; done
+    # Resetar UFW por completo si es purga total
+    ufw --force reset > /dev/null 2>&1
+    ufw allow 22/tcp > /dev/null 2>&1
 
     # 6. Borrar Carpetas de Configuración y Logs
     echo -e "${CYAN}[+] Borrando rastros de configuración...${NC}"
-    rm -rf /etc/MaximusVpsMx
-    rm -rf /etc/hysteria
-    rm -rf /root/udp
-    rm -rf /etc/stunnel
-    rm -rf /var/log/MaximusVpsMx/*
-    rm -rf /etc/slowdns
-    rm -f /etc/issue.net
+    rm -rf /etc/MaximusVpsMx /etc/hysteria /root/udp /etc/stunnel /var/log/MaximusVpsMx /etc/slowdns /etc/x-ui /usr/local/x-ui 2>/dev/null
+    rm -f /etc/issue.net /etc/motd.bak 2>/dev/null
 
-    # 7. Eliminar Archivos de Servicio
-    echo -e "${CYAN}[+] Eliminando definiciones de servicio...${NC}"
-    rm -f /etc/systemd/system/mx-proxy.service 2>/dev/null
-    rm -f /etc/systemd/system/badvpn.service 2>/dev/null
-    rm -f /etc/systemd/system/mx-slowdns.service 2>/dev/null
-    rm -f /etc/systemd/system/udp-custom.service 2>/dev/null
-    rm -f /etc/systemd/system/hysteria.service 2>/dev/null
-    rm -f /etc/systemd/system/ws-epro.service 2>/dev/null
-
-    # 8. Purga APT
+    # 7. Purga APT (Opcional pero recomendado para limpieza real)
     echo -e "${CYAN}[+] Purgando paquetes APT...${NC}"
-    DEBIAN_FRONTEND=noninteractive apt-get purge stunnel4 dropbear badvpn -y 2>/dev/null
+    DEBIAN_FRONTEND=noninteractive apt-get purge stunnel4 dropbear -y 2>/dev/null
     apt-get autoremove -y 2>/dev/null
 
-    # 9. Recargar y Finalizar
+    # 8. Recargar y Finalizar
     systemctl daemon-reload
     systemctl reset-failed 2>/dev/null
-    echo -e "${GREEN}✅ SISTEMA PURGADO AL 100%.${NC}"
+    echo -e "${GREEN}✅ SISTEMA PURGADO AL 100%. EL VPS ESTÁ LIMPIO.${NC}"
     sleep 2
 }
 
