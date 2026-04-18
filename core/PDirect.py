@@ -62,9 +62,18 @@ class ConnectionHandler(threading.Thread):
                 self.client.close()
                 return
 
-            # Clasificación inicial
+            # Clasificación de Tráfico (Motor Agnóstico v5.2)
             is_ssh = client_buffer.startswith(b'SSH-')
-            is_http = any(client_buffer.startswith(v) for v in [b'GET', b'POST', b'HEAD', b'CONNECT', b'PUT', b'DELETE'])
+            
+            # Buscamos si el buffer contiene una estructura HTTP (Verbo + Path + HTTP/)
+            is_http = False
+            if not is_ssh:
+                # Si contiene "HTTP/" es casi seguro una petición web
+                if b'HTTP/' in client_buffer:
+                    is_http = True
+                # O si empieza con verbos comunes de payloads (incluyendo COPY)
+                elif any(client_buffer.startswith(v) for v in [b'GET', b'POST', b'HEAD', b'CONNECT', b'COPY', b'PUT', b'DELETE', b'OPTIONS', b'PROPFIND']):
+                    is_http = True
             
             # --- GESTIÓN DE PROTOCOLOS ---
             if is_http:
