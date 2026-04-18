@@ -94,227 +94,217 @@ get_telemetry() {
 
 # --- SUBMENÚ DE USUARIOS ---
 menu_usuarios() {
-    local USER_DB="/etc/MaximusVpsMx/users.db"
-    mkdir -p /etc/MaximusVpsMx
-    [ ! -f "$USER_DB" ] && touch "$USER_DB"
+    while true; do
+        local USER_DB="/etc/MaximusVpsMx/users.db"
+        mkdir -p /etc/MaximusVpsMx
+        [ ! -f "$USER_DB" ] && touch "$USER_DB"
 
-    # Hilo de Migración Automática (v1 -> v2)
-    if [ -f "$USER_DB" ]; then
-        if [ $(head -n 1 "$USER_DB" | grep -o ":" | wc -l) -lt 4 ]; then
-            echo -e "${YELLOW}⚙️ Migrando base de datos de usuarios al nuevo formato...${NC}"
-            sed -i 's/$/:NONE:1/' "$USER_DB"
+        # Hilo de Migración Automática (v1 -> v2)
+        if [ -f "$USER_DB" ]; then
+            if [ $(head -n 1 "$USER_DB" | grep -o ":" | wc -l) -lt 4 ]; then
+                echo -e "${YELLOW}⚙️ Migrando base de datos de usuarios al nuevo formato...${NC}"
+                sed -i 's/$/:NONE:1/' "$USER_DB"
+            fi
         fi
-    fi
 
-    ui_header "ADMINISTRACIÓN DE CUENTAS SSH / DROPBEAR"
-    echo -e "  ${CYAN}[1]>${WHITE} CREAR NUEVO USUARIO PREMIUM${NC}"
-    echo -e "  ${CYAN}[2]>${RED} REMOVER / ELIMINAR USUARIO${NC}"
-    echo -e "  ${CYAN}[3]>${WHITE} RENOVAR VENCIMIENTO${NC}"
-    echo -e "  ${CYAN}[4]>${YELLOW} CAMBIAR CONTRASEÑA${NC}"
-    echo -e "  ${CYAN}[5]>${WHITE} BLOQUEAR/DESBLOQUEAR USUARIO${NC}"
-    ui_subhr
-    echo -e "  ${CYAN}[7]>${GREEN} VER DETALLES DE TODOS LOS USUARIOS${NC}"
-    echo -e "  ${CYAN}[8]>${WHITE} MONITOR DE CONEXIONES ACTUALES${NC}"
-    echo -e "  ${CYAN}[10]>${WHITE} LIMPIAR USUARIOS VENCIDOS${NC}"
-    ui_subhr
-    echo -e "  ${CYAN}[12]>${WHITE} BACKUP DE BASE DE DATOS${NC}"
-    echo -e "  ${CYAN}[15]>${YELLOW} 🛡️ GESTIÓN DE HUID / TOKEN${NC}"
-    ui_hr
-    echo -e "  ${WHITE}[0] VOLVER AL MENÚ ANTERIOR${NC}"
-    ui_hr
-    ui_prompt " Selecciona una opción: "
-    read opt_user
+        ui_header "ADMINISTRACIÓN DE CUENTAS SSH / DROPBEAR"
+        echo -e "  ${CYAN}[1]>${WHITE} CREAR NUEVO USUARIO PREMIUM${NC}"
+        echo -e "  ${CYAN}[2]>${RED} REMOVER / ELIMINAR USUARIO${NC}"
+        echo -e "  ${CYAN}[3]>${WHITE} RENOVAR VENCIMIENTO${NC}"
+        echo -e "  ${CYAN}[4]>${YELLOW} CAMBIAR CONTRASEÑA${NC}"
+        echo -e "  ${CYAN}[5]>${WHITE} BLOQUEAR/DESBLOQUEAR USUARIO${NC}"
+        ui_subhr
+        echo -e "  ${CYAN}[7]>${GREEN} VER DETALLES DE TODOS LOS USUARIOS${NC}"
+        echo -e "  ${CYAN}[8]>${WHITE} MONITOR DE CONEXIONES ACTUALES${NC}"
+        echo -e "  ${CYAN}[10]>${WHITE} LIMPIAR USUARIOS VENCIDOS${NC}"
+        ui_subhr
+        echo -e "  ${CYAN}[12]>${WHITE} BACKUP DE BASE DE DATOS${NC}"
+        echo -e "  ${CYAN}[15]>${YELLOW} 🛡️ GESTIÓN DE HUID / TOKEN${NC}"
+        ui_hr
+        echo -e "  ${WHITE}[0] VOLVER AL MENÚ ANTERIOR${NC}"
+        ui_hr
+        ui_prompt " Selecciona una opción: "
+        read opt_user
 
-    case $opt_user in
-        1)
-            echo -e "\n${YELLOW}▶ Crear Usuario Premium${NC}"
-            read -p " Nombre del Usuario: " user
-            [ -z "$user" ] && menu_usuarios
-            grep -qw "$user" "$USER_DB" && { echo -e "${RED}❌ Error: Usuario ya existe.${NC}"; sleep 2; menu_usuarios; }
-            read -p " Contraseña: " pass
-            read -p " Días de Duración: " dias
-            read -p " Límite de Conexiones [1]: " limit
-            [ -z "$limit" ] && limit=1
-            echo -e "${CYAN} ¿Activar Bloqueo por HUID? (s/n)${NC}"
-            read -p " Opción: " h_opt
-            hwid_val="OFF"
-            if [[ "$h_opt" == "S" || "$h_opt" == "s" ]]; then
-                echo -e "   ${YELLOW}▶ Selecciona el Método de Registro:${NC}"
-                echo -e "   [1] Automático (Capturar en primer login)"
-                echo -e "   [2] Manual (Ingresar Token ahora)"
-                read -p "   Opción [1]: " m_hwid
-                if [[ "$m_hwid" == "2" ]]; then
-                    read -p "   Ingresa el Token/HUID: " hwid_val
+        case $opt_user in
+            1)
+                echo -e "\n${YELLOW}▶ Crear Usuario Premium${NC}"
+                read -p " Nombre del Usuario: " user
+                [ -z "$user" ] && continue
+                grep -qw "$user" "$USER_DB" && { echo -e "${RED}❌ Error: Usuario ya existe.${NC}"; sleep 2; continue; }
+                read -p " Contraseña: " pass
+                read -p " Días de Duración: " dias
+                read -p " Límite de Conexiones [1]: " limit
+                [ -z "$limit" ] && limit=1
+                echo -e "${CYAN} ¿Activar Bloqueo por HUID? (s/n)${NC}"
+                read -p " Opción: " h_opt
+                hwid_val="OFF"
+                if [[ "$h_opt" == "S" || "$h_opt" == "s" ]]; then
+                    echo -e "   ${YELLOW}▶ Selecciona el Método de Registro:${NC}"
+                    echo -e "   [1] Automático (Capturar en primer login)"
+                    echo -e "   [2] Manual (Ingresar Token ahora)"
+                    read -p "   Opción [1]: " m_hwid
+                    if [[ "$m_hwid" == "2" ]]; then
+                        read -p "   Ingresa el Token/HUID: " hwid_val
+                    else
+                        hwid_val="NONE"
+                    fi
+                fi
+
+                exp_date=$(date -d "+$dias days" +%Y-%m-%d)
+                rm -f /etc/passwd.lock /etc/shadow.lock
+                useradd -e $exp_date -s /bin/false -M $user 2>/dev/null
+                echo "$user:$pass" | chpasswd
+                echo "$user:$pass:$exp_date:$hwid_val:$limit" >> "$USER_DB"
+                echo -e "${GREEN}✅ Usuario $user creado ($limit SSH, HUID: $hwid_val) por $dias días.${NC}"
+                ui_pause
+                ;;
+            2)
+                echo -e "\n${RED}▶ Eliminar Sistema${NC}"
+                read -p " Username a destruir: " user
+                userdel -f $user 2>/dev/null
+                sed -i "/^$user:/d" "$USER_DB" 2>/dev/null
+                echo -e "${GREEN}✅ Usuario eliminado de la base de datos.${NC}"
+                ui_pause
+                ;;
+            3)
+                echo -e "\n${YELLOW}▶ Renovar Usuario${NC}"
+                read -p " Escribe el Username: " user
+                grep -qw "$user" "$USER_DB" || { echo -e "${RED}❌ Usuario no encontrado.${NC}"; sleep 2; continue; }
+                read -p " Días a Añadir: " dias
+                
+                # Cálculo de Renovación Acumulativa
+                old_exp=$(grep -w "^$user" "$USER_DB" | cut -d: -f3)
+                current_sec=$(date +%s)
+                old_sec=$(date -d "$old_exp" +%s 2>/dev/null)
+                
+                if [ "$old_sec" -gt "$current_sec" ]; then
+                    new_exp=$(date -d "$old_exp + $dias days" +%Y-%m-%d)
                 else
-                    hwid_val="NONE"
+                    new_exp=$(date -d "+$dias days" +%Y-%m-%d)
                 fi
-            fi
 
-            exp_date=$(date -d "+$dias days" +%Y-%m-%d)
-            rm -f /etc/passwd.lock /etc/shadow.lock
-            useradd -e $exp_date -s /bin/false -M $user 2>/dev/null
-            echo "$user:$pass" | chpasswd
-            echo "$user:$pass:$exp_date:$hwid_val:$limit" >> "$USER_DB"
-            echo -e "${GREEN}✅ Usuario $user creado ($limit SSH, HUID: $hwid_val) por $dias días.${NC}"
-            ui_pause; menu_usuarios
-            ;;
-        2)
-            echo -e "\n${RED}▶ Eliminar Sistema${NC}"
-            read -p " Username a destruir: " user
-            userdel -f $user 2>/dev/null
-            sed -i "/^$user:/d" "$USER_DB" 2>/dev/null
-            echo -e "${GREEN}✅ Usuario eliminado de la base de datos.${NC}"
-            ui_pause; menu_usuarios
-            ;;
-        3)
-            echo -e "\n${YELLOW}▶ Renovar Usuario${NC}"
-            read -p " Escribe el Username: " user
-            grep -qw "$user" "$USER_DB" || { echo -e "${RED}❌ Usuario no encontrado.${NC}"; sleep 2; menu_usuarios; }
-            read -p " Días a Añadir: " dias
-            
-            # Cálculo de Renovación Acumulativa
-            old_exp=$(grep -w "^$user" "$USER_DB" | cut -d: -f3)
-            current_sec=$(date +%s)
-            old_sec=$(date -d "$old_exp" +%s 2>/dev/null)
-            
-            if [ "$old_sec" -gt "$current_sec" ]; then
-                new_exp=$(date -d "$old_exp + $dias days" +%Y-%m-%d)
-            else
-                new_exp=$(date -d "+$dias days" +%Y-%m-%d)
-            fi
-
-            chage -E $new_exp $user 2>/dev/null
-            sed -i "/^$user:/ s/:${old_exp}:/:${new_exp}:/" "$USER_DB"
-            echo -e "${GREEN}✅ Usuario renovado hasta el $new_exp.${NC}"
-            ui_pause; menu_usuarios
-            ;;
-        4)
-            echo -e "\n${YELLOW}▶ Editar Contraseña${NC}"
-            read -p " Escribe el Username: " user
-            read -p " Nueva Contraseña: " pass
-            echo "$user:$pass" | chpasswd
-            sed -i "/^$user:/ s/:[^:]*:/:${pass}:/2" "$USER_DB"
-            echo -e "${GREEN}✅ Contraseña actualizada.${NC}"
-            ui_pause; menu_usuarios
-            ;;
-        5)
-            echo -e "\n${YELLOW}▶ Bloquear/Desbloquear Usuario${NC}"
-            read -p " Username a modificar: " user
-            estado=$(passwd -S $user 2>/dev/null | awk '{print $2}')
-            if [[ "$estado" == "L" || "$estado" == "P" ]]; then
-                usermod -U $user 2>/dev/null
-                echo -e "${GREEN}✅ Usuario $user DESBLOQUEADO (Active).${NC}"
-            else
-                usermod -L $user 2>/dev/null
-                echo -e "${RED}🔒 Usuario $user BLOQUEADO (Lock).${NC}"
-            fi
-            sleep 2; menu_usuarios
-            ;;
-        7)
-            echo -e "\n${YELLOW}▶ Detalles de Usuarios VIP (Elite Series):${NC}"
-            ui_hr
-            printf "${WHITE}%-12s | %-12s | %-10s | %-8s | %-6s${NC}\n" "USUARIO" "PASS" "EXPIRA" "HUID" "LIM"
-            ui_subhr
-            if [ -s "$USER_DB" ]; then
+                chage -E $new_exp $user 2>/dev/null
+                sed -i "/^$user:/ s/:${old_exp}:/:${new_exp}:/" "$USER_DB"
+                echo -e "${GREEN}✅ Usuario renovado hasta el $new_exp.${NC}"
+                ui_pause
+                ;;
+            4)
+                echo -e "\n${YELLOW}▶ Editar Contraseña${NC}"
+                read -p " Escribe el Username: " user
+                read -p " Nueva Contraseña: " pass
+                echo "$user:$pass" | chpasswd
+                sed -i "/^$user:/ s/:[^:]*:/:${pass}:/2" "$USER_DB"
+                echo -e "${GREEN}✅ Contraseña actualizada.${NC}"
+                ui_pause
+                ;;
+            5)
+                echo -e "\n${YELLOW}▶ Bloquear/Desbloquear Usuario${NC}"
+                read -p " Username a modificar: " user
+                estado=$(passwd -S $user 2>/dev/null | awk '{print $2}')
+                if [[ "$estado" == "L" || "$estado" == "P" ]]; then
+                    usermod -U $user 2>/dev/null
+                    echo -e "${GREEN}✅ Usuario $user DESBLOQUEADO (Active).${NC}"
+                else
+                    usermod -L $user 2>/dev/null
+                    echo -e "${RED}🔒 Usuario $user BLOQUEADO (Lock).${NC}"
+                fi
+                sleep 2
+                ;;
+            7)
+                echo -e "\n${YELLOW}▶ Detalles de Usuarios VIP (Elite Series):${NC}"
+                ui_hr
+                printf "${WHITE}%-12s | %-12s | %-10s | %-8s | %-6s${NC}\n" "USUARIO" "PASS" "EXPIRA" "HUID" "LIM"
+                ui_subhr
+                if [ -s "$USER_DB" ]; then
+                    while IFS=: read -r d_user d_pass d_exp d_hwid d_limit; do
+                        h_color="${GREEN}" ; [ "$d_hwid" == "OFF" ] && h_color="${RED}"
+                        printf " ${CYAN}%-11s${NC} | %-12s | %-10s | %b%-8s${NC} | %-6s\n" "$d_user" "$d_pass" "$d_exp" "$h_color" "$d_hwid" "$d_limit"
+                    done < "$USER_DB"
+                else
+                    echo -e " ${RED}No hay usuarios registrados.${NC}"
+                fi
+                ui_hr
+                ui_pause
+                ;;
+            8)
+                echo -e "\n${YELLOW}▶ MONITOR DE CONEXIONES ELITE${NC}"
+                ui_hr
+                printf "${WHITE}%-15s | %-15s | %-15s${NC}\n" "USUARIO" "IP ORIGEN" "DISPOSITIVO"
+                ui_subhr
+                # Monitor Simple: Cruzamos procesos de SSH/Dropbear con netstat
+                netstat -antp 2>/dev/null | grep -E "sshd|dropbear" | grep ESTABLISHED | awk '{print $5, $7}' | while read -r rip rproc; do
+                    u_ip=$(echo $rip | cut -d: -f1)
+                    u_pid=$(echo $rproc | cut -d/ -f1)
+                    u_name=$(ps -u -p $u_pid 2>/dev/null | tail -n 1 | awk '{print $1}')
+                    [ -z "$u_name" ] && u_name="Unknown"
+                    printf " ${GREEN}%-14s${NC} | %-15s | ${CYAN}Verified${NC}\n" "$u_name" "$u_ip"
+                done
+                ui_hr
+                ui_pause
+                ;;
+            10)
+                echo -e "\n${YELLOW}▶ Eliminando Usuarios Vencidos...${NC}"
+                today=$(date +%s)
+                ct=0
                 while IFS=: read -r d_user d_pass d_exp d_hwid d_limit; do
-                    h_color="${GREEN}" ; [ "$d_hwid" == "OFF" ] && h_color="${RED}"
-                    printf " ${CYAN}%-11s${NC} | %-12s | %-10s | %b%-8s${NC} | %-6s\n" "$d_user" "$d_pass" "$d_exp" "$h_color" "$d_hwid" "$d_limit"
+                    exp_sec=$(date -d "$d_exp" +%s 2>/dev/null)
+                    if [ ! -z "$exp_sec" ] && [ "$today" -gt "$exp_sec" ]; then
+                        userdel -f "$d_user" 2>/dev/null
+                        sed -i "/^$d_user:/d" "$USER_DB"
+                        echo -e "${RED}🗑️ Eliminado: $d_user (Venció el $d_exp)${NC}"
+                        ct=$((ct+1))
+                    fi
                 done < "$USER_DB"
-            else
-                echo -e " ${RED}No hay usuarios registrados.${NC}"
-            fi
-            ui_hr
-            ui_pause ; menu_usuarios
-            ;;
-        8)
-            echo -e "\n${YELLOW}▶ MONITOR DE CONEXIONES ELITE${NC}"
-            ui_hr
-            printf "${WHITE}%-15s | %-15s | %-15s${NC}\n" "USUARIO" "IP ORIGEN" "DISPOSITIVO"
-            ui_subhr
-            # Monitor Simple: Cruzamos procesos de SSH/Dropbear con netstat
-            netstat -antp 2>/dev/null | grep -E "sshd|dropbear" | grep ESTABLISHED | awk '{print $5, $7}' | while read -r rip rproc; do
-                u_ip=$(echo $rip | cut -d: -f1)
-                u_pid=$(echo $rproc | cut -d/ -f1)
-                u_name=$(ps -u -p $u_pid 2>/dev/null | tail -n 1 | awk '{print $1}')
-                [ -z "$u_name" ] && u_name="Unknown"
-                printf " ${GREEN}%-14s${NC} | %-15s | ${CYAN}Verified${NC}\n" "$u_name" "$u_ip"
-            done
-            ui_hr
-            ui_pause ; menu_usuarios
-            ;;
-        10)
-            echo -e "\n${YELLOW}▶ Eliminando Usuarios Vencidos...${NC}"
-            today=$(date +%s)
-            ct=0
-            while IFS=: read -r d_user d_pass d_exp d_hwid d_limit; do
-                exp_sec=$(date -d "$d_exp" +%s 2>/dev/null)
-                if [ ! -z "$exp_sec" ] && [ "$today" -gt "$exp_sec" ]; then
-                    userdel -f "$d_user" 2>/dev/null
-                    sed -i "/^$d_user:/d" "$USER_DB"
-                    echo -e "${RED}🗑️ Eliminado: $d_user (Venció el $d_exp)${NC}"
-                    ct=$((ct+1))
-                fi
-            done < "$USER_DB"
-            [ "$ct" -eq 0 ] && echo -e "${GREEN}Todo al día.${NC}" || echo -e "${GREEN}Limpieza terminada.${NC}"
-            sleep 2; menu_usuarios
             ;;
         12)
             echo -e "\n${YELLOW}▶ Generando Backup Maximus...${NC}"
             tar -cvf /root/maximus_users_backup.tar "$USER_DB" /etc/passwd /etc/shadow 2>/dev/null
             echo -e "${GREEN}✅ Backup guardado en /root/maximus_users_backup.tar${NC}"
-            ui_pause; menu_usuarios
-            ;;
+            ui_pause ;;
         15) sub_huid ;; # Definir abajo
-        0) break ;;
+        0) return ;;
     esac
 }
 
 # --- SUBMENÚ HUID ---
 sub_huid() {
     local USER_DB="/etc/MaximusVpsMx/users.db"
-    ui_header "GESTIÓN DE SEGURIDAD HUID / TOKEN"
-    echo -e "  ${CYAN}[1]>${WHITE} LISTAR USUARIOS CON HUID ACTIVO${NC}"
-    echo -e "  ${CYAN}[2]>${YELLOW} RESETEAR / LIMPIAR HUID DE UN USUARIO${NC}"
-    echo -e "  ${CYAN}[3]>${WHITE} ASIGNAR HUID MANUALMENTE${NC}"
-    echo -e "  ${CYAN}[4]>${RED} DESACTIVAR HUID A UN USUARIO${NC}"
-    ui_hr
-    echo -e "  ${WHITE}[0] VOLVER${NC}"
-    ui_hr
-    ui_prompt " Selecciona: " ; read opt_h
-    
-    case $opt_h in
-        1)
-            ui_header "USUARIOS CON BLOQUEO DISPOSITIVO"
-            printf "${WHITE}%-15s | %-30s${NC}\n" "USUARIO" "HARDWARE ID (TOKEN)"
-            ui_subhr
-            grep -v ":OFF:" "$USER_DB" | while IFS=: read -r d_user d_pass d_exp d_hwid d_limit; do
-                printf " ${GREEN}%-14s${NC} | ${CYAN}%-30s${NC}\n" "$d_user" "$d_hwid"
-            done
-            ui_pause ; sub_huid
-            ;;
-        2)
-            read -p " Username para Resetear HUID: " user
-            sed -i "/^$user:/ s/:[^:]*:/ :NONE: /3" "$USER_DB" # Corrección: el campo HUID es el 4to
-            # Re-ajuste de sed para el 4to campo real
-            sed -i "/^$user:/ s/\(:[^:]*:[^:]*:\)[^:]*:/\1NONE:/" "$USER_DB"
-            echo -e "${GREEN}✅ HUID reseteado. El próximo ingreso capturará el nuevo ID.${NC}"
-            ui_pause ; sub_huid
-            ;;
-        3)
-            read -p " Username: " user
-            read -p " Nuevo HUID (Token): " n_huid
-            sed -i "/^$user:/ s/\(:[^:]*:[^:]*:\)[^:]*:/\1$n_huid:/" "$USER_DB"
-            echo -e "${GREEN}✅ HUID asignado manualmente.${NC}"
-            ui_pause ; sub_huid
-            ;;
-        4)
-            read -p " Username para Desactivar HUID: " user
-            sed -i "/^$user:/ s/\(:[^:]*:[^:]*:\)[^:]*:/\1OFF:/" "$USER_DB"
-            echo -e "${RED}🔒 Bloqueo HUID desactivado.${NC}"
-            ui_pause ; sub_huid
-            ;;
-        0) menu_usuarios ;;
-    esac
+    while true; do
+        ui_header "GESTIÓN DE SEGURIDAD HUID / TOKEN"
+        echo -e "  ${CYAN}[1]>${WHITE} LISTAR USUARIOS CON HUID ACTIVO${NC}"
+        echo -e "  ${CYAN}[2]>${YELLOW} RESETEAR / LIMPIAR HUID DE UN USUARIO${NC}"
+        echo -e "  ${CYAN}[3]>${WHITE} ASIGNAR HUID MANUALMENTE${NC}"
+        echo -e "  ${CYAN}[4]>${RED} DESACTIVAR HUID A UN USUARIO${NC}"
+        ui_hr
+        echo -e "  ${WHITE}[0] VOLVER${NC}"
+        ui_hr
+        ui_prompt " Selecciona: " ; read opt_h
+        
+        case $opt_h in
+            1)
+                ui_header "USUARIOS CON BLOQUEO DISPOSITIVO"
+                printf "${WHITE}%-15s | %-30s${NC}\n" "USUARIO" "HARDWARE ID (TOKEN)"
+                ui_subhr
+                grep -v ":OFF:" "$USER_DB" | while IFS=: read -r d_user d_pass d_exp d_hwid d_limit; do
+                    printf " ${GREEN}%-14s${NC} | ${CYAN}%-30s${NC}\n" "$d_user" "$d_hwid"
+                done
+                ui_pause ;;
+            2)
+                read -p " Username para Resetear HUID: " user
+                sed -i "/^$user:/ s/\(:[^:]*:[^:]*:\)[^:]*:/\1NONE:/" "$USER_DB"
+                echo -e "${GREEN}✅ HUID reseteado. El próximo ingreso capturará el nuevo ID.${NC}"; ui_pause ;;
+            3)
+                read -p " Username: " user; read -p " Nuevo HUID (Token): " n_huid
+                sed -i "/^$user:/ s/\(:[^:]*:[^:]*:\)[^:]*:/\1$n_huid:/" "$USER_DB"
+                echo -e "${GREEN}✅ HUID asignado manualmente.${NC}"; ui_pause ;;
+            4)
+                read -p " Username para Desactivar HUID: " user
+                sed -i "/^$user:/ s/\(:[^:]*:[^:]*:\)[^:]*:/\1OFF:/" "$USER_DB"
+                echo -e "${RED}🔒 Bloqueo HUID desactivado.${NC}"; ui_pause ;;
+            0) return ;;
+        esac
+    done
 }
 
 # --- ADMINISTRADOR DE CUENTAS POR PROTOCOLO ---
@@ -378,7 +368,7 @@ menu_cuentas() {
                 ;;
             3) sub_hysteria ;;
             4) sub_xui ;;
-            0) break ;;
+            0) return ;;
             *) ;;
         esac
     done
@@ -478,7 +468,7 @@ sub_webpanel() {
             1) bash /etc/MaximusVpsMx/modules/install_web-panel.sh ;;
             2) systemctl stop mx-webpanel; echo -e "${RED}⚠️ Detenido.${NC}"; sleep 1 ;;
             3) bash /etc/MaximusVpsMx/modules/install_web-panel.sh --uninstall ;;
-            0) break ;;
+            0) return ;;
         esac
     done
 }
@@ -621,11 +611,10 @@ gestor_servicio() {
                    *) ;;
                esac
                ;;
-            0) break ;;
+            0) return ;;
             *) ;;
         esac
     done
-    menu_protocolos
 }
 
 # --- SUBMENU EXCLUSIVO SLOWDNS ---
@@ -726,11 +715,10 @@ sub_slowdns() {
                     fi
                 fi
                 sleep 2 ;;
-            0) break ;;
+            0) return ;;
             *) ;;
         esac
     done
-    menu_protocolos
 }
 
 # --- SUBMENÚ X-UI PANEL (V2RAY/XRAY) ---
@@ -811,7 +799,7 @@ sub_xui() {
                     ui_pause
                 fi
                 ;;
-            0) break ;;
+            0) return ;;
             *) ;;
         esac
     done
@@ -888,345 +876,162 @@ sub_hysteria() {
                 systemctl restart hysteria 2>/dev/null ;;
             6)
                 bash /etc/MaximusVpsMx/modules/install_hysteria.sh ;;
-            0) break ;;
+            0) return ;;
         esac
     done
 }
 
 # --- SUBMENÚ DE PROTOCOLOS ---
 menu_protocolos() {
-    ui_header "A D M I N I S T R A D O R   D E   P R O T O C O L O S"
-    # --- DETECCIÓN DINÁMICA DE PUERTOS Y ESTATUS (Doble Verificación) ---
+    while true; do
+        # --- Lógica de Telemetría local ---
+        P_SSH=$(grep "^Port" /etc/ssh/sshd_config 2>/dev/null | awk '{print $2}' | head -1)
+        [ -z "$P_SSH" ] && P_SSH="22"
+        if netstat -tuln 2>/dev/null | grep -q ":${P_SSH} "; then st_ssh="${GREEN}[ON] ${NC}"; else st_ssh="${RED}[OFF]${NC}"; P_SSH="--"; fi
 
-    # SSH (OpenSSH)
-    P_SSH=$(grep "^Port" /etc/ssh/sshd_config 2>/dev/null | awk '{print $2}' | head -1)
-    [ -z "$P_SSH" ] && P_SSH="22"
-    if netstat -tuln 2>/dev/null | grep -q ":${P_SSH} "; then 
-        st_ssh="${GREEN}[ON] ${NC}"
-    else 
-        st_ssh="${RED}[OFF]${NC}"
-        P_SSH="--"
-    fi
+        if dpkg -l dropbear 2>/dev/null | grep -q "^ii"; then
+            P_DROP=$(grep "DROPBEAR_PORT=" /etc/default/dropbear 2>/dev/null | cut -d= -f2 | tr -d '"' | xargs)
+            [ -z "$P_DROP" ] && P_DROP="44"
+            if netstat -tuln 2>/dev/null | grep -q ":${P_DROP} "; then st_drop="${GREEN}[ON] ${NC}"; else st_drop="${RED}[OFF]${NC}"; P_DROP="--"; fi
+        else P_DROP="--"; st_drop="${RED}[OFF]${NC}"; fi
 
-    # Dropbear
-    if dpkg -l dropbear 2>/dev/null | grep -q "^ii"; then
-        P_DROP=$(grep "DROPBEAR_PORT=" /etc/default/dropbear 2>/dev/null | cut -d= -f2 | tr -d '"' | xargs)
-        [ -z "$P_DROP" ] && P_DROP="44"
-        if netstat -tuln 2>/dev/null | grep -q ":${P_DROP} "; then 
-            st_drop="${GREEN}[ON] ${NC}"
-        else 
-            st_drop="${RED}[OFF]${NC}"
-            P_DROP="--"
-        fi
-    else
-        P_DROP="--"; st_drop="${RED}[OFF]${NC}"
-    fi
+        if [ -f /etc/systemd/system/mx-proxy.service ]; then
+            P_PROXY=$(grep "ExecStart=" /etc/systemd/system/mx-proxy.service 2>/dev/null | awk '{print $NF}')
+            P_PROXY="${P_PROXY%%-*}"; [ -z "$P_PROXY" ] && P_PROXY="80"
+            if netstat -tuln 2>/dev/null | grep -q ":${P_PROXY} "; then st_proxy="${GREEN}[ON] ${NC}"; else st_proxy="${RED}[OFF]${NC}"; P_PROXY="--"; fi
+        else P_PROXY="--"; st_proxy="${RED}[OFF]${NC}"; fi
 
-    # Proxy Python
-    if [ -f /etc/systemd/system/mx-proxy.service ]; then
-        P_PROXY=$(grep "ExecStart=" /etc/systemd/system/mx-proxy.service 2>/dev/null | awk '{print $NF}')
-        P_PROXY="${P_PROXY%%-*}"
-        [ -z "$P_PROXY" ] && P_PROXY="80"
-        if netstat -tuln 2>/dev/null | grep -q ":${P_PROXY} "; then 
-            st_proxy="${GREEN}[ON] ${NC}"
-        else 
-            st_proxy="${RED}[OFF]${NC}"
-            P_PROXY="--"
-        fi
-    else
-        P_PROXY="--"; st_proxy="${RED}[OFF]${NC}"
-    fi
+        if [ -f /etc/stunnel/stunnel.conf ] && dpkg -l stunnel4 2>/dev/null | grep -q "^ii"; then
+            P_STUN=$(grep "accept =" /etc/stunnel/stunnel.conf 2>/dev/null | awk '{print $3}' | head -1)
+            [ -z "$P_STUN" ] && P_STUN="443"
+            if netstat -tuln 2>/dev/null | grep -q ":${P_STUN} "; then st_stun="${GREEN}[ON] ${NC}"; else st_stun="${RED}[OFF]${NC}"; P_STUN="--"; fi
+        else P_STUN="--"; st_stun="${RED}[OFF]${NC}"; fi
 
-    # Stunnel (SSL)
-    if [ -f /etc/stunnel/stunnel.conf ] && dpkg -l stunnel4 2>/dev/null | grep -q "^ii"; then
-        P_STUN=$(grep "accept =" /etc/stunnel/stunnel.conf 2>/dev/null | awk '{print $3}' | head -1)
-        [ -z "$P_STUN" ] && P_STUN="443"
-        if netstat -tuln 2>/dev/null | grep -q ":${P_STUN} "; then 
-            st_stun="${GREEN}[ON] ${NC}"
-        else 
-            st_stun="${RED}[OFF]${NC}"
-            P_STUN="--"
-        fi
-    else
-        P_STUN="--"; st_stun="${RED}[OFF]${NC}"
-    fi
+        if [ -f /usr/local/bin/badvpn-udpgw ]; then
+            if ps -ef | grep -q "[b]advpn-udpgw"; then
+                P_BAD=$(ps -ef | grep badvpn-udpgw | grep -v grep | grep -o ":[0-9]*" | head -1 | tr -d ':')
+                [ -z "$P_BAD" ] && P_BAD="7300"; st_udp="${GREEN}[ON] ${NC}"
+            else P_BAD="--"; st_udp="${RED}[OFF]${NC}"; fi
+        else P_BAD="--"; st_udp="${RED}[OFF]${NC}"; fi
 
-    # BadVPN (UDP)
-    if [ -f /usr/local/bin/badvpn-udpgw ]; then
-        if ps -ef | grep -q "[b]advpn-udpgw"; then
-            P_BAD=$(ps -ef | grep badvpn-udpgw | grep -v grep | grep -o ":[0-9]*" | head -1 | tr -d ':')
-            [ -z "$P_BAD" ] && P_BAD="7300"
-            st_udp="${GREEN}[ON] ${NC}"
-        else
-            P_BAD="--"; st_udp="${RED}[OFF]${NC}"
-        fi
-    else
-        P_BAD="--"; st_udp="${RED}[OFF]${NC}"
-    fi
+        systemctl is-active --quiet mx-slowdns && st_dns="${GREEN}[ON] ${NC}" || st_dns="${RED}[OFF]${NC}"
+        systemctl is-active --quiet ws-epro && st_ws="${GREEN}[ON] ${NC}" || st_ws="${RED}[OFF]${NC}"
+        if systemctl is-active --quiet udp-custom 2>/dev/null; then P_UDPC="7100-7300"; st_udpc="${GREEN}[ON] ${NC}"; else P_UDPC="--"; st_udpc="${RED}[OFF]${NC}"; fi
+        if [ -f /etc/hysteria/hysteria ]; then
+            if systemctl is-active --quiet hysteria 2>/dev/null; then P_HY="2000-5000"; st_udph="${GREEN}[ON] ${NC}"; else P_HY="--"; st_udph="${RED}[OFF]${NC}"; fi
+        else P_HY="--"; st_udph="${RED}[OFF]${NC}"; fi
 
-    # SlowDNS
-    systemctl is-active --quiet mx-slowdns && st_dns="${GREEN}[ON] ${NC}" || st_dns="${RED}[OFF]${NC}"
-    # WS-EPRO
-    systemctl is-active --quiet ws-epro && st_ws="${GREEN}[ON] ${NC}" || st_ws="${RED}[OFF]${NC}"
-
-    # UDP-Custom
-    if systemctl is-active --quiet udp-custom 2>/dev/null; then
-        P_UDPC="7100-7300"
-        st_udpc="${GREEN}[ON] ${NC}"
-    else
-        P_UDPC="--"; st_udpc="${RED}[OFF]${NC}"
-    fi
-
-    # Hysteria v2
-    if [ -f /etc/hysteria/hysteria ]; then
-        if systemctl is-active --quiet hysteria 2>/dev/null; then
-            P_HY="2000-5000"
-            st_udph="${GREEN}[ON] ${NC}"
-        else
-            P_HY="--"; st_udph="${RED}[OFF]${NC}"
-        fi
-    else
-        P_HY="--"; st_udph="${RED}[OFF]${NC}"
-    fi
-
-    # OpenVPN
-    P_OVPN="--"
-    if [ -f /etc/openvpn/server/server.conf ]; then
-        OVPN_PORT=$(grep -E '^port ' /etc/openvpn/server/server.conf 2>/dev/null | awk '{print $2}' | head -1)
-        OVPN_PROTO=$(grep -E '^proto ' /etc/openvpn/server/server.conf 2>/dev/null | awk '{print $2}' | head -1)
-        [ -z "$OVPN_PORT" ] && OVPN_PORT="1194"
-        [ -z "$OVPN_PROTO" ] && OVPN_PROTO="udp"
-        if systemctl is-active --quiet openvpn-server@server 2>/dev/null; then
-            st_ovpn="${GREEN}[ON] ${NC}"
-            P_OVPN="${OVPN_PORT}/${OVPN_PROTO}"
-        else
-            st_ovpn="${RED}[OFF]${NC}"
-            P_OVPN="--"
-        fi
-    else
-        st_ovpn="${RED}[OFF]${NC}"
         P_OVPN="--"
-    fi
+        if [ -f /etc/openvpn/server/server.conf ]; then
+            OVPN_PORT=$(grep -E '^port ' /etc/openvpn/server/server.conf 2>/dev/null|awk '{print $2}'|head -1)
+            OVPN_PROTO=$(grep -E '^proto ' /etc/openvpn/server/server.conf 2>/dev/null|awk '{print $2}'|head -1)
+            [ -z "$OVPN_PORT" ] && OVPN_PORT="1194"
+            if systemctl is-active --quiet openvpn-server@server 2>/dev/null; then
+                st_ovpn="${GREEN}[ON] ${NC}"; P_OVPN="${OVPN_PORT}/${OVPN_PROTO}"
+            else st_ovpn="${RED}[OFF]${NC}"; P_OVPN="--"; fi
+        else st_ovpn="${RED}[OFF]${NC}"; P_OVPN="--"; fi
 
-    st_chk="${GREEN}[ON] ${NC}"
-    if systemctl is-active --quiet x-ui 2>/dev/null; then st_xui="${GREEN}[ON] ${NC}"; else st_xui="${RED}[OFF]${NC}"; fi
-
-    # Resumen (compacto)
-    echo -e " ${CYAN}SSH:${WHITE} $P_SSH  ${CYAN}DROB:${WHITE} $P_DROP  ${CYAN}PROXY:${WHITE} $P_PROXY  ${CYAN}SSL:${WHITE} $P_STUN${NC}"
-    echo -e " ${CYAN}UDPG:${WHITE} $P_BAD  ${CYAN}UDPC:${WHITE} $P_UDPC  ${CYAN}HYST:${WHITE} $P_HY  ${CYAN}OVPN:${WHITE} $P_OVPN${NC}"
-    ui_hr
-    printf "  ${CYAN}[1] ${WHITE}%-15s %b  ${CYAN}[7] ${WHITE}%-15s %b\n" "SSH" "$st_ssh" "OPENVPN" "$st_ovpn"
-    printf "  ${CYAN}[2] ${WHITE}%-15s %b  ${CYAN}[8] ${WHITE}%-15s %b\n" "DROPBEAR" "$st_drop" "SLOWDNS" "$st_dns"
-    printf "  ${CYAN}[3] ${WHITE}%-15s %b  ${CYAN}[9] ${WHITE}%-15s %b\n" "WS-EPRO" "$st_ws" "UDP-CUSTOM" "$st_udpc"
-    printf "  ${CYAN}[4] ${WHITE}%-15s %b  ${CYAN}[10] ${WHITE}%-15s %b\n" "PYTHON PROXY" "$st_proxy" "HYSTERIA v2" "$st_udph"
-    printf "  ${CYAN}[5] ${WHITE}%-15s %b  ${CYAN}[11] ${WHITE}%-15s %b\n" "STUNNEL4" "$st_stun" "PANEL X-UI" "$st_xui"
-    printf "  ${CYAN}[6] ${WHITE}%-15s %b  ${CYAN}[12] ${WHITE}%-15s %b\n" "BADVPN" "$st_udp" "CHECKUSER" "$st_chk"
-    ui_subhr
-    echo -e "  ${CYAN}[13]>${WHITE} REINICIAR TODOS LOS SERVICIOS${NC}"
-    ui_hr
-    echo -e "  ${WHITE}[0] VOLVER AL MENÚ PRINCIPAL${NC}"
-    ui_hr
-    ui_prompt " Selecciona una opción: "
-    read opt_prot
-    
-    case $opt_prot in
-        1) gestor_servicio "SSH" "ssh" ;;
-        2) gestor_servicio "DROPBEAR" "dropbear" ;;
-        3) gestor_servicio "WS-EPRO" "ws-epro" ;;
-        4) gestor_servicio "SOCKS PYTHON" "mx-proxy" ;;
-        5) gestor_servicio "STUNNEL (SSL)" "stunnel4" ;;
-        6) gestor_servicio "BADVPN-UDPGW" "badvpn" ;;
-        7) gestor_servicio "OPENVPN" "openvpn" ;;
-        8) sub_slowdns ;;
-        9) gestor_servicio "UDP-CUSTOM" "udp-custom" ;;
-        10) sub_hysteria ; menu_protocolos ;;
-        11) sub_xui ; menu_protocolos ;;
-        12) gestor_servicio "CHECKUSER ONLINE" "checkuser" ;;
-        13)
-            echo "🔄 Reiniciando toda la red..."
-            systemctl restart mx-proxy dropbear stunnel4 badvpn mx-slowdns ssh 2>/dev/null
-            sleep 2; menu_protocolos ;;
-        0) main_menu ;;
-        *) menu_protocolos ;;
-    esac
+        ui_header "A D M I N I S T R A D O R   D E   P R O T O C O L O S"
+        echo -e " ${CYAN}SSH:${WHITE} $P_SSH  ${CYAN}DROB:${WHITE} $P_DROP  ${CYAN}PROXY:${WHITE} $P_PROXY  ${CYAN}SSL:${WHITE} $P_STUN${NC}"
+        echo -e " ${CYAN}UDPG:${WHITE} $P_BAD  ${CYAN}UDPC:${WHITE} $P_UDPC  ${CYAN}HYST:${WHITE} $P_HY  ${CYAN}OVPN:${WHITE} $P_OVPN${NC}"
+        ui_hr
+        printf "  ${CYAN}[1] ${WHITE}%-15s %b  ${CYAN}[7] ${WHITE}%-15s %b\n" "SSH" "$st_ssh" "OPENVPN" "$st_ovpn"
+        printf "  ${CYAN}[2] ${WHITE}%-15s %b  ${CYAN}[8] ${WHITE}%-15s %b\n" "DROPBEAR" "$st_drop" "SLOWDNS" "$st_dns"
+        printf "  ${CYAN}[3] ${WHITE}%-15s %b  ${CYAN}[9] ${WHITE}%-15s %b\n" "WS-EPRO" "$st_ws" "UDP-CUSTOM" "$st_udpc"
+        printf "  ${CYAN}[4] ${WHITE}%-15s %b  ${CYAN}[10] ${WHITE}%-15s %b\n" "PYTHON PROXY" "$st_proxy" "HYSTERIA v2" "$st_udph"
+        printf "  ${CYAN}[5] ${WHITE}%-15s %b  ${CYAN}[11] ${WHITE}%-15s %b\n" "STUNNEL4" "$st_stun" "PANEL X-UI" "$st_xui"
+        printf "  ${CYAN}[6] ${WHITE}%-15s %b  ${CYAN}[12] ${WHITE}%-15s %b\n" "BADVPN" "$st_udp" "CHECKUSER" "$st_chk"
+        ui_subhr
+        echo -e "  ${CYAN}[13]>${WHITE} REINICIAR TODOS LOS SERVICIOS${NC}"
+        ui_hr
+        echo -e "  ${WHITE}[0] VOLVER AL MENÚ PRINCIPAL${NC}"
+        ui_hr
+        ui_prompt " Selecciona una opción: " ; read opt_prot
+        
+        case $opt_prot in
+            1) gestor_servicio "SSH" "ssh" ;;
+            2) gestor_servicio "DROPBEAR" "dropbear" ;;
+            3) gestor_servicio "WS-EPRO" "ws-epro" ;;
+            4) gestor_servicio "SOCKS PYTHON" "mx-proxy" ;;
+            5) gestor_servicio "STUNNEL (SSL)" "stunnel4" ;;
+            6) gestor_servicio "BADVPN-UDPGW" "badvpn" ;;
+            7) gestor_servicio "OPENVPN" "openvpn" ;;
+            8) sub_slowdns ;;
+            9) gestor_servicio "UDP-CUSTOM" "udp-custom" ;;
+            10) sub_hysteria ;;
+            11) sub_xui ;;
+            12) gestor_servicio "CHECKUSER ONLINE" "checkuser" ;;
+            13) echo "🔄 Reiniciando red..."; systemctl restart mx-proxy dropbear stunnel4 badvpn mx-slowdns ssh 2>/dev/null; sleep 2 ;;
+            0) return ;;
+            *) continue ;;
+        esac
+    done
 }
 
 # --- SUBMENÚ DE SISTEMA ---
 menu_sistema() {
-    ui_header "H E R R A M I E N T A S   Y   S I S T E M A"
-    ufw status | grep -q "active" && fw_st="${GREEN}[Activo]${NC}" || fw_st="${RED}[Inactivo]${NC}"
-    crontab -l 2>/dev/null | grep -q "cloudflare-ddns" && cf_st="${GREEN}[Activo]${NC}" || cf_st="${RED}[Inactivo]${NC}"
-    systemctl is-active --quiet mx-webpanel && wp_st="${GREEN}[ON]${NC}" || wp_st="${RED}[OFF]${NC}"
+    while true; do
+        ui_header "H E R R A M I E N T A S   Y   S I S T E M A"
+        ufw status | grep -q "active" && fw_st="${GREEN}[Activo]${NC}" || fw_st="${RED}[Inactivo]${NC}"
+        crontab -l 2>/dev/null | grep -q "cloudflare-ddns" && cf_st="${GREEN}[Activo]${NC}" || cf_st="${RED}[Inactivo]${NC}"
+        systemctl is-active --quiet mx-webpanel && wp_st="${GREEN}[ON]${NC}" || wp_st="${RED}[OFF]${NC}"
 
-    echo -e "  ${CYAN}[1]>${WHITE} Optimizar VPS (Limpiar RAM y Caché)${NC}"
-    echo -e "  ${CYAN}[2]>${WHITE} Editor de Banner Global (SSH/Issue)${NC}"
-    echo -e "  ${CYAN}[3]>${WHITE} Respaldar Cuentas Localmente${NC}"
-    echo -e "  ${CYAN}[4]>${WHITE} Monitor de Tráfico (vnstat)${NC}"
-    ui_subhr
-    echo -e "  ${CYAN}[5]>${WHITE} Firewall UFW Config          | $fw_st${NC}"
-    echo -e "  ${CYAN}[7]>${WHITE} PANEL WEB (Premium Edition)  | $wp_st${NC}"
-    ui_hr
-    echo -e "  ${WHITE}[0] VOLVER AL MENÚ PRINCIPAL${NC}"
-    ui_hr
-    ui_prompt " Selecciona una opción: "
-    read opt_sys
-    
-    case $opt_sys in
-        1)
-            echo -e "\n${YELLOW}▶ Iniciando Limpieza Profunda y Optimización...${NC}"
-            
-            # 1. Limpieza de Memoria RAM
-            echo -ne "${CYAN}[+] Liberando Memoria RAM...${NC}"
-            sync; echo 3 > /proc/sys/vm/drop_caches
-            swapoff -a && swapon -a
-            echo -e " ${GREEN}[OK]${NC}"
-
-            # 2. Limpieza de Logs del Sistema (Journald)
-            echo -ne "${CYAN}[+] Purgando Journald (Semanas previas)...${NC}"
-            journalctl --vacuum-time=1d > /dev/null 2>&1
-            echo -e " ${GREEN}[OK]${NC}"
-
-            # 3. Limpieza de Caché APT
-            echo -ne "${CYAN}[+] Limpiando caché de paquetes APT...${NC}"
-            apt-get clean > /dev/null 2>&1
-            echo -e " ${GREEN}[OK]${NC}"
-
-            # 4. Super Limpieza de Logs (Archivos antiguos y rotados)
-            echo -ne "${CYAN}[+] Eliminando historiales de log (.gz, .1, .log.*)...${NC}"
-            find /var/log -type f -name "*.[0-9]" -delete > /dev/null 2>&1
-            find /var/log -type f -name "*.gz" -delete > /dev/null 2>&1
-            find /var/log -type f -name "*.log.*" -delete > /dev/null 2>&1
-            
-            # Vaciar los logs activos
-            find /var/log -type f -name "*.log" -exec truncate -s 0 {} + > /dev/null 2>&1
-            rm -rf /var/log/MaximusVpsMx/* 2>/dev/null
-            echo -e " ${GREEN}[OK]${NC}"
-
-            echo -e "\n${GREEN}✅ VPS OPTIMIZADO: Se han liberado GB de espacio en disco.${NC}"
-            sleep 2; menu_sistema ;;
-        2)
-            echo -e "\n${YELLOW}▶ Ingrese nuevo texto HTML para el Banner (Ctrl+O para guardar, Ctrl+X para salir)${NC}"
-            sleep 3
-            nano /etc/issue.net
-            menu_sistema ;;
-        3)
-            echo -e "\n${YELLOW}▶ Generando Backup...${NC}"
-            tar -cvf /root/users_backup.tar /etc/passwd /etc/shadow 2>/dev/null
-            echo -e "${GREEN}✅ Guardado en /root/users_backup.tar${NC}"
-            sleep 2; menu_sistema ;;
-        4)
-            echo -e "\n${YELLOW}▶ Tráfico de Red (Mes actual)${NC}"
-            vnstat -m
-            ui_pause ; menu_sistema ;;
-        5)
-            echo -e "\n${YELLOW}▶ Administrador de Firewall UFW${NC}"
-            read -p "¿Qué deseas hacer? [1=Activar Seguro, 2=Desactivar]: " actf
-            if [ "$actf" == "1" ]; then
-                echo "Permitiendo puertos críticos..."
-                ufw allow 22/tcp 2>/dev/null; ufw allow 44/tcp 2>/dev/null; ufw allow 80/tcp 2>/dev/null; ufw allow 443/tcp 2>/dev/null; ufw allow 7300/udp 2>/dev/null
-                ufw --force enable
-                echo -e "${GREEN}✅ Firewall Activado y Blindado.${NC}"
-            elif [ "$actf" == "2" ]; then
-                ufw disable
-                echo -e "${RED}⚠️ Firewall Apagado.${NC}"
-            fi
-            sleep 2; menu_sistema ;;
-        6)
-            ui_header "CLOUDFLARE DDNS"
-            echo -e "${GREEN} [1] Configurar Credenciales de Cloudflare${NC}"
-            echo -e "${GREEN} [2] Activar DDNS (Cada 5 minutos)${NC}"
-            echo -e "${RED} [3] Desactivar DDNS${NC}"
-            echo -e "${YELLOW} [4] Forzar Comprobación AHORA${NC}"
-            echo -e "${YELLOW} [5] Ver Log de Cambios de IP${NC}"
-            echo -e "${YELLOW} [6] Ver Configuración Actual${NC}"
-            echo -e "${RED} [0] Volver${NC}"
-            read -p "Opción DDNS: " opt_cf
-
-            case $opt_cf in
-                1)
-                    echo -e "\n${YELLOW}▶ Configurar Cloudflare DDNS${NC}"
-                    echo -e "${WHITE}Necesitas los siguientes datos de tu cuenta Cloudflare:${NC}"
-                    echo -e "${CYAN}(Encuéntralos en: dash.cloudflare.com → API Tokens)${NC}\n"
-                    read -p " 🔑 API Token: " cf_token
-                    read -p " 🌐 Zone ID: " cf_zone
-                    read -p " 📛 Dominio (ej: vpsmx.tudominio.com): " cf_domain
-                    
-                    cat > /etc/MaximusVpsMx/cloudflare.conf << CFEOF
-# Cloudflare DDNS Config - MaximusVpsMx
+        echo -e "  ${CYAN}[1]>${WHITE} Optimizar VPS (Limpiar RAM y Caché)${NC}"
+        echo -e "  ${CYAN}[2]>${WHITE} Editor de Banner Global (SSH/Issue)${NC}"
+        echo -e "  ${CYAN}[3]>${WHITE} Respaldar Cuentas Localmente${NC}"
+        echo -e "  ${CYAN}[4]>${WHITE} Monitor de Tráfico (vnstat)${NC}"
+        ui_subhr
+        echo -e "  ${CYAN}[5]>${WHITE} Firewall UFW Config          | $fw_st${NC}"
+        echo -e "  ${CYAN}[6]>${WHITE} CLOUDFLARE DDNS              | $cf_st${NC}"
+        echo -e "  ${CYAN}[7]>${WHITE} PANEL WEB (Premium Edition)  | $wp_st${NC}"
+        ui_hr
+        echo -e "  ${WHITE}[0] VOLVER AL MENÚ PRINCIPAL${NC}"
+        ui_hr
+        ui_prompt " Selecciona una opción: " ; read opt_sys
+        
+        case $opt_sys in
+            1)
+                echo -e "\n${YELLOW}▶ Iniciando Optimización...${NC}"
+                sync; echo 3 > /proc/sys/vm/drop_caches; swapoff -a && swapon -a
+                journalctl --vacuum-time=1d >/dev/null 2>&1; apt-get clean >/dev/null 2>&1
+                find /var/log -type f -name "*.[0-9]" -delete; find /var/log -type f -name "*.gz" -delete
+                echo -e "${GREEN}✅ VPS OPTIMIZADO.${NC}"; sleep 2 ;;
+            2) nano /etc/issue.net ;;
+            3)
+                echo -e "\n${YELLOW}▶ Generando Backup...${NC}"
+                tar -cvf /root/users_backup.tar /etc/passwd /etc/shadow /etc/MaximusVpsMx/users.db 2>/dev/null
+                echo -e "${GREEN}✅ Guardado en /root/users_backup.tar${NC}"; sleep 2 ;;
+            4) vnstat -m; ui_pause ;;
+            5)
+                read -p "¿Activar Firewall? [1=S, 2=N]: " actf
+                if [ "$actf" == "1" ]; then
+                    ufw allow 22,44,80,443/tcp 2>/dev/null; ufw --force enable
+                    echo -e "${GREEN}✅ Activo.${NC}"
+                else ufw disable; echo -e "${RED}⚠️ Apagado.${NC}"; fi
+                sleep 2 ;;
+            6)
+                ui_header "CLOUDFLARE DDNS"
+                echo -e " [1] Configurar  [2] Activar  [3] Desactivar  [0] Volver"
+                read -p "Opción: " opt_cf
+                case $opt_cf in
+                    1)
+                        read -p " Token: " cf_token; read -p " ZoneID: " cf_zone; read -p " Dominio: " cf_domain
+                        cat >/etc/MaximusVpsMx/cloudflare.conf <<CFEOF
 CF_API_TOKEN="$cf_token"
 CF_ZONE_ID="$cf_zone"
 CF_RECORD_NAME="$cf_domain"
 CFEOF
-                    chmod 600 /etc/MaximusVpsMx/cloudflare.conf
-                    echo -e "\n${GREEN}✅ Credenciales guardadas de forma segura.${NC}"
-                    sleep 2; menu_sistema ;;
-                2)
-                    if [ ! -f /etc/MaximusVpsMx/cloudflare.conf ]; then
-                        echo -e "${RED}❌ Primero configura las credenciales (Opción 1).${NC}"
-                        sleep 2; menu_sistema
-                        return
-                    fi
-                    chmod +x /etc/MaximusVpsMx/modules/cloudflare-ddns.sh
-                    # Agregar al cron cada 5 minutos
-                    (crontab -l 2>/dev/null | grep -v "cloudflare-ddns"; echo "*/5 * * * * /etc/MaximusVpsMx/modules/cloudflare-ddns.sh") | crontab -
-                    # Ejecutar una vez inmediatamente
-                    /etc/MaximusVpsMx/modules/cloudflare-ddns.sh
-                    echo -e "${GREEN}✅ DDNS Activado. Comprobará tu IP cada 5 minutos.${NC}"
-                    sleep 2; menu_sistema ;;
-                3)
-                    crontab -l 2>/dev/null | grep -v "cloudflare-ddns" | crontab -
-                    echo -e "${RED}⚠️ DDNS Desactivado. Ya no se comprobará la IP.${NC}"
-                    sleep 2; menu_sistema ;;
-                4)
-                    echo -e "\n${YELLOW}▶ Ejecutando comprobación manual...${NC}"
-                    if [ -f /etc/MaximusVpsMx/modules/cloudflare-ddns.sh ]; then
-                        /etc/MaximusVpsMx/modules/cloudflare-ddns.sh
-                        echo -e "${GREEN}✅ Comprobación completada.${NC}"
-                    else
-                        echo -e "${RED}❌ Script no encontrado.${NC}"
-                    fi
-                    sleep 2; menu_sistema ;;
-                5)
-                    echo -e "\n${YELLOW}▶ Últimos cambios de IP registrados:${NC}"
-                    if [ -f /var/log/MaximusVpsMx/cloudflare-ddns.log ]; then
-                        tail -20 /var/log/MaximusVpsMx/cloudflare-ddns.log
-                    else
-                        echo -e "${RED}No hay logs aún.${NC}"
-                    fi
-                    ui_pause ; menu_sistema ;;
-                6)
-                    echo -e "\n${YELLOW}▶ Configuración Actual:${NC}"
-                    if [ -f /etc/MaximusVpsMx/cloudflare.conf ]; then
-                        source /etc/MaximusVpsMx/cloudflare.conf
-                        echo -e " Token: ${GREEN}${CF_API_TOKEN:0:8}...****${NC}"
-                        echo -e " Zone:  ${GREEN}$CF_ZONE_ID${NC}"
-                        echo -e " Dominio: ${GREEN}$CF_RECORD_NAME${NC}"
-                        echo -e " IP Actual: ${CYAN}$(curl -s https://api.ipify.org)${NC}"
-                    else
-                        echo -e "${RED}No configurado aún.${NC}"
-                    fi
-                    ui_pause ; menu_sistema ;;
-                *) menu_sistema ;;
-            esac
-            ;;
-        7)
-            sub_webpanel ;;
-        99)
-            echo -e "\n${RED}================ ¡¡PELIGRO!! ================${NC}"
-            read -p "¿Estás 100% seguro de destruir MaximusVpsMx? [S/N]: " desc
-            if [[ "$desc" == "S" || "$desc" == "s" ]]; then
-                echo -e "${RED}🔥 INICIANDO PURGA MASIVA...${NC}"
-                systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns 2>/dev/null
-                rm -rf /etc/MaximusVpsMx
-                rm -f /usr/local/bin/MX
-                apt-get purge stunnel4 dropbear -y 2>/dev/null
-                echo -e "${GREEN}✅ VUELO COMPLETADO. El servidor vuelve a ser de fábrica.${NC}"
-                exit
-            fi
-            menu_sistema ;;
-        0) main_menu ;;
-        *) menu_sistema ;;
-    esac
+                        echo -e "${GREEN}✅ Guardado.${NC}"; sleep 1 ;;
+                    2)
+                        (crontab -l 2>/dev/null | grep -v "cloudflare-ddns"; echo "*/5 * * * * /etc/MaximusVpsMx/modules/cloudflare-ddns.sh") | crontab -
+                        echo -e "${GREEN}✅ Activado.${NC}"; sleep 1 ;;
+                    3) crontab -l 2>/dev/null | grep -v "cloudflare-ddns" | crontab -; echo -e "${RED}⚠️ Desactivado.${NC}"; sleep 1 ;;
+                esac ;;
+            7) sub_webpanel ;;
+            0) return ;;
+            *) continue ;;
+        esac
+    done
 }
 
 # --- MENÚ DE MANTENIMIENTO / ACTUALIZACIÓN ---
@@ -1281,7 +1086,7 @@ menu_mantenimiento() {
 
                 rm -rf "$TEMP_DIR" /tmp/MX_BACKUP
                 echo -e "\n${GREEN}✅ ACTUALIZACIÓN COMPLETADA EXITOSAMENTE.${NC}"
-                read -p "Presiona Enter para reiniciar el panel..." ; MX ; exit
+                read -p "Presiona Enter para reiniciar el panel..." ; exec "$0" ; exit
                 ;;
             2)
                 echo -e "\n${RED}⚠️ REINSTALACION LIMPIA SELECCIONADA${NC}"
@@ -1296,7 +1101,7 @@ menu_mantenimiento() {
                     rm -rf /tmp/MaximusVpsMx
                     git clone https://github.com/JuandeMx/MAXIMUS.git /tmp/MaximusVpsMx
                     cd /tmp/MaximusVpsMx && chmod +x install.sh && bash install.sh
-                    MX ; exit
+                    exec "$0" ; exit
                 fi
                 ;;
             3)
@@ -1329,50 +1134,51 @@ menu_mantenimiento() {
                     echo -e "${GREEN}✅ VUELO COMPLETADO. El servidor ha sido restaurado de fábrica.${NC}"
                     exit
                 fi ;;
-            0) break ;;
+            0) return ;;
         esac
     done
 }
 
 
 # --- MENÚ PRINCIPAL ---
+# --- MENÚ PRINCIPAL ---
 main_menu() {
-    get_telemetry
-    ui_header "P A N E L   P R I N C I P A L"
-    printf "${CYAN} S.O:    ${WHITE}%-25s ${CYAN}Fecha: ${WHITE}%-10s${NC}\n" "$OS" "$FECHA"
-    printf "${CYAN} IP:     ${WHITE}%-25s ${CYAN}Hora:  ${WHITE}%-10s${NC}\n" "$IP" "$HORA"
-    ui_subhr
-    echo -e " ${CYAN}Disco / CPU${NC}"
-    printf " ${CYAN}Total:  ${WHITE}%-9s ${CYAN}Dispo: ${WHITE}%-9s ${CYAN}Cores:  ${WHITE}%-9s${NC}\n" "$DISC_TOTAL" "$DISC_DISP" "$CORES"
-    printf " ${CYAN}En Uso: ${WHITE}%-9s ${CYAN}Libre: ${WHITE}%-9s ${CYAN}En Uso: ${WHITE}%-9s${NC}\n" "$DISC_USO" "$DISC_FREE" "$CPU_USE"
-    ui_subhr
-    echo -e " ${CYAN}Memoria RAM${NC}"
-    printf " ${CYAN}Total:  ${WHITE}%-9s ${CYAN}En Uso: ${WHITE}%-9s ${CYAN}Libre: ${WHITE}%-9s${NC}\n" "$RAM_TOTAL" "$RAM_USO" "$RAM_FREE"
-    printf " ${CYAN}Buffer: ${WHITE}%-9s ${CYAN}Cache:  ${WHITE}%-9s${NC}\n" "$RAM_BUFF" "$RAM_CACHE"
-    ui_hr
-    printf "    ${CYAN}ACTIVOS: ${WHITE}%-3s  ${RED}EXPIRADOS: ${WHITE}%-3s  ${CYAN}TOTAL: ${WHITE}%-3s${NC}\n" "$ACTIVA" "$EXPIRADA" "$TOTAL"
-    ui_hr
-    echo -e "  ${CYAN}[1]>${WHITE} USUARIOS / CUENTAS (SSH, OVPN, HYST, XUI)${NC}"
-    echo -e "  ${CYAN}[2]>${WHITE} PROTOCOLOS / SERVICIOS${NC}"
-    echo -e "  ${CYAN}[3]>${WHITE} AJUSTES DEL SISTEMA / FIREWALL${NC}"
-    ui_subhr
-    echo -e "  ${CYAN}[4]>${GREEN} MANTENIMIENTO (Actualizar o Desinstalar)${NC}"
-    ui_hr
-    echo -e "  ${WHITE}[0] SALIR DEL VPS     [7] SALIR SCRIPT    [8] REINICIAR${NC}"
-    ui_hr
-    ui_prompt " Selecciona una opción: "
-    read main_opt
+    while true; do
+        get_telemetry
+        ui_header "P A N E L   P R I N C I P A L"
+        printf "${CYAN} S.O:    ${WHITE}%-25s ${CYAN}Fecha: ${WHITE}%-10s${NC}\n" "$OS" "$FECHA"
+        printf "${CYAN} IP:     ${WHITE}%-25s ${CYAN}Hora:  ${WHITE}%-10s${NC}\n" "$IP" "$HORA"
+        ui_subhr
+        echo -e " ${CYAN}Disco / CPU${NC}"
+        printf " ${CYAN}Total:  ${WHITE}%-9s ${CYAN}Dispo: ${WHITE}%-9s ${CYAN}Cores:  ${WHITE}%-9s${NC}\n" "$DISC_TOTAL" "$DISC_DISP" "$CORES"
+        echo -e " ${CYAN}Memoria RAM${NC}"
+        printf " ${CYAN}Total:  ${WHITE}%-9s ${CYAN}En Uso: ${WHITE}%-9s ${CYAN}Libre: ${WHITE}%-9s${NC}\n" "$RAM_TOTAL" "$RAM_USO" "$RAM_FREE"
+        printf " ${CYAN}Buffer: ${WHITE}%-9s ${CYAN}Cache:  ${WHITE}%-9s${NC}\n" "$RAM_BUFF" "$RAM_CACHE"
+        ui_hr
+        printf "    ${CYAN}ACTIVOS: ${WHITE}%-3s  ${RED}EXPIRADOS: ${WHITE}%-3s  ${CYAN}TOTAL: ${WHITE}%-3s${NC}\n" "$ACTIVA" "$EXPIRADA" "$TOTAL"
+        ui_hr
+        echo -e "  ${CYAN}[1]>${WHITE} USUARIOS / CUENTAS (SSH, OVPN, HYST, XUI)${NC}"
+        echo -e "  ${CYAN}[2]>${WHITE} PROTOCOLOS / SERVICIOS${NC}"
+        echo -e "  ${CYAN}[3]>${WHITE} AJUSTES DEL SISTEMA / FIREWALL${NC}"
+        ui_subhr
+        echo -e "  ${CYAN}[4]>${GREEN} MANTENIMIENTO (Actualizar o Desinstalar)${NC}"
+        ui_hr
+        echo -e "  ${WHITE}[0] SALIR DEL VPS     [7] SALIR SCRIPT    [8] REINICIAR${NC}"
+        ui_hr
+        ui_prompt " Selecciona una opción: "
+        read main_opt
 
-    case $main_opt in
-        1) menu_cuentas ;;
-        2) menu_protocolos ;;
-        3) menu_sistema ;;
-        4) menu_mantenimiento ;;
-        7) clear; exit ;;
-        8) echo -e "${YELLOW}🔄 Reiniciando VPS...${NC}"; reboot ;;
-        0) clear; exit ;;
-        *) main_menu ;;
-    esac
+        case $main_opt in
+            1) menu_cuentas ;;
+            2) menu_protocolos ;;
+            3) menu_sistema ;;
+            4) menu_mantenimiento ;;
+            7) clear; exit ;;
+            8) echo -e "${YELLOW}🔄 Reiniciando VPS...${NC}"; reboot ;;
+            0) clear; exit ;;
+            *) continue ;;
+        esac
+    done
 }
 
 # Inicializar
