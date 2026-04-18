@@ -41,20 +41,19 @@ UDP_DIR="/etc/udp-custom"
 mkdir -p "$UDP_DIR"
 mkdir -p "/var/log/MaximusVpsMx"
 
-# Descargar el binario Real de Haris131
-echo -e "${YELLOW}[+] Descargando UDP-Custom Real desde Haris131 ($BIN_ARCH)...${NC}"
-if curl -sL --connect-timeout 10 --max-time 60 -o "/usr/local/bin/udp-custom" "https://github.com/Haris131/UDP-Custom/raw/main/udp-custom-linux-${BIN_ARCH}"; then
-    echo -e "${GREEN}[✔] Descarga primaria exitosa (Haris Real).${NC}"
+# Descargar el binario estable (Maximus Mirror Prioritario para modo 'system')
+echo -e "${YELLOW}[+] Descargando UDP-Custom estable desde Mirror Maximus ($BIN_ARCH)...${NC}"
+if curl -sL --connect-timeout 10 --max-time 60 -o "/usr/local/bin/udp-custom" "https://raw.githubusercontent.com/JuandeMx/MAXIMUS/main/bin/udp-custom-linux-${BIN_ARCH}"; then
+    echo -e "${GREEN}[✔] Descarga primaria exitosa (Mirror Maximus).${NC}"
 else
-    # Mirror estable propio
-    echo -e "${YELLOW}[!] Falló descarga principal. Intentando Mirror Maximus...${NC}"
-    wget -q --timeout=20 -O "/usr/local/bin/udp-custom" "https://raw.githubusercontent.com/JuandeMx/MAXIMUS/main/bin/udp-custom-linux-${BIN_ARCH}"
-    echo -e "${GREEN}[✔] Descarga desde mirror oficial Maximus.${NC}"
-fi
-
-if [ ! -f "/usr/local/bin/udp-custom" ] || [ ! -s "/usr/local/bin/udp-custom" ]; then
-    echo -e "${RED}❌ Error: No se pudo descargar el binario.${NC}"
-    exit 1
+    # Fallback a Haris131
+    echo -e "${YELLOW}[!] Mirror fallido. Intentando descargar desde repositorio Haris131...${NC}"
+    if curl -sL --connect-timeout 10 --max-time 60 -o "/usr/local/bin/udp-custom" "https://github.com/Haris131/UDP-Custom/raw/main/udp-custom-linux-${BIN_ARCH}"; then
+        echo -e "${GREEN}[✔] Descarga desde Haris131 exitosa.${NC}"
+    else
+        echo -e "${RED}❌ Error: No se pudo descargar el binario de ninguna fuente.${NC}"
+        exit 1
+    fi
 fi
 
 chmod +x "/usr/local/bin/udp-custom"
