@@ -43,12 +43,12 @@ mkdir -p "/var/log/MaximusVpsMx"
 
 # Descargar el binario estable (Maximus Mirror Prioritario para modo 'system')
 echo -e "${YELLOW}[+] Descargando UDP-Custom estable desde Mirror Maximus ($BIN_ARCH)...${NC}"
-if curl -sL --connect-timeout 10 --max-time 60 -o "/usr/local/bin/udp-custom" "https://raw.githubusercontent.com/JuandeMx/MAXIMUS/main/bin/udp-custom-linux-${BIN_ARCH}"; then
+if curl -sL --connect-timeout 10 --max-time 60 -o "$UDP_DIR/udp-custom" "https://raw.githubusercontent.com/JuandeMx/MAXIMUS/main/bin/udp-custom-linux-${BIN_ARCH}"; then
     echo -e "${GREEN}[✔] Descarga primaria exitosa (Mirror Maximus).${NC}"
 else
     # Fallback a Haris131
     echo -e "${YELLOW}[!] Mirror fallido. Intentando descargar desde repositorio Haris131...${NC}"
-    if curl -sL --connect-timeout 10 --max-time 60 -o "/usr/local/bin/udp-custom" "https://github.com/Haris131/UDP-Custom/raw/main/udp-custom-linux-${BIN_ARCH}"; then
+    if curl -sL --connect-timeout 10 --max-time 60 -o "$UDP_DIR/udp-custom" "https://github.com/Haris131/UDP-Custom/raw/main/udp-custom-linux-${BIN_ARCH}"; then
         echo -e "${GREEN}[✔] Descarga desde Haris131 exitosa.${NC}"
     else
         echo -e "${RED}❌ Error: No se pudo descargar el binario de ninguna fuente.${NC}"
@@ -56,13 +56,13 @@ else
     fi
 fi
 
-chmod +x "/usr/local/bin/udp-custom"
+chmod +x "$UDP_DIR/udp-custom"
 
 # Generar configuración de escucha directa (Puerto :36712)
 echo -e "${GREEN}[+] Generando configuración de escucha directa (Puerto :36712)...${NC}"
 cat > "$UDP_DIR/config.json" << UDPEOF
 {
-    "listen": "0.0.0.0:36712",
+    "listen": ":36712",
     "stream_buffer": 33554432,
     "receive_buffer": 83886080,
     "auth": {
@@ -82,9 +82,9 @@ After=network.target
 Type=simple
 User=root
 WorkingDirectory=$UDP_DIR
-ExecStart=/usr/local/bin/udp-custom -config $UDP_DIR/config.json server
+ExecStart=${UDP_DIR}/udp-custom server
 Restart=always
-RestartSec=5
+RestartSec=3
 LimitNOFILE=infinity
 StandardOutput=append:/var/log/MaximusVpsMx/udp-custom.log
 StandardError=append:/var/log/MaximusVpsMx/udp-custom.log
