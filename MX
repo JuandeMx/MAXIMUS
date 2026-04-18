@@ -306,20 +306,8 @@ sub_huid() {
         0) menu_usuarios ;;
     esac
 }
-        ;;
-        14)
-            echo -e "\n${YELLOW}▶ Configuración del Administrador (Próximamente)${NC}"
-            sleep 2; menu_usuarios
-            ;;
-        15)
-            echo -e "\n${YELLOW}▶ Modo SSH/HWID/TOKEN (Próximamente)${NC}"
-            sleep 2; menu_usuarios
-            ;;
-        0) main_menu ;;
-        *) menu_usuarios ;;
-    esac
-}
 
+# --- ADMINISTRADOR DE CUENTAS POR PROTOCOLO ---
 # --- ADMINISTRADOR DE CUENTAS POR PROTOCOLO ---
 menu_cuentas() {
     while true; do
