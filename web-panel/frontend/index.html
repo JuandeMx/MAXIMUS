@@ -3,147 +3,302 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MAXIMUS ELITE | Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>MAXIMUS ELITE | Centro de Control</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <div class="sidebar">
-        <div class="logo">MAX<span>MX</span></div>
-        <nav>
-            <a href="#" class="nav-item active" onclick="switchTab('dashboard')">
-                <i class="fa-solid fa-gauge-high"></i> <span>Dashboard</span>
+    <!-- Efectos de fondo -->
+    <div class="bg-orb orb-1"></div>
+    <div class="bg-orb orb-2"></div>
+    <div class="bg-orb orb-3"></div>
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <div class="brand-icon"><i class="fa-solid fa-ghost"></i></div>
+            <div class="brand-text">MAXIMUS<span>MX</span></div>
+        </div>
+        <div class="sidebar-version">ELITE v2.0</div>
+
+        <nav class="sidebar-nav">
+            <a href="#" class="nav-link active" data-tab="dashboard">
+                <i class="fa-solid fa-gauge-high"></i>
+                <span>Dashboard</span>
             </a>
-            <a href="#" class="nav-item" onclick="switchTab('users')">
-                <i class="fa-solid fa-users"></i> <span>Usuarios</span>
+            <a href="#" class="nav-link" data-tab="users">
+                <i class="fa-solid fa-users-gear"></i>
+                <span>Usuarios</span>
             </a>
-            <a href="#" class="nav-item" onclick="switchTab('services')">
-                <i class="fa-solid fa-server"></i> <span>Servicios</span>
+            <a href="#" class="nav-link" data-tab="services">
+                <i class="fa-solid fa-server"></i>
+                <span>Servicios</span>
             </a>
-            <a href="#" class="nav-item" onclick="switchTab('generator')">
-                <i class="fa-solid fa-plus-circle"></i> <span>Generador</span>
+            <a href="#" class="nav-link" data-tab="generator">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                <span>Generador</span>
+            </a>
+            <a href="#" class="nav-link" data-tab="connections">
+                <i class="fa-solid fa-network-wired"></i>
+                <span>Conexiones</span>
             </a>
         </nav>
-        <div class="sidebar-footer">
-            <a href="#" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Salir</a>
-        </div>
-    </div>
 
-    <main class="content">
-        <header class="top-bar">
-            <h2 id="pageTitle">Dashboard</h2>
-            <div class="uptime-badge">
-                <i class="fa-solid fa-clock"></i> <span id="uptime-val">Cargando...</span>
+        <div class="sidebar-bottom">
+            <div class="server-info">
+                <div class="server-ip"><i class="fa-solid fa-globe"></i> <span id="server-ip">...</span></div>
+                <div class="server-os" id="server-os">...</div>
+            </div>
+            <a href="#" class="logout-btn" onclick="logout()">
+                <i class="fa-solid fa-right-from-bracket"></i> Cerrar Sesión
+            </a>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+        <header class="topbar">
+            <div class="topbar-left">
+                <button class="menu-toggle" onclick="toggleSidebar()">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <h1 class="page-title" id="pageTitle">Dashboard</h1>
+            </div>
+            <div class="topbar-right">
+                <div class="live-indicator">
+                    <span class="pulse-dot"></span> EN VIVO
+                </div>
+                <div class="uptime-chip">
+                    <i class="fa-solid fa-clock"></i>
+                    <span id="uptime-val">...</span>
+                </div>
             </div>
         </header>
 
-        <!-- DASHBOARD TAB -->
-        <section id="tab-dashboard" class="tab-content active">
+        <!-- TAB: DASHBOARD -->
+        <section id="tab-dashboard" class="tab-panel active">
+            <!-- Stat Cards -->
             <div class="stats-grid">
                 <div class="stat-card">
-                    <div class="stat-info">
-                        <label>CPU LOAD</label>
-                        <h3 id="cpu-val">0%</h3>
+                    <div class="stat-header">
+                        <span class="stat-label">CPU LOAD</span>
+                        <div class="stat-icon cpu"><i class="fa-solid fa-microchip"></i></div>
                     </div>
-                    <div class="stat-icon"><i class="fa-solid fa-microchip"></i></div>
+                    <div class="stat-value" id="cpu-val">0%</div>
+                    <div class="stat-bar"><div class="stat-bar-fill cpu-bar" id="cpu-bar"></div></div>
+                    <div class="stat-detail" id="cpu-detail">-- cores</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-info">
-                        <label>RAM USAGE</label>
-                        <h3 id="ram-val">0 / 0 MB</h3>
+                    <div class="stat-header">
+                        <span class="stat-label">MEMORIA RAM</span>
+                        <div class="stat-icon ram"><i class="fa-solid fa-memory"></i></div>
                     </div>
-                    <div class="stat-icon"><i class="fa-solid fa-memory"></i></div>
+                    <div class="stat-value" id="ram-val">0 MB</div>
+                    <div class="stat-bar"><div class="stat-bar-fill ram-bar" id="ram-bar"></div></div>
+                    <div class="stat-detail" id="ram-detail">-- / -- MB</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-info">
-                        <label>DISK SPACE</label>
-                        <h3 id="disk-val">0%</h3>
+                    <div class="stat-header">
+                        <span class="stat-label">DISCO</span>
+                        <div class="stat-icon disk"><i class="fa-solid fa-hard-drive"></i></div>
                     </div>
-                    <div class="stat-icon"><i class="fa-solid fa-hard-drive"></i></div>
+                    <div class="stat-value" id="disk-val">0%</div>
+                    <div class="stat-bar"><div class="stat-bar-fill disk-bar" id="disk-bar"></div></div>
+                    <div class="stat-detail" id="disk-detail">-- / --</div>
                 </div>
                 <div class="stat-card highlight">
-                    <div class="stat-info">
-                        <label>ONLINES</label>
-                        <h3 id="online-val">0</h3>
+                    <div class="stat-header">
+                        <span class="stat-label">USUARIOS ONLINE</span>
+                        <div class="stat-icon online"><i class="fa-solid fa-wifi"></i></div>
                     </div>
-                    <div class="stat-icon"><i class="fa-solid fa-wifi"></i></div>
+                    <div class="stat-value big" id="online-val">0</div>
+                    <div class="stat-detail" id="users-detail">Total: 0 cuentas</div>
                 </div>
             </div>
 
-            <div class="charts-row">
-                <div class="chart-container">
-                    <h4>Consumo de Recursos</h4>
-                    <canvas id="resourceChart"></canvas>
+            <!-- Charts -->
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3><i class="fa-solid fa-chart-line"></i> CPU & RAM en Tiempo Real</h3>
+                        <span class="chart-badge">Último minuto</span>
+                    </div>
+                    <canvas id="resourceChart" height="90"></canvas>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3><i class="fa-solid fa-chart-area"></i> Tráfico de Red</h3>
+                        <span class="chart-badge">Acumulado</span>
+                    </div>
+                    <div class="network-stats">
+                        <div class="net-stat">
+                            <div class="net-icon download"><i class="fa-solid fa-arrow-down"></i></div>
+                            <div>
+                                <div class="net-label">DESCARGA</div>
+                                <div class="net-value" id="net-rx">0 GB</div>
+                            </div>
+                        </div>
+                        <div class="net-stat">
+                            <div class="net-icon upload"><i class="fa-solid fa-arrow-up"></i></div>
+                            <div>
+                                <div class="net-label">SUBIDA</div>
+                                <div class="net-value" id="net-tx">0 GB</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="system-info-grid" id="sysInfoGrid">
+                        <div class="sys-item"><span>Hostname</span><span id="sys-hostname">--</span></div>
+                        <div class="sys-item"><span>Kernel</span><span id="sys-kernel">--</span></div>
+                        <div class="sys-item"><span>Load Avg</span><span id="sys-loadavg">--</span></div>
+                    </div>
                 </div>
             </div>
         </section>
 
-        <!-- USERS TAB -->
-        <section id="tab-users" class="tab-content">
-            <div class="card">
-                <div class="card-header">
-                    <h3>Listado de Usuarios</h3>
-                    <div class="search-box">
-                        <input type="text" placeholder="Buscar usuario...">
+        <!-- TAB: USERS -->
+        <section id="tab-users" class="tab-panel">
+            <div class="panel-card">
+                <div class="card-toolbar">
+                    <h3><i class="fa-solid fa-users"></i> Gestión de Usuarios</h3>
+                    <div class="toolbar-actions">
+                        <div class="search-input">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="text" id="userSearch" placeholder="Buscar usuario..." oninput="filterUsers()">
+                        </div>
+                        <button class="btn-action" onclick="fetchUsers()"><i class="fa-solid fa-rotate"></i></button>
                     </div>
                 </div>
-                <div class="table-container">
-                    <table>
+                <div class="table-wrap">
+                    <table id="usersTable">
                         <thead>
                             <tr>
                                 <th>Usuario</th>
                                 <th>Tipo</th>
+                                <th>Contraseña</th>
                                 <th>Vencimiento</th>
                                 <th>Estado</th>
                                 <th>Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="userListBody">
-                            <!-- Inyectado por JS -->
+                            <tr><td colspan="6" class="empty-state"><i class="fa-solid fa-spinner fa-spin"></i> Cargando...</td></tr>
                         </tbody>
                     </table>
                 </div>
             </div>
         </section>
 
-        <!-- SERVICES TAB -->
-        <section id="tab-services" class="tab-content">
+        <!-- TAB: SERVICES -->
+        <section id="tab-services" class="tab-panel">
+            <div class="services-header">
+                <h3><i class="fa-solid fa-server"></i> Administrador de Protocolos</h3>
+                <button class="btn-action" onclick="fetchServices()"><i class="fa-solid fa-rotate"></i> Actualizar</button>
+            </div>
             <div class="services-grid" id="servicesGrid">
-                <!-- Inyectado por JS -->
+                <div class="empty-state"><i class="fa-solid fa-spinner fa-spin"></i> Cargando servicios...</div>
             </div>
         </section>
 
-        <!-- GENERATOR TAB -->
-        <section id="tab-generator" class="tab-content">
-            <div class="generator-container">
-                <div class="card gen-card" onclick="openGen('ssh')">
-                    <i class="fa-solid fa-shield"></i>
-                    <h4>SSH / SSL</h4>
+        <!-- TAB: GENERATOR -->
+        <section id="tab-generator" class="tab-panel">
+            <div class="gen-grid">
+                <div class="gen-card" onclick="openGen('ssh')">
+                    <div class="gen-icon ssh"><i class="fa-solid fa-shield-halved"></i></div>
+                    <h3>SSH / SSL</h3>
+                    <p>Crear cuenta con acceso SSH, HTTP y SSL</p>
+                    <div class="gen-ports">Puertos: 22, 80, 443</div>
                 </div>
-                <div class="card gen-card" onclick="openGen('hysteria')">
-                    <i class="fa-solid fa-bolt"></i>
-                    <h4>Hysteria v2</h4>
+                <div class="gen-card" onclick="openGen('hysteria')">
+                    <div class="gen-icon hy"><i class="fa-solid fa-rocket"></i></div>
+                    <h3>Hysteria v2</h3>
+                    <p>Protocolo QUIC de ultra velocidad</p>
+                    <div class="gen-ports">Puertos: 2000-5000 UDP</div>
                 </div>
             </div>
         </section>
 
+        <!-- TAB: CONNECTIONS -->
+        <section id="tab-connections" class="tab-panel">
+            <div class="panel-card">
+                <div class="card-toolbar">
+                    <h3><i class="fa-solid fa-network-wired"></i> Conexiones Activas</h3>
+                    <button class="btn-action" onclick="fetchConnections()"><i class="fa-solid fa-rotate"></i></button>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Protocolo</th>
+                                <th>Local</th>
+                                <th>Remoto</th>
+                                <th>Estado</th>
+                                <th>Proceso</th>
+                            </tr>
+                        </thead>
+                        <tbody id="connListBody">
+                            <tr><td colspan="5" class="empty-state">Cargando conexiones...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
     </main>
 
-    <!-- Modal Gen -->
-    <div id="genModal" class="modal">
-        <div class="modal-content">
-            <h2 id="genTitle">Crear Cuenta</h2>
-            <form id="genForm">
+    <!-- MODAL: Generador -->
+    <div id="genModal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-top">
+                <h2 id="genTitle"><i class="fa-solid fa-wand-magic-sparkles"></i> Crear Cuenta</h2>
+                <button class="modal-close" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="genForm" onsubmit="handleCreate(event)">
                 <input type="hidden" id="genType">
-                <input type="text" id="genUser" placeholder="Usuario" required>
-                <input type="password" id="genPass" placeholder="Contraseña" required>
-                <button type="submit">GENERAR AHORA</button>
-                <button type="button" class="btn-cancel" onclick="closeModal()">Cancelar</button>
+                <div class="field">
+                    <label>Usuario</label>
+                    <div class="field-input">
+                        <i class="fa-solid fa-user"></i>
+                        <input type="text" id="genUser" placeholder="Escribe un usuario..." required minlength="3">
+                    </div>
+                </div>
+                <div class="field">
+                    <label>Contraseña</label>
+                    <div class="field-input">
+                        <i class="fa-solid fa-lock"></i>
+                        <input type="text" id="genPass" placeholder="Contraseña segura..." required>
+                    </div>
+                </div>
+                <div class="field">
+                    <label>Días de Vigencia</label>
+                    <div class="field-input">
+                        <i class="fa-solid fa-calendar"></i>
+                        <input type="number" id="genDays" value="3" min="1" max="365">
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary" id="genSubmitBtn">
+                    <span class="btn-label">GENERAR CUENTA</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
             </form>
         </div>
     </div>
+
+    <!-- MODAL: Resultado -->
+    <div id="resultModal" class="modal-overlay">
+        <div class="modal-box result-box">
+            <div class="result-icon"><i class="fa-solid fa-circle-check"></i></div>
+            <h2>¡Cuenta Creada!</h2>
+            <pre id="resultData"></pre>
+            <div class="result-actions">
+                <button onclick="copyResult()" class="btn-primary"><i class="fa-solid fa-copy"></i> Copiar</button>
+                <button onclick="closeResultModal()" class="btn-secondary">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="toast"></div>
 
     <script src="script.js"></script>
 </body>
