@@ -32,116 +32,20 @@ if ! command -v go &>/dev/null; then
 fi
 
 if [ ! -f /usr/local/bin/slowdns ]; then
-    echo -e "\e[1;33m    → Compilando motor DNS Tunnel (dnstt) desde código fuente...\e[0m"
-    mkdir -p /tmp/dnstt-build
-    cat > /tmp/dnstt-build/main.go << 'GODNSTT'
-package main
-
-import (
-	"crypto/rsa"
-	"crypto/x509"
-	"encoding/pem"
-	"flag"
-	"fmt"
-	"io"
-	"net"
-	"os"
-	"strings"
-	"sync"
-)
-
-var (
-	privkeyFile string
-	udpAddr     string
-	domain      string
-	upstream    string
-)
-
-func relay(dst, src net.Conn) {
-	io.Copy(dst, src)
-	dst.Close()
-}
-
-func handleConn(conn net.Conn) {
-	defer conn.Close()
-	upstream, err := net.Dial("tcp", upstream)
-	if err != nil {
-		return
-	}
-	defer upstream.Close()
-	var wg sync.WaitGroup
-	wg.Add(2)
-	go func() { defer wg.Done(); relay(upstream, conn) }()
-	go func() { defer wg.Done(); relay(conn, upstream) }()
-	wg.Wait()
-}
-
-func dnsHandler(pc net.PacketConn) {
-	buf := make([]byte, 65535)
-	for {
-		n, addr, err := pc.ReadFrom(buf)
-		if err != nil { continue }
-		if n < 12 { continue }
-		response := make([]byte, n)
-		copy(response, buf[:n])
-		response[2] = 0x81
-		response[3] = 0x80
-		pc.WriteTo(response, addr)
-	}
-}
-
-func main() {
-	flag.StringVar(&privkeyFile, "privkey-file", "", "Private key file")
-	flag.StringVar(&udpAddr, "udp", ":53", "UDP listen address")
-	flag.Parse()
-
-	args := flag.Args()
-	if len(args) < 2 {
-		fmt.Fprintf(os.Stderr, "Usage: slowdns -udp :53 -privkey-file KEY DOMAIN UPSTREAM\n")
-		os.Exit(1)
-	}
-	domain = args[0]
-	upstream = args[1]
-
-	_ = domain
-	_ = strings.ToLower
-
-	tcpLn, err := net.Listen("tcp", ":5353")
-	if err == nil {
-		go func() {
-			for {
-				conn, err := tcpLn.Accept()
-				if err != nil { continue }
-				go handleConn(conn)
-			}
-		}()
-	}
-
-	pc, err := net.ListenPacket("udp", udpAddr)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error listening UDP %s: %v\n", udpAddr, err)
-		os.Exit(1)
-	}
-	dnsHandler(pc)
-}
-GODNSTT
-    cd /tmp/dnstt-build
-    if ! go build -o /usr/local/bin/slowdns main.go 2>/dev/null; then
-        echo -e "\e[1;31m    ❌ Falló la compilación local de Go. Instalando binario precompilado...\e[0m"
-        curl -sL -o /usr/local/bin/slowdns "https://github.com/JuandeMx/MAXIMUS/raw/main/bin/dnstt-server-linux-amd64"
-    fi
-    rm -rf /tmp/dnstt-build
+    echo -e "\e[1;33m    → Descargando motor DNS Tunnel (dnstt) en C/Go...\e[0m"
+    curl -sL -o /usr/local/bin/slowdns "https://github.com/JuandeMx/MAXIMUS/raw/main/bin/dnstt-server-linux-amd64"
     chmod +x /usr/local/bin/slowdns 2>/dev/null
 fi
 
-# Generar llaves si no existen
-echo -e "\e[1;33m    → Generando llaves RSA de encriptación...\e[0m"
+# Generar llaves Hexadecimales (x25519) reales para DNSTT
+echo -e "\e[1;33m    → Generando llaves criptográficas x25519 (DNSTT Native)...\e[0m"
 mkdir -p /etc/MaximusVpsMx/slowdns
+
 if [ ! -f /etc/MaximusVpsMx/slowdns/server.key ]; then
-    openssl genrsa -out /etc/MaximusVpsMx/slowdns/server.key 2048 2>/dev/null
-    openssl rsa -in /etc/MaximusVpsMx/slowdns/server.key -pubout -out /etc/MaximusVpsMx/slowdns/server.pub 2>/dev/null
-    chmod 600 /etc/MaximusVpsMx/slowdns/server.key
-    chmod 644 /etc/MaximusVpsMx/slowdns/server.pub
+    /usr/local/bin/slowdns -gen > /etc/MaximusVpsMx/slowdns/keys.txt
+    grep "Private key:" /etc/MaximusVpsMx/slowdns/keys.txt | awk '{print $3}' > /etc/MaximusVpsMx/slowdns/server.key
+    grep "Public key:" /etc/MaximusVpsMx/slowdns/keys.txt | awk '{print $3}' > /etc/MaximusVpsMx/slowdns/server.pub
+    rm -f /etc/MaximusVpsMx/slowdns/keys.txt
 fi
 
 echo "$ns_dom" > /etc/MaximusVpsMx/slowdns/ns-domain.conf
