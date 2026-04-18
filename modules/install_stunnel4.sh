@@ -45,12 +45,16 @@ case $mode_opt in
         read -p " Puerto SSL (Default 443): " SSL_PORT
         [ -z "$SSL_PORT" ] && SSL_PORT=443
         
-        # Autodetección rápida
+        # Autodetección agresiva del backend SSH
         if systemctl is-active --quiet dropbear; then
             BACKEND_PORT=$(grep "DROPBEAR_PORT=" /etc/default/dropbear | cut -d= -f2 | tr -d '"')
             [ -z "$BACKEND_PORT" ] && BACKEND_PORT=44
+        else
+            BACKEND_PORT=$(grep "^Port " /etc/ssh/sshd_config | awk '{print $2}' | head -1)
+            [ -z "$BACKEND_PORT" ] && BACKEND_PORT=22
         fi
         CONNECT_TARGET="127.0.0.1:$BACKEND_PORT"
+        echo -e "${YELLOW}[+] Apuntando Stunnel al puerto interno 127.0.0.1:$BACKEND_PORT...${NC}"
         ;;
     2)
         # --- MODO PROXY (SSL + PROXY) ---
@@ -58,9 +62,8 @@ case $mode_opt in
         read -p " Puerto SSL (Default 443): " SSL_PORT
         [ -z "$SSL_PORT" ] && SSL_PORT=443
         
-        # El puerto preferido por el usuario es el 80
         PROXY_PORT=80
-        echo -e "${YELLOW}[+] Instalando/Asegurando Proxy en puerto $PROXY_PORT...${NC}"
+        echo -e "${YELLOW}[+] Forzando reinicio de Proxy en puerto $PROXY_PORT...${NC}"
         bash /etc/MaximusVpsMx/modules/install_mx-proxy.sh $PROXY_PORT > /dev/null 2>&1
         
         CONNECT_TARGET="127.0.0.1:$PROXY_PORT"
@@ -71,9 +74,8 @@ case $mode_opt in
         read -p " Puerto SSL (Default 443): " SSL_PORT
         [ -z "$SSL_PORT" ] && SSL_PORT=443
 
-        # El puerto preferido por el usuario es el 8080
         PROXY_PORT=8080
-        echo -e "${YELLOW}[+] Instalando/Asegurando Proxy Universal en puerto $PROXY_PORT...${NC}"
+        echo -e "${YELLOW}[+] Forzando reinicio de Proxy Universal en puerto $PROXY_PORT...${NC}"
         bash /etc/MaximusVpsMx/modules/install_mx-proxy.sh $PROXY_PORT > /dev/null 2>&1
 
         CONNECT_TARGET="127.0.0.1:$PROXY_PORT"
