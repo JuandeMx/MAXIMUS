@@ -40,13 +40,8 @@ systemctl stop dropbear.socket 2>/dev/null || true
 systemctl disable dropbear.socket 2>/dev/null || true
 systemctl mask dropbear.socket 2>/dev/null || true
 
-# Crear override para systemd
-mkdir -p /etc/systemd/system/dropbear.service.d
-cat > /etc/systemd/system/dropbear.service.d/override.conf << OVERRIDE
-[Service]
-ExecStart=
-ExecStart=/usr/sbin/dropbear -F -p $drop_port -b /etc/issue.net -r /etc/dropbear/dropbear_rsa_host_key -r /etc/dropbear/dropbear_ecdsa_host_key
-OVERRIDE
+# Eliminar posible override.conf conflictivo
+rm -f /etc/systemd/system/dropbear.service.d/override.conf 2>/dev/null
 
 # Abrir ufw
 ufw allow ${drop_port}/tcp 2>/dev/null
