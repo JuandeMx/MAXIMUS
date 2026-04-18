@@ -81,27 +81,35 @@ async function handleCreate(e) {
 }
 
 function showResult(data, protocol) {
+    console.log("Mostrando resultado para:", protocol, data);
     modal.style.display = 'none';
     resultModal.style.display = 'flex';
     
     let info = "";
     
-    if (protocol === 'ssh') {
-        info = `--- DATOS DE CUENTA SSH ---\n`;
-        info += `IP: ${data.server_ip}\n`;
-        info += `Usuario: ${data.username}\n`;
-        info += `Contraseña: ${data.password}\n`;
-        info += `Vencimiento: ${data.expiry}\n`;
-        info += `Puertos: 443, 80, 22, 7300\n`;
-        info += `---------------------------`;
-    } else if (protocol === 'udp') {
-        info = `${data.server_ip}:1-65535@${data.username}:${data.password}`;
-    } else if (protocol === 'hysteria') {
-        info = `--- DATOS HYSTERIA v2 ---\n`;
-        info += `Usuario: ${data.username}\n`;
-        info += `Password: ${data.password}\n`;
-        info += `Vencimiento: ${data.expiry}\n\n`;
-        info += `LINK DE CONFIGURACIÓN:\n${data.link}`;
+    try {
+        if (protocol === 'ssh') {
+            info = `--- DATOS DE CUENTA SSH ---\n`;
+            info += `IP: ${data.server_ip || 'No detectada'}\n`;
+            info += `Usuario: ${data.username}\n`;
+            info += `Contraseña: ${data.password}\n`;
+            info += `Vencimiento: ${data.expiry}\n`;
+            info += `Puertos: 443, 80, 22, 7300\n`;
+            info += `---------------------------`;
+        } else if (protocol === 'udp') {
+            info = `${data.server_ip || 'IP_LOCAL'}:1-65535@${data.username}:${data.password}`;
+        } else if (protocol === 'hysteria') {
+            info = `--- DATOS HYSTERIA v2 ---\n`;
+            info += `Usuario: ${data.username}\n`;
+            info += `Password: ${data.password}\n`;
+            info += `Vencimiento: ${data.expiry}\n\n`;
+            info += `LINK DE CONFIGURACIÓN:\n${data.link}`;
+        } else {
+            info = JSON.stringify(data, null, 2);
+        }
+    } catch (e) {
+        console.error("Error al formatear resultado:", e);
+        info = "Error al procesar la respuesta del servidor.";
     }
     
     resultData.textContent = info;
@@ -109,7 +117,22 @@ function showResult(data, protocol) {
 
 function copyResult() {
     const text = resultData.textContent;
-    navigator.clipboard.writeText(text).then(() => {
+    
+    const fallbackCopy = (content) => {
+        const textArea = document.createElement("textarea");
+        textArea.value = content;
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            updateCopyButton();
+        } catch (err) {
+            console.error('Fallback copy failed', err);
+        }
+        document.body.removeChild(textArea);
+    };
+
+    const updateCopyButton = () => {
         const copyBtn = document.querySelector('.btn-copy');
         const originalHtml = copyBtn.innerHTML;
         copyBtn.innerHTML = '<i class="fa-solid fa-check"></i> ¡Copiado!';
@@ -121,7 +144,13 @@ function copyResult() {
             copyBtn.style.color = 'var(--primary)';
             copyBtn.style.borderColor = 'var(--primary)';
         }, 2000);
-    });
+    };
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(updateCopyButton).catch(() => fallbackCopy(text));
+    } else {
+        fallbackCopy(text);
+    }
 }
 
 // Close modal when clicking outside
