@@ -58,6 +58,20 @@ fi
 
 chmod +x "$UDP_DIR/udp-custom"
 
+# --- PRUEBA DE VUELO (DIAGNÓSTICO) ---
+echo -e "${YELLOW}[+] Verificando integridad del binario...${NC}"
+ls -lh "$UDP_DIR/udp-custom"
+echo -ne "${YELLOW}[+] Prueba de ejecución manual: ${NC}"
+timeout 3s "$UDP_DIR/udp-custom" -h > /tmp/udp_test.log 2>&1
+if [ $? -eq 127 ]; then
+    echo -e "${RED}[FALLO: Librería faltante]${NC}"
+    ldd "$UDP_DIR/udp-custom" 2>/dev/null || echo "No se pudo ejecutar ldd."
+elif [ $? -eq 126 ]; then
+    echo -e "${RED}[FALLO: Permisos/Arquitectura]${NC}"
+else
+    echo -e "${GREEN}[OK/Respuesta recibida]${NC}"
+fi
+
 # Generar configuración de escucha directa (Puerto :36712)
 echo -e "${GREEN}[+] Generando configuración de escucha directa (Puerto :36712)...${NC}"
 cat > "$UDP_DIR/config.json" << UDPEOF
