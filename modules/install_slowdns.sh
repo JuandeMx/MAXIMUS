@@ -116,7 +116,10 @@ func main() {
 }
 GODNSTT
     cd /tmp/dnstt-build
-    go build -o /usr/local/bin/slowdns main.go 2>/dev/null
+    if ! go build -o /usr/local/bin/slowdns main.go 2>/dev/null; then
+        echo -e "\e[1;31m    ❌ Falló la compilación local de Go. Instalando binario precompilado...\e[0m"
+        curl -sL -o /usr/local/bin/slowdns "https://github.com/JuandeMx/MAXIMUS/raw/main/bin/dnstt-server-linux-amd64"
+    fi
     rm -rf /tmp/dnstt-build
     chmod +x /usr/local/bin/slowdns 2>/dev/null
 fi

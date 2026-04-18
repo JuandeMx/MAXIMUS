@@ -45,7 +45,7 @@ mkdir -p /etc/systemd/system/dropbear.service.d
 cat > /etc/systemd/system/dropbear.service.d/override.conf << OVERRIDE
 [Service]
 ExecStart=
-ExecStart=/usr/sbin/dropbear -F -p $drop_port -b /etc/issue.net
+ExecStart=/usr/sbin/dropbear -F -p $drop_port -b /etc/issue.net -r /etc/dropbear/dropbear_rsa_host_key -r /etc/dropbear/dropbear_ecdsa_host_key
 OVERRIDE
 
 # Abrir ufw
