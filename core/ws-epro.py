@@ -1,14 +1,8 @@
 #!/usr/bin/env python3
 import socket, threading, select, sys, time, os
-try:
-    import maximus_auth
-except ImportError:
-    # Si estamos en /etc/MaximusVpsMx/core/
-    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-    import maximus_auth
 
-# MaximusVpsMx - Pure WebSocket Proxy (WS-EPRO Engine)
-# Minimal, Async, High Performance.
+# MaximusVpsMx - WS-Engine Stable v5.1
+# Agnóstico y compatible con cualquier app (No-Auth)
 
 if len(sys.argv) < 3:
     print("Uso: ws-epro.py <Listen_Port> <Backend_Port>")
@@ -19,94 +13,61 @@ TARGET_PORT = int(sys.argv[2])
 LISTENING_ADDR = '0.0.0.0'
 BUFLEN = 8192
 
-RESPONSE_WS = b'HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nServer: Maximus-WSEngine\r\n\r\n'
+RESPONSE_WS = b'HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nServer: Maximus-WS\r\n\r\n'
 
 class Proxy(threading.Thread):
     def __init__(self, client_sock):
         threading.Thread.__init__(self)
         self.client = client_sock
+        self.daemon = True
 
     def run(self):
         target = None
         try:
-            self.client.settimeout(2.0)
+            self.client.settimeout(3)
             client_buffer = b''
             
-            # Recolectar datos con tolerancia al [split] de HTTP Custom
-            while True:
-                try:
-                    chunk = self.client.recv(BUFLEN)
-                    if not chunk: break
-                    client_buffer += chunk
-                    # Si ya recibimos un doble salto de línea, rompemos el ciclo
-                    if b'\r\n\r\n' in client_buffer or b'\n\n' in client_buffer:
-                        break
-                    # Si el payload usa un [split] malicioso sin \r\n\r\n, forzamos un chequeo HTTP temprano
-                    if len(client_buffer) > 10 and b'HTTP/' in client_buffer:
-                       if b'Upgrade' in client_buffer or b'\n' in client_buffer:
-                          break 
-                except socket.timeout:
-                    if len(client_buffer) > 0:
-                        break
-                    else:
-                        return
-
-            if not client_buffer:
-                self.client.close()
-                return
+            # Captura de Handshake WS
+            r, _, _ = select.select([self.client], [], [], 1.0)
+            if r:
+                client_buffer = self.client.recv(BUFLEN)
+            
+            if not client_buffer: return
 
             if b'HTTP' in client_buffer:
-                # --- Maximus Elite Validation (Opcional) ---
-                headers_str = client_buffer.decode('utf-8', errors='ignore')
-                if "X-User:" in headers_str:
-                    ok, msg = maximus_auth.authenticate_elite(headers_str)
-                    if not ok:
-                        err_msg = f"HTTP/1.1 403 Forbidden\r\nContent-Type: text/plain\r\nServer: Maximus-WSEngine\r\n\r\nMaximus Auth Error: {msg}\r\n"
-                        self.client.send(err_msg.encode())
-                        self.client.close()
-                        return
-
-                # Responder con 101 Switching Protocols sin importar qué headers traiga (Payload Inyectado)
+                # Respondemos 101 Switching Protocols de inmediato (Compatibilidad Total)
                 self.client.send(RESPONSE_WS)
             
-            # Conectar al backend (Dropbear/OpenSSH)
+            # Conexión Backend
             target = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             target.settimeout(3)
             target.connect(('127.0.0.1', TARGET_PORT))
-            target.setblocking(1)
-            self.client.setblocking(1)
-
-            # Extraer y enviar el cuerpo remanente si existiera
-            body_start = client_buffer.find(b'\r\n\r\n')
-            if body_start != -1 and len(client_buffer) > body_start + 4:
-                # Comprobar que no estemos enviando headers HTTP crudos al SSH si fue un Payload Ofuscado con split
-                if b'SSH-' not in client_buffer[body_start + 4:]:
-                     pass # Probablemente restos de un Payload agresivo, se ignoran.
-                else:
-                     target.send(client_buffer[body_start + 4:])
-            elif b'HTTP' not in client_buffer:
+            
+            # Envío de remanentes
+            if b'HTTP' in client_buffer:
+                idx = client_buffer.find(b'\r\n\r\n')
+                if idx != -1:
+                    leftover = client_buffer[idx+4:]
+                    if leftover: target.send(leftover)
+            else:
                 target.send(client_buffer)
 
+            # Relay Stream
             sockets = [self.client, target]
             while True:
                 r, _, _ = select.select(sockets, [], [], 120)
-                if not r: break # Timeout
-                
-                if self.client in r:
-                    data = self.client.recv(BUFLEN)
-                    if not data: break
-                    target.sendall(data)
-                    
-                if target in r:
-                    data = target.recv(BUFLEN)
-                    if not data: break
-                    self.client.sendall(data)
-                    
-        except Exception:
-            pass
+                if not r: break
+                for s in r:
+                    data = s.recv(BUFLEN)
+                    if not data: return
+                    out = target if s is self.client else self.client
+                    out.sendall(data)
+        except: pass
         finally:
-            self.client.close()
-            if target: target.close()
+            try: self.client.close()
+            except: pass
+            try: target.close()
+            except: pass
 
 def main():
     try:
@@ -114,14 +75,12 @@ def main():
         server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         server.bind((LISTENING_ADDR, LISTENING_PORT))
         server.listen(1024)
-        print(f"WS-EPRO iniciado en Puerto {LISTENING_PORT} -> Backend {TARGET_PORT}")
+        print(f"WS-Engine v5.1 activo: {LISTENING_PORT} -> {TARGET_PORT}")
         while True:
             c, _ = server.accept()
-            p = Proxy(c)
-            p.daemon = True
-            p.start()
+            Proxy(c).start()
     except Exception as e:
-        print(f"Error fatal: {e}")
+        print(f"Error: {e}")
         sys.exit(1)
 
 if __name__ == '__main__':
