@@ -891,13 +891,23 @@ menu_protocolos() {
     # SSH (OpenSSH)
     P_SSH=$(grep "^Port" /etc/ssh/sshd_config 2>/dev/null | awk '{print $2}' | head -1)
     [ -z "$P_SSH" ] && P_SSH="22"
-    if netstat -tuln 2>/dev/null | grep -q ":${P_SSH} "; then st_ssh="${GREEN}[ON] ${NC}"; else st_ssh="${RED}[OFF]${NC}"; fi
+    if netstat -tuln 2>/dev/null | grep -q ":${P_SSH} "; then 
+        st_ssh="${GREEN}[ON] ${NC}"
+    else 
+        st_ssh="${RED}[OFF]${NC}"
+        P_SSH="--"
+    fi
 
     # Dropbear
     if dpkg -l dropbear 2>/dev/null | grep -q "^ii"; then
         P_DROP=$(grep "DROPBEAR_PORT=" /etc/default/dropbear 2>/dev/null | cut -d= -f2 | tr -d '"' | xargs)
         [ -z "$P_DROP" ] && P_DROP="44"
-        if netstat -tuln 2>/dev/null | grep -q ":${P_DROP} "; then st_drop="${GREEN}[ON] ${NC}"; else st_drop="${RED}[OFF]${NC}"; fi
+        if netstat -tuln 2>/dev/null | grep -q ":${P_DROP} "; then 
+            st_drop="${GREEN}[ON] ${NC}"
+        else 
+            st_drop="${RED}[OFF]${NC}"
+            P_DROP="--"
+        fi
     else
         P_DROP="--"; st_drop="${RED}[OFF]${NC}"
     fi
@@ -907,7 +917,12 @@ menu_protocolos() {
         P_PROXY=$(grep "ExecStart=" /etc/systemd/system/mx-proxy.service 2>/dev/null | awk '{print $NF}')
         P_PROXY="${P_PROXY%%-*}"
         [ -z "$P_PROXY" ] && P_PROXY="80"
-        if netstat -tuln 2>/dev/null | grep -q ":${P_PROXY} "; then st_proxy="${GREEN}[ON] ${NC}"; else st_proxy="${RED}[OFF]${NC}"; fi
+        if netstat -tuln 2>/dev/null | grep -q ":${P_PROXY} "; then 
+            st_proxy="${GREEN}[ON] ${NC}"
+        else 
+            st_proxy="${RED}[OFF]${NC}"
+            P_PROXY="--"
+        fi
     else
         P_PROXY="--"; st_proxy="${RED}[OFF]${NC}"
     fi
@@ -916,7 +931,12 @@ menu_protocolos() {
     if [ -f /etc/stunnel/stunnel.conf ] && dpkg -l stunnel4 2>/dev/null | grep -q "^ii"; then
         P_STUN=$(grep "accept =" /etc/stunnel/stunnel.conf 2>/dev/null | awk '{print $3}' | head -1)
         [ -z "$P_STUN" ] && P_STUN="443"
-        if netstat -tuln 2>/dev/null | grep -q ":${P_STUN} "; then st_stun="${GREEN}[ON] ${NC}"; else st_stun="${RED}[OFF]${NC}"; fi
+        if netstat -tuln 2>/dev/null | grep -q ":${P_STUN} "; then 
+            st_stun="${GREEN}[ON] ${NC}"
+        else 
+            st_stun="${RED}[OFF]${NC}"
+            P_STUN="--"
+        fi
     else
         P_STUN="--"; st_stun="${RED}[OFF]${NC}"
     fi
@@ -966,10 +986,16 @@ menu_protocolos() {
         OVPN_PROTO=$(grep -E '^proto ' /etc/openvpn/server/server.conf 2>/dev/null | awk '{print $2}' | head -1)
         [ -z "$OVPN_PORT" ] && OVPN_PORT="1194"
         [ -z "$OVPN_PROTO" ] && OVPN_PROTO="udp"
-        P_OVPN="${OVPN_PORT}/${OVPN_PROTO}"
-        systemctl is-active --quiet openvpn-server@server 2>/dev/null && st_ovpn="${GREEN}[ON] ${NC}" || st_ovpn="${RED}[OFF]${NC}"
+        if systemctl is-active --quiet openvpn-server@server 2>/dev/null; then
+            st_ovpn="${GREEN}[ON] ${NC}"
+            P_OVPN="${OVPN_PORT}/${OVPN_PROTO}"
+        else
+            st_ovpn="${RED}[OFF]${NC}"
+            P_OVPN="--"
+        fi
     else
         st_ovpn="${RED}[OFF]${NC}"
+        P_OVPN="--"
     fi
 
     st_chk="${GREEN}[ON] ${NC}"
