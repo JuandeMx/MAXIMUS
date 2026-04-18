@@ -46,10 +46,7 @@ echo -e "\e[1;33m    → Generando llaves criptográficas x25519 (DNSTT Native).
 mkdir -p /etc/MaximusVpsMx/slowdns
 
 if [ ! -f /etc/MaximusVpsMx/slowdns/server.key ]; then
-    /usr/local/bin/slowdns -gen > /etc/MaximusVpsMx/slowdns/keys.txt
-    grep "Private key:" /etc/MaximusVpsMx/slowdns/keys.txt | awk '{print $3}' > /etc/MaximusVpsMx/slowdns/server.key
-    grep "Public key:" /etc/MaximusVpsMx/slowdns/keys.txt | awk '{print $3}' > /etc/MaximusVpsMx/slowdns/server.pub
-    rm -f /etc/MaximusVpsMx/slowdns/keys.txt
+    /usr/local/bin/slowdns -gen-key -privkey-file /etc/MaximusVpsMx/slowdns/server.key -pubkey-file /etc/MaximusVpsMx/slowdns/server.pub
 fi
 
 echo "$ns_dom" > /etc/MaximusVpsMx/slowdns/ns-domain.conf

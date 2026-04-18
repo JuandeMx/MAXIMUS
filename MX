@@ -653,10 +653,9 @@ sub_slowdns() {
                 read -p " ¿Continuar? (s/n): " confirmar
                 if [ "$confirmar" == "s" ]; then
                     if [ -f /usr/local/bin/slowdns ]; then
-                        /usr/local/bin/slowdns -gen > /etc/MaximusVpsMx/slowdns/keys.txt
-                        grep "Private key:" /etc/MaximusVpsMx/slowdns/keys.txt | awk '{print $3}' > /etc/MaximusVpsMx/slowdns/server.key
-                        grep "Public key:" /etc/MaximusVpsMx/slowdns/keys.txt | awk '{print $3}' > /etc/MaximusVpsMx/slowdns/server.pub
-                        rm -f /etc/MaximusVpsMx/slowdns/keys.txt
+                        rm -f /etc/MaximusVpsMx/slowdns/server.key
+                        rm -f /etc/MaximusVpsMx/slowdns/server.pub
+                        /usr/local/bin/slowdns -gen-key -privkey-file /etc/MaximusVpsMx/slowdns/server.key -pubkey-file /etc/MaximusVpsMx/slowdns/server.pub
                         systemctl restart mx-slowdns 2>/dev/null
                         echo -e "${GREEN}✅ Llaves DNSTT (Hex) regeneradas exitosamente.${NC}"
                     else
