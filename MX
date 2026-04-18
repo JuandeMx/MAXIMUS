@@ -265,6 +265,7 @@ menu_usuarios() {
         15) sub_huid ;; # Definir abajo
         0) return ;;
     esac
+done
 }
 
 # --- SUBMENÚ HUID ---
