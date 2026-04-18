@@ -28,26 +28,36 @@ case $ARCH in
     *)       echo -e "${RED}❌ Arquitectura $ARCH no soportada.${NC}"; exit 1 ;;
 esac
 
+# Matar procesos previos y limpiar sockets (IMPORTANTE: Antes de descargar para liberar el archivo)
+echo -e "${GREEN}[+] Limpiando procesos y sockets previos para liberar el puerto 36712...${NC}"
+systemctl stop udp-custom 2>/dev/null
+pkill -9 udp-custom 2>/dev/null
+killall -9 udp-custom 2>/dev/null
+fuser -k 36712/udp 2>/dev/null
+rm -f /usr/local/bin/udp-custom 2>/dev/null
+
 # Directorio de trabajo y binario
 UDP_DIR="/etc/udp-custom"
 mkdir -p "$UDP_DIR"
+mkdir -p "/var/log/MaximusVpsMx"
 
 # Descargar el binario Real de Haris131
 echo -e "${YELLOW}[+] Descargando UDP-Custom Real desde Haris131 ($BIN_ARCH)...${NC}"
-if curl -sL -o "/usr/local/bin/udp-custom" "https://github.com/Haris131/UDP-Custom/raw/main/udp-custom-linux-${BIN_ARCH}"; then
+if curl -sL --connect-timeout 10 --max-time 60 -o "/usr/local/bin/udp-custom" "https://github.com/Haris131/UDP-Custom/raw/main/udp-custom-linux-${BIN_ARCH}"; then
     echo -e "${GREEN}[✔] Descarga primaria exitosa (Haris Real).${NC}"
 else
     # Mirror estable propio
-    wget -q -O "/usr/local/bin/udp-custom" "https://raw.githubusercontent.com/JuandeMx/MAXIMUS/main/bin/udp-custom-linux-${BIN_ARCH}"
+    echo -e "${YELLOW}[!] Falló descarga principal. Intentando Mirror Maximus...${NC}"
+    wget -q --timeout=20 -O "/usr/local/bin/udp-custom" "https://raw.githubusercontent.com/JuandeMx/MAXIMUS/main/bin/udp-custom-linux-${BIN_ARCH}"
     echo -e "${GREEN}[✔] Descarga desde mirror oficial Maximus.${NC}"
 fi
 
-if [ ! -f "$UDP_DIR/udp-custom" ] || [ ! -s "$UDP_DIR/udp-custom" ]; then
+if [ ! -f "/usr/local/bin/udp-custom" ] || [ ! -s "/usr/local/bin/udp-custom" ]; then
     echo -e "${RED}❌ Error: No se pudo descargar el binario.${NC}"
     exit 1
 fi
 
-chmod +x "$UDP_DIR/udp-custom"
+chmod +x "/usr/local/bin/udp-custom"
 
 # Generar configuración de escucha directa (Puerto :36712)
 echo -e "${GREEN}[+] Generando configuración de escucha directa (Puerto :36712)...${NC}"
@@ -61,12 +71,6 @@ cat > "$UDP_DIR/config.json" << UDPEOF
     }
 }
 UDPEOF
-
-# Matar procesos previos y limpiar sockets
-echo -e "${GREEN}[+] Limpiando procesos y sockets previos...${NC}"
-pkill -9 udp-custom 2>/dev/null
-killall -9 udp-custom 2>/dev/null
-fuser -k 36712/udp 2>/dev/null
 
 # Crear servicio systemd con Logs de Depuración
 echo -e "${GREEN}[+] Creando servicio systemd con registros de error...${NC}"
