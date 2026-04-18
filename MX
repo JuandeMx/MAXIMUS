@@ -1267,12 +1267,30 @@ menu_mantenimiento() {
                 echo -e "\n${RED}================ ¡¡PELIGRO!! ================${NC}"
                 read -p "¿Estás 100% seguro de destruir MaximusVpsMx? [S/N]: " desc
                 if [[ "$desc" == "S" || "$desc" == "s" ]]; then
-                    echo -e "${RED}🔥 INICIANDO PURGA MASIVA...${NC}"
+                    echo -e "${RED}🔥 INICIANDO PURGA MASIVA Y LIMPIEZA TOTAL...${NC}"
+                    # Detener y deshabilitar servicios complejos
                     systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns 2>/dev/null
+                    systemctl stop x-ui openvpn-server@server hysteria udp-custom ws-epro 2>/dev/null
+                    systemctl disable x-ui openvpn-server@server hysteria udp-custom ws-epro 2>/dev/null
+                    
+                    # Eliminar directorios y binarios externos
+                    rm -rf /usr/local/x-ui /etc/x-ui /usr/bin/x-ui 2>/dev/null
+                    rm -rf /usr/local/hysteria /etc/hysteria 2>/dev/null
+                    rm -f /etc/systemd/system/x-ui.service 2>/dev/null
+                    rm -f /etc/systemd/system/hysteria.service 2>/dev/null
+                    rm -f /etc/systemd/system/udp-custom.service 2>/dev/null
+                    
+                    # Eliminar estructura principal y alias
                     rm -rf /etc/MaximusVpsMx
-                    rm -f /usr/local/bin/MX
-                    apt-get purge stunnel4 dropbear -y 2>/dev/null
-                    echo -e "${GREEN}✅ VUELO COMPLETADO. El servidor vuelve a ser de fábrica.${NC}"
+                    rm -f /usr/local/bin/MX /usr/local/bin/menu /usr/local/bin/MENU
+                    
+                    # Purga de paquetes de repositorio
+                    apt-get purge stunnel4 dropbear openvpn -y 2>/dev/null
+                    apt-get autoremove -y 2>/dev/null
+                    
+                    # Refrescar systemd
+                    systemctl daemon-reload
+                    echo -e "${GREEN}✅ VUELO COMPLETADO. El servidor ha sido restaurado de fábrica.${NC}"
                     exit
                 fi ;;
             0) break ;;
