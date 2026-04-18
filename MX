@@ -1190,162 +1190,106 @@ CFEOF
             read -p "¿Estás 100% seguro de destruir MaximusVpsMx? [S/N]: " desc
             if [[ "$desc" == "S" || "$desc" == "s" ]]; then
                 echo -e "${RED}🔥 INICIANDO PURGA MASIVA...${NC}"
-                systemctl stop stunnel4 dropbear mx-proxy badvpn 2>/dev/null
-                killall -9 stunnel4 dropbear python3 badvpn-udpgw 2>/dev/null
+                systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns 2>/dev/null
                 rm -rf /etc/MaximusVpsMx
                 rm -f /usr/local/bin/MX
-                rm -f /etc/systemd/system/mx-proxy.service
-                rm -f /etc/systemd/system/badvpn.service
                 apt-get purge stunnel4 dropbear -y 2>/dev/null
-                systemctl daemon-reload
                 echo -e "${GREEN}✅ VUELO COMPLETADO. El servidor vuelve a ser de fábrica.${NC}"
                 exit
-            else
-                menu_sistema
             fi
-            ;;
+            menu_sistema ;;
         0) main_menu ;;
         *) menu_sistema ;;
     esac
 }
 
-# --- SUBMENÚ DE REINSTALACIÓN / ACTUALIZACIÓN ---
+# --- MENÚ DE MANTENIMIENTO / ACTUALIZACIÓN ---
 menu_mantenimiento() {
-    ui_header "MANTENIMIENTO Y ACTUALIZACIÓN"
-    echo -e "  ${CYAN}[1]>${WHITE} ACTUALIZACIÓN INTELIGENTE (Mantiene Datos)${NC}"
-    echo -e "      ${WHITE}→ Respalda usuarios y configuraciones.${NC}"
-    echo -e "  ${CYAN}[2]>${RED} REINSTALACIÓN LIMPIA (Borra Todo)${NC}"
-    echo -e "      ${WHITE}→ Deja el panel como nuevo de fábrica.${NC}"
-    ui_subhr
-    echo -e "  ${CYAN}[0]${WHITE} Volver al Menú Principal${NC}"
-    ui_hr
-    ui_prompt " Selecciona una opción: "
-    read mant_opt
-
-    case $mant_opt in
-        1)
-            echo -e "\n${YELLOW}▶ Iniciando Actualización Inteligente...${NC}"
-            URL_REPO="https://github.com/JuandeMx/MAXIMUS.git"
-            TEMP_DIR="/tmp/MaximusVpsMx_temp"
-
-            echo -e "${CYAN}[+] Descargando última versión de GitHub...${NC}"
-            rm -rf "$TEMP_DIR" 2>/dev/null
-            if git clone "$URL_REPO" "$TEMP_DIR"; then
-                echo -e "${GREEN}[OK] Descarga exitosa.${NC}"
-            else
-                echo -e "${RED}❌ ERROR: No se pudo conectar con GitHub.${NC}"
-                echo -e "${YELLOW}Tu panel actual no ha sido modificado.${NC}"
-                ui_pause
-                return 1
-            fi
-
-            echo -e "${CYAN}[+] Creando respaldo de datos vitales...${NC}"
-            mkdir -p /tmp/MX_BACKUP
-            [ -f /etc/MaximusVpsMx/users.db ] && cp /etc/MaximusVpsMx/users.db /tmp/MX_BACKUP/
-            [ -f /etc/MaximusVpsMx/cloudflare.conf ] && cp /etc/MaximusVpsMx/cloudflare.conf /tmp/MX_BACKUP/
-            [ -f /etc/MaximusVpsMx/slowdns/ns-domain.conf ] && cp /etc/MaximusVpsMx/slowdns/ns-domain.conf /tmp/MX_BACKUP/
-            [ -f /etc/stunnel/stunnel.pem ] && cp /etc/stunnel/stunnel.pem /tmp/MX_BACKUP/
-            [ -f /etc/default/dropbear ] && cp /etc/default/dropbear /tmp/MX_BACKUP/
-
-            echo -e "${CYAN}[+] Reemplazando archivos del sistema...${NC}"
-            systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns 2>/dev/null
-            rm -rf /etc/MaximusVpsMx
-            rm -f /usr/local/bin/MX
-
-            echo -e "${CYAN}[+] Ejecutando instalador...${NC}"
-            cd "$TEMP_DIR" && chmod +x install.sh && bash install.sh
-
-            echo -e "${CYAN}[+] Restaurando respaldo de datos...${NC}"
-            [ -f /tmp/MX_BACKUP/users.db ] && cp /tmp/MX_BACKUP/users.db /etc/MaximusVpsMx/
-            [ -f /tmp/MX_BACKUP/cloudflare.conf ] && cp /tmp/MX_BACKUP/cloudflare.conf /etc/MaximusVpsMx/
-            [ -f /tmp/MX_BACKUP/ns-domain.conf ] && cp /tmp/MX_BACKUP/ns-domain.conf /etc/MaximusVpsMx/slowdns/
-            [ -f /tmp/MX_BACKUP/stunnel.pem ] && cp /tmp/MX_BACKUP/stunnel.pem /etc/stunnel/
-            [ -f /tmp/MX_BACKUP/dropbear ] && cp /tmp/MX_BACKUP/dropbear /etc/default/
-
-            rm -rf "$TEMP_DIR" /tmp/MX_BACKUP
-            echo -e "\n${GREEN}✅ ACTUALIZACIÓN COMPLETADA EXITOSAMENTE.${NC}"
-            echo -e "${YELLOW}Presiona Enter para volver a iniciar el panel...${NC}"
-            read
-            MX
-            exit
-            ;;
-        2)
-            echo -e "\n${RED}⚠️ REINSTALACION LIMPIA SELECCIONADA${NC}"
-            read -p "¿Estás 100% seguro de borrar TODO? [S/N]: " conf_clean
-            if [[ "$conf_clean" == "S" || "$conf_clean" == "s" ]]; then
-                purgar_sistema_total
-                
-                cd /tmp || exit
-                echo -e "${CYAN}[+] Instalando versión limpia de GitHub...${NC}"
-                rm -rf /tmp/MaximusVpsMx
-                apt-get install -y git 2>/dev/null
-                git clone https://github.com/JuandeMx/MAXIMUS.git /tmp/MaximusVpsMx
-                cd /tmp/MaximusVpsMx && chmod +x install.sh && bash install.sh
-                
-                echo -e "\n${GREEN}✅ REINSTALACION LIMPIA COMPLETADA.${NC}"
-                echo -e "${YELLOW}Presiona Enter...${NC}"
-                read
-                MX
-                exit
-            else
-                menu_mantenimiento
-            fi
-            ;;
-        0) main_menu ;;
-        *) menu_mantenimiento ;;
-    esac
-}
-
-# --- MENÚ AJUSTES DEL SCRIPT ---
-menu_ajustes_script() {
     while true; do
-        ui_header "CONFIGURACIÓN DEL SCRIPT"
-        echo -e "  ${CYAN}[1]>${WHITE} ACTUALIZAR PANEL (GitHub Sync)${NC}"
-        echo -e "  ${CYAN}[2]>${WHITE} REINSTALAR PANEL (Forzar Limpieza)${NC}"
-        echo -e "  ${CYAN}[3]>${WHITE} CAMBIAR BANNER SSH (issue.net/Dropbear)${NC}"
+        ui_header "MANTENIMIENTO Y ACTUALIZACIÓN"
+        echo -e "  ${CYAN}[1]>${WHITE} ACTUALIZACIÓN INTELIGENTE (Mantiene Datos)${NC}"
+        echo -e "  ${CYAN}[2]>${YELLOW} REINSTALACIÓN FORZADA (Limpia y Repara)${NC}"
+        echo -e "  ${CYAN}[3]>${RED} [!] DESINSTALAR / PURGAR TODO EL PANEL${NC}"
         ui_subhr
-        echo -e "  ${WHITE}[0] VOLVER AL MENÚ ANTERIOR${NC}"
+        echo -e "  ${WHITE}[0] VOLVER AL MENÚ PRINCIPAL${NC}"
         ui_hr
-        ui_prompt " Selecciona una opción: "
-        read opt_aj
+        ui_prompt " Selecciona: "
+        read mant_opt
 
-        case $opt_aj in
-            1) menu_mantenimiento ;;
-            2) 
-               echo -e "\n${RED}⚠️ REINSTALACION FORZADA SELECCIONADA${NC}"
-               read -p "¿Deseas purgar TODO antes de reinstalar? [S/N]: " conf_p
-               if [[ "$conf_p" == "S" || "$conf_p" == "s" ]]; then
-                   purgar_sistema_total
-                   # Re-clonar e instalar
-                   cd /tmp || exit
-                   rm -rf /tmp/MaximusVpsMx
-                   git clone https://github.com/JuandeMx/MAXIMUS.git /tmp/MaximusVpsMx
-                   cd /tmp/MaximusVpsMx && chmod +x install.sh && bash install.sh
-               else
-                   echo -e "\n${YELLOW}▶ Reinstalando componentes base sin purgar...${NC}"
-                   bash /etc/MaximusVpsMx/install.sh
-               fi
-               sleep 2 ;;
+        case $mant_opt in
+            1)
+                echo -e "\n${YELLOW}▶ Iniciando Actualización Inteligente...${NC}"
+                URL_REPO="https://github.com/JuandeMx/MAXIMUS.git"
+                TEMP_DIR="/tmp/MaximusVpsMx_temp"
+                echo -e "${CYAN}[+] Descargando última versión de GitHub...${NC}"
+                rm -rf "$TEMP_DIR" 2>/dev/null
+                if git clone "$URL_REPO" "$TEMP_DIR"; then
+                    echo -e "${GREEN}[OK] Descarga exitosa.${NC}"
+                else
+                    echo -e "${RED}❌ ERROR: No se pudo conectar con GitHub.${NC}"
+                    ui_pause ; return
+                fi
+
+                echo -e "${CYAN}[+] Creando respaldo de datos vitales...${NC}"
+                mkdir -p /tmp/MX_BACKUP
+                [ -f /etc/MaximusVpsMx/users.db ] && cp /etc/MaximusVpsMx/users.db /tmp/MX_BACKUP/
+                [ -f /etc/MaximusVpsMx/cloudflare.conf ] && cp /etc/MaximusVpsMx/cloudflare.conf /tmp/MX_BACKUP/
+                [ -f /etc/MaximusVpsMx/slowdns/ns-domain.conf ] && cp /etc/MaximusVpsMx/slowdns/ns-domain.conf /tmp/MX_BACKUP/
+                [ -f /etc/stunnel/stunnel.pem ] && cp /etc/stunnel/stunnel.pem /tmp/MX_BACKUP/
+                [ -f /etc/default/dropbear ] && cp /etc/default/dropbear /tmp/MX_BACKUP/
+
+                echo -e "${CYAN}[+] Reemplazando archivos del sistema...${NC}"
+                systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns 2>/dev/null
+                rm -rf /etc/MaximusVpsMx
+                rm -f /usr/local/bin/MX
+
+                echo -e "${CYAN}[+] Ejecutando instalador...${NC}"
+                cd "$TEMP_DIR" && chmod +x install.sh && bash install.sh
+
+                echo -e "${CYAN}[+] Restaurando respaldo de datos...${NC}"
+                [ -f /tmp/MX_BACKUP/users.db ] && cp /tmp/MX_BACKUP/users.db /etc/MaximusVpsMx/
+                [ -f /tmp/MX_BACKUP/cloudflare.conf ] && cp /tmp/MX_BACKUP/cloudflare.conf /etc/MaximusVpsMx/
+                [ -f /tmp/MX_BACKUP/ns-domain.conf ] && cp /tmp/MX_BACKUP/ns-domain.conf /etc/MaximusVpsMx/slowdns/
+                [ -f /tmp/MX_BACKUP/stunnel.pem ] && cp /tmp/MX_BACKUP/stunnel.pem /etc/stunnel/
+                [ -f /tmp/MX_BACKUP/dropbear ] && cp /tmp/MX_BACKUP/dropbear /etc/default/
+
+                rm -rf "$TEMP_DIR" /tmp/MX_BACKUP
+                echo -e "\n${GREEN}✅ ACTUALIZACIÓN COMPLETADA EXITOSAMENTE.${NC}"
+                read -p "Presiona Enter para reiniciar el panel..." ; MX ; exit
+                ;;
+            2)
+                echo -e "\n${RED}⚠️ REINSTALACION LIMPIA SELECCIONADA${NC}"
+                read -p "¿Estás 100% seguro de borrar TODO? [S/N]: " conf_clean
+                if [[ "$conf_clean" == "S" || "$conf_clean" == "s" ]]; then
+                    echo -e "${RED}🔥 INICIANDO LIMPIEZA TOTAL...${NC}"
+                    systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns 2>/dev/null
+                    rm -rf /etc/MaximusVpsMx
+                    rm -f /usr/local/bin/MX
+                    
+                    cd /tmp || exit
+                    rm -rf /tmp/MaximusVpsMx
+                    git clone https://github.com/JuandeMx/MAXIMUS.git /tmp/MaximusVpsMx
+                    cd /tmp/MaximusVpsMx && chmod +x install.sh && bash install.sh
+                    MX ; exit
+                fi
+                ;;
             3)
-               echo -e "\n${YELLOW}▶ Configuración del Banner SSH${NC}"
-               echo -e "${CYAN}Escribe el nuevo mensaje para tus clientes:${NC}"
-               read -p " > " new_banner
-               echo -e "$new_banner" > /etc/issue.net
-               echo -e "${GREEN}✅ Banner actualizado correctamente.${NC}"
-               sleep 2 ;;
-            4) 
-               echo -e "\n${RED}================ ¡¡PELIGRO!! ================${NC}"
-               read -p "¿Estás 100% seguro de destruir MaximusVpsMx? [S/N]: " desc
-               if [[ "$desc" == "S" || "$desc" == "s" ]]; then
-                   purgar_sistema_total
-                   echo -e "${GREEN}✅ VUELO COMPLETADO. Servidor de fábrica.${NC}"
-                   exit
-               fi
-               ;;
-            0) main_menu ;;
+                echo -e "\n${RED}================ ¡¡PELIGRO!! ================${NC}"
+                read -p "¿Estás 100% seguro de destruir MaximusVpsMx? [S/N]: " desc
+                if [[ "$desc" == "S" || "$desc" == "s" ]]; then
+                    echo -e "${RED}🔥 INICIANDO PURGA MASIVA...${NC}"
+                    systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns 2>/dev/null
+                    rm -rf /etc/MaximusVpsMx
+                    rm -f /usr/local/bin/MX
+                    apt-get purge stunnel4 dropbear -y 2>/dev/null
+                    echo -e "${GREEN}✅ VUELO COMPLETADO. El servidor vuelve a ser de fábrica.${NC}"
+                    exit
+                fi ;;
+            0) break ;;
         esac
     done
 }
+
 
 # --- MENÚ PRINCIPAL ---
 main_menu() {
@@ -1365,16 +1309,10 @@ main_menu() {
     printf "    ${CYAN}ACTIVOS: ${WHITE}%-3s  ${RED}EXPIRADOS: ${WHITE}%-3s  ${CYAN}TOTAL: ${WHITE}%-3s${NC}\n" "$ACTIVA" "$EXPIRADA" "$TOTAL"
     ui_hr
     echo -e "  ${CYAN}[1]>${WHITE} USUARIOS / CUENTAS (SSH, OVPN, HYST, XUI)${NC}"
+    echo -e "  ${CYAN}[2]>${WHITE} PROTOCOLOS / SERVICIOS${NC}"
+    echo -e "  ${CYAN}[3]>${WHITE} AJUSTES DEL SISTEMA / FIREWALL${NC}"
     ui_subhr
-    echo -e "  ${CYAN}[2]>${WHITE} CONFIGURACIÓN DE PROTOCOLO / SERVICIOS${NC}"
-    echo -e "  ${CYAN}[3]>${WHITE} HERRAMIENTAS EXTRAS / SISTEMA${NC}"
-    ui_subhr
-    echo -e "  ${CYAN}[4]>${WHITE} CONFIGURACIÓN DEL SCRIPT${NC}"
-    echo -e "  ${CYAN}[5]>${WHITE} IDIOMA / LANGUAGE${NC}"
-    ui_subhr
-    echo -e "  ${CYAN}[6]>${RED} [!] DESINSTALAR PANEL${NC}"
-    ui_subhr
-    echo -e "  ${CYAN}[9]>${GREEN} ACTUALIZAR / REINSTALAR PANEL${NC}"
+    echo -e "  ${CYAN}[4]>${GREEN} MANTENIMIENTO (Actualizar o Desinstalar)${NC}"
     ui_hr
     echo -e "  ${WHITE}[0] SALIR DEL VPS     [7] SALIR SCRIPT    [8] REINICIAR${NC}"
     ui_hr
@@ -1385,31 +1323,9 @@ main_menu() {
         1) menu_cuentas ;;
         2) menu_protocolos ;;
         3) menu_sistema ;;
-        4) menu_ajustes_script ;;
-        5) echo -e "\n${YELLOW}▶ Idioma Actual: Español${NC}"; sleep 2; main_menu ;;
-        6) 
-            echo -e "\n${RED}================ ¡¡PELIGRO!! ================${NC}"
-            read -p "¿Estás 100% seguro de destruir MaximusVpsMx? [S/N]: " desc
-            if [[ "$desc" == "S" || "$desc" == "s" ]]; then
-                echo -e "${RED}🔥 INICIANDO PURGA MASIVA...${NC}"
-                systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns 2>/dev/null
-                killall -9 stunnel4 dropbear python3 badvpn-udpgw 2>/dev/null
-                rm -rf /etc/MaximusVpsMx
-                rm -f /usr/local/bin/MX
-                rm -f /etc/systemd/system/mx-proxy.service
-                rm -f /etc/systemd/system/badvpn.service
-                rm -f /etc/systemd/system/mx-slowdns.service
-                apt-get purge stunnel4 dropbear -y 2>/dev/null
-                systemctl daemon-reload
-                echo -e "${GREEN}✅ VUELO COMPLETADO. El servidor vuelve a ser de fábrica.${NC}"
-                exit
-            else
-                main_menu
-            fi
-            ;;
+        4) menu_mantenimiento ;;
         7) clear; exit ;;
         8) echo -e "${YELLOW}🔄 Reiniciando VPS...${NC}"; reboot ;;
-        9) menu_mantenimiento ;;
         0) clear; exit ;;
         *) main_menu ;;
     esac
