@@ -103,30 +103,34 @@ class ConnectionHandler(threading.Thread):
                 is_ws = b'upgrade: websocket' in client_buffer.lower()
                 is_split = b'100-continue' in client_buffer.lower()
 
-                # --- Maximus Elite Validation ---
+                # --- Maximus Elite Validation (Opcional) ---
                 headers_str = client_buffer.decode('utf-8', errors='ignore')
-                ok, msg = maximus_auth.authenticate_elite(headers_str)
-                if not ok:
-                    err_msg = f"HTTP/1.1 403 Forbidden\r\nContent-Type: text/plain\r\n\r\nMaximus Auth Error: {msg}\r\n"
-                    self.client.sendall(err_msg.encode())
-                    self.client.close()
-                    return
+                if "X-User:" in headers_str:
+                    ok, msg = maximus_auth.authenticate_elite(headers_str)
+                    if not ok:
+                        err_msg = f"HTTP/1.1 403 Forbidden\r\nContent-Type: text/plain\r\nServer: Maximus-Guard\r\n\r\nMaximus Auth Error: {msg}\r\n"
+                        self.client.sendall(err_msg.encode())
+                        self.client.close()
+                        return
 
                 if is_split:
                     self.client.sendall(RESPONSE_CONTINUE)
-                    second_buffer = b''
-                    second_buffer = collect_headers(self.client, second_buffer, 3)
-                    if b'websocket' in second_buffer.lower():
-                        self.client.sendall(RESPONSE_WS)
-                    else:
-                        self.client.sendall(RESPONSE_STD)
-                elif is_ws:
+                    time.sleep(0.1) # Breve pausa para motor split
+                    # Intentamos capturar el resto del payload si existe
+                    try:
+                        self.client.setblocking(0)
+                        more = self.client.recv(BUFLEN)
+                        if more: client_buffer += more
+                        self.client.setblocking(1)
+                    except: pass
+
+                if b'websocket' in client_buffer.lower() or is_ws:
                     self.client.sendall(RESPONSE_WS)
                 else:
                     self.client.sendall(RESPONSE_STD)
                 
                 # Sincronización pequeña para separar cabeceras del flujo SSH
-                time.sleep(0.1)
+                time.sleep(0.05)
 
             # Conexión al Backend local (Detección Multinivel)
             drop_port = 44
