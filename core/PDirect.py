@@ -1,4 +1,9 @@
-import socket, threading, select, sys, time, datetime
+import socket, threading, select, sys, time, datetime, os
+try:
+    import maximus_auth
+except:
+    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+    import maximus_auth
 
 # Config
 LISTENING_ADDR = '0.0.0.0'
@@ -97,6 +102,15 @@ class ConnectionHandler(threading.Thread):
                 client_buffer = collect_headers(self.client, client_buffer, 5)
                 is_ws = b'upgrade: websocket' in client_buffer.lower()
                 is_split = b'100-continue' in client_buffer.lower()
+
+                # --- Maximus Elite Validation ---
+                headers_str = client_buffer.decode('utf-8', errors='ignore')
+                ok, msg = maximus_auth.authenticate_elite(headers_str)
+                if not ok:
+                    err_msg = f"HTTP/1.1 403 Forbidden\r\nContent-Type: text/plain\r\n\r\nMaximus Auth Error: {msg}\r\n"
+                    self.client.sendall(err_msg.encode())
+                    self.client.close()
+                    return
 
                 if is_split:
                     self.client.sendall(RESPONSE_CONTINUE)
