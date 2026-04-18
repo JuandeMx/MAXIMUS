@@ -13,9 +13,11 @@ echo -e "${CYAN}=========================================================${NC}"
 echo -e "${YELLOW}          INSTALADOR HYSTERIA v2 (QUIC/UDP)${NC}"
 echo -e "${CYAN}=========================================================${NC}"
 
-# Puerto configurable
-read -p " Puerto UDP para Hysteria (Default 443, Enter para Default): " hy_port
-[ -z "$hy_port" ] && hy_port=443
+# Puerto configurable y Rango de Port-Hopping
+read -p " Rango de puertos UDP para Hysteria (Default: 2000:5000): " hy_range
+[ -z "$hy_range" ] && hy_range="2000:5000"
+
+hy_port=36713
 
 # Contraseña de autenticación
 read -p " Contraseña de autenticación (Default: maximus): " hy_pass
@@ -179,14 +181,21 @@ WantedBy=multi-user.target
 EOF
 
 # Abrir puerto en firewall local
-ufw allow ${hy_port}/udp 2>/dev/null
+ufw allow ${hy_range}/udp 2>/dev/null
 
-# EXCLUSIÓN NAT (Crítico para que udp-custom no robe el tráfico de Hysteria)
-echo -e "${YELLOW}[+] Salvando a Hysteria de la redirección maestra (udp-custom)...${NC}"
-iptables -t nat -I PREROUTING -p udp --dport ${hy_port} -j ACCEPT
-ip6tables -t nat -I PREROUTING -p udp --dport ${hy_port} -j ACCEPT 2>/dev/null
+# EXCLUSIÓN Y PORT-HOPPING NAT
+echo -e "${YELLOW}[+] Configurando Port-Hopping (Rango $hy_range -> Interno $hy_port)...${NC}"
+# Limpiar previas si las hay
+iptables -t nat -D PREROUTING -p udp --dport ${hy_range} -j REDIRECT --to-port ${hy_port} 2>/dev/null
+ip6tables -t nat -D PREROUTING -p udp --dport ${hy_range} -j REDIRECT --to-port ${hy_port} 2>/dev/null
 
+iptables -t nat -I PREROUTING -p udp --dport ${hy_range} -j REDIRECT --to-port ${hy_port}
+ip6tables -t nat -I PREROUTING -p udp --dport ${hy_range} -j REDIRECT --to-port ${hy_port} 2>/dev/null
 
+# Guardar reglas iptables
+if command -v iptables-save > /dev/null; then
+    iptables-save > /etc/iptables/rules.v4
+fi
 # Activar y arrancar
 systemctl daemon-reload
 systemctl enable --now hysteria 2>/dev/null
@@ -197,12 +206,12 @@ sleep 2
 if systemctl is-active --quiet hysteria; then
     echo -e "\n${GREEN}=========================================================${NC}"
     echo -e "${GREEN} ✅ HYSTERIA v2 INSTALADO CORRECTAMENTE${NC}"
-    echo -e "${CYAN} Puerto QUIC/UDP: $hy_port${NC}"
+    echo -e "${CYAN} Rango Port-Hopping: $hy_range${NC}"
+    echo -e "${CYAN} Puerto Nativo:   $hy_port${NC}"
     echo -e "${CYAN} Contraseña:      $hy_pass${NC}"
     echo -e "${CYAN} Mascarada:       bing.com (Anti-DPI)${NC}"
-    echo -e "${CYAN} Certificado:     $HY_DIR/hysteria.crt${NC}"
     echo -e "${GREEN}=========================================================${NC}"
-    echo -e "${YELLOW} NOTA: Usa esta contraseña en tu cliente Hysteria.${NC}"
+    echo -e "${YELLOW} NOTA: Tu enlace será IP:$hy_range${NC}"
 else
     echo -e "\n${RED}=========================================================${NC}"
     echo -e "${RED} ⚠️ Hysteria se instaló pero no arrancó correctamente.${NC}"

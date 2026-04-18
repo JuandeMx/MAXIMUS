@@ -92,8 +92,8 @@ def create_hysteria():
     # Obtener IP del servidor
     server_ip, _, _ = run_command("wget -qO- ipv4.icanhazip.com")
     
-    # Obtener puerto de Hysteria (por defecto 443 si no se encuentra)
-    hy_port = "443" # Debería detectarse dinámicamente en producción
+    # Obtener puerto de Hysteria: Usaremos Port-Hopping
+    hy_port = "2000-5000"
     
     # Obtener contraseña obfs de la configuración
     obfs_password = "maximus_obfs_maestra" # Valor por defecto
