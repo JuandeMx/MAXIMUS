@@ -31,16 +31,15 @@ if ! command -v go &>/dev/null; then
     DEBIAN_FRONTEND=noninteractive apt-get install -y golang-go 2>/dev/null
 fi
 
-if [ ! -f /usr/local/bin/slowdns ]; then
-    echo -e "\e[1;33m    → Descargando motor real DNSTT-Server desde fuente oficial...\e[0m"
-    rm -rf /tmp/dnstt-src
-    git clone https://www.bamsoftware.com/git/dnstt.git /tmp/dnstt-src 2>/dev/null || git clone https://github.com/www-dt/dnstt.git /tmp/dnstt-src 2>/dev/null
-    echo -e "\e[1;33m    → Compilando motor...\e[0m"
-    cd /tmp/dnstt-src/dnstt-server
-    go build -o /usr/local/bin/slowdns 2>/dev/null
-    rm -rf /tmp/dnstt-src
-    chmod +x /usr/local/bin/slowdns 2>/dev/null
-fi
+echo -e "\e[1;33m    → Instalando motor real DNSTT-Server desde fuente oficial...\e[0m"
+rm -f /usr/local/bin/slowdns 2>/dev/null
+rm -rf /tmp/dnstt-src
+git clone https://www.bamsoftware.com/git/dnstt.git /tmp/dnstt-src 2>/dev/null || git clone https://github.com/www-dt/dnstt.git /tmp/dnstt-src 2>/dev/null
+echo -e "\e[1;33m    → Compilando motor...\e[0m"
+cd /tmp/dnstt-src/dnstt-server
+go build -o /usr/local/bin/slowdns 2>/dev/null
+rm -rf /tmp/dnstt-src
+chmod +x /usr/local/bin/slowdns 2>/dev/null
 
 # Generar llaves Hexadecimales (x25519) reales para DNSTT
 echo -e "\e[1;33m    → Generando llaves criptográficas x25519 (DNSTT Native)...\e[0m"
