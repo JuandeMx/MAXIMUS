@@ -83,7 +83,17 @@ get_telemetry() {
 
     # Cuentas SSH
     if [ -f /etc/MaximusVpsMx/users.db ]; then
-        TOTAL=$(wc -l < /etc/Maxmenu_usuarios() {
+        TOTAL=$(wc -l < /etc/MaximusVpsMx/users.db)
+        ACTIVA=$(grep -v "^#" /etc/MaximusVpsMx/users.db | wc -l)
+        EXPIRADA=0
+        BLOQUEADA=0
+    else
+        TOTAL=0; ACTIVA=0; EXPIRADA=0; BLOQUEADA=0
+    fi
+}
+
+# --- SUBMENÚ DE USUARIOS ---
+menu_usuarios() {
     local USER_DB="/etc/MaximusVpsMx/users.db"
     mkdir -p /etc/MaximusVpsMx
     [ ! -f "$USER_DB" ] && touch "$USER_DB"
