@@ -84,7 +84,7 @@ cat > "$UDP_DIR/config.json" << UDPEOF
     "stream_buffer": 33554432,
     "receive_buffer": 83886080,
     "auth": {
-        "mode": "none"
+        "mode": "passwords"
     }
 }
 UDPEOF
