@@ -330,7 +330,7 @@ purgar_sistema_total() {
 
     # 1. Detener y Deshabilitar Servicios Systemd
     echo -e "${CYAN}[+] Fulminando servicios systemd...${NC}"
-    local services=("stunnel4" "dropbear" "mx-proxy" "badvpn" "mx-slowdns" "udp-custom" "hysteria" "ws-epro" "sshd" "ssh")
+    local services=("stunnel4" "dropbear" "mx-proxy" "badvpn" "mx-slowdns" "udp-custom" "hysteria" "maximus-shield" "sshd" "ssh")
     for srv in "${services[@]}"; do
         systemctl stop "$srv" 2>/dev/null
         systemctl disable "$srv" 2>/dev/null
@@ -383,7 +383,7 @@ purgar_sistema_total() {
     rm -f /etc/systemd/system/mx-slowdns.service 2>/dev/null
     rm -f /etc/systemd/system/udp-custom.service 2>/dev/null
     rm -f /etc/systemd/system/hysteria.service 2>/dev/null
-    rm -f /etc/systemd/system/ws-epro.service 2>/dev/null
+    rm -f /etc/systemd/system/maximus-shield.service 2>/dev/null
 
     # 8. Purga APT
     echo -e "${CYAN}[+] Purgando paquetes APT...${NC}"
@@ -755,6 +755,60 @@ sub_xui() {
 }
 
 # --- SUBMENÚ HYSTERIA v2 ---
+sub_shield() {
+    local KEY_FILE="/etc/MaximusVpsMx/shield.key"
+    while true; do
+        ui_header "M A X I MUS - S H I E L D   (ELITE WS)"
+        systemctl is-active --quiet maximus-shield && sh_st="${GREEN}[ON]${NC}" || sh_st="${RED}[OFF]${NC}"
+        sh_port=$(systemctl show -p ExecStart maximus-shield 2>/dev/null | grep -oE '[0-9]+' | head -1)
+        [ -z "$sh_port" ] && sh_port="--"
+        
+        echo -e " Estatus: $sh_st   Puerto: ${WHITE}$sh_port${NC}"
+        ui_subhr
+        echo -e "${CYAN} [1] INSTALAR / REINSTALAR MOTOR SHIELD${NC}"
+        echo -e "${CYAN} [2] ELIMINAR / DESINSTALAR MOTOR${NC}"
+        echo -e "${CYAN} [3] CAMBIAR PUERTOS DE ENTRADA/BACKEND${NC}"
+        ui_subhr
+        echo -e "${YELLOW} [4] 🛡️ HERRAMIENTA: CIFRAR SNI (HOST)${NC}"
+        echo -e "${CYAN} [5] VER LOGS EN TIEMPO REAL${NC}"
+        ui_hr
+        echo -e "${CYAN} [0] VOLVER${NC}"
+        ui_hr
+        ui_prompt "Selecciona: " ; read opt_sh
+
+        case $opt_sh in
+            1) bash /etc/MaximusVpsMx/modules/install_maximus-shield.sh ;;
+            2) 
+                systemctl disable --now maximus-shield
+                rm /etc/systemd/system/maximus-shield.service
+                echo -e "${RED}✅ Motor desinstalado.${NC}"; sleep 2 ;;
+            3) bash /etc/MaximusVpsMx/modules/install_maximus-shield.sh ;;
+            4)
+                if [ ! -f "$KEY_FILE" ]; then
+                    echo -e "${RED}❌ Error: Debes instalar Maximus-Shield primero.${NC}"; sleep 2; continue
+                fi
+                echo -e "\n${YELLOW}▶ Herramienta de Cifrado Anti-Robo${NC}"
+                read -p " Ingresa el Host/SNI a cifrar: " raw_sni
+                s_key=$(cat "$KEY_FILE")
+                t_enc=$(python3 -c "
+import base64
+def xor_crypt(data, key):
+    return bytes([data[i] ^ key[i % len(key)] for i in range(len(data))])
+sni = '$raw_sni'.encode('utf-8')
+key = '$s_key'.encode('utf-8')
+print('MAX-' + base64.b64encode(xor_crypt(sni, key)).decode('utf-8'))
+")
+                echo -e "\n${GREEN}✅ TOKEN BLINDADO GENERADO:${NC}"
+                echo -e "${WHITE}$t_enc${NC}"
+                echo -e "\n${YELLOW}Úsalo en tu Payload así:${NC}"
+                echo -e "${WHITE}Host: $t_enc${NC}"
+                ui_pause ;;
+            5) journalctl -u maximus-shield -f ;;
+            0) break ;;
+        esac
+    done
+}
+
 sub_hysteria() {
     while true; do
         ui_header "HYSTERIA v2 (CUENTAS PREMIUM)"
@@ -883,8 +937,8 @@ menu_protocolos() {
 
     # SlowDNS
     systemctl is-active --quiet mx-slowdns && st_dns="${GREEN}[ON]${NC}" || st_dns="${RED}[OFF]${NC}"
-    # WS-EPRO
-    systemctl is-active --quiet ws-epro && st_ws="${GREEN}[ON]${NC}" || st_ws="${RED}[OFF]${NC}"
+    # MAXIMUS-SHIELD
+    systemctl is-active --quiet maximus-shield && st_sh="${GREEN}[ON]${NC}" || st_sh="${RED}[OFF]${NC}"
 
     # UDP-Custom
     if systemctl is-active --quiet udp-custom 2>/dev/null; then
@@ -933,7 +987,7 @@ menu_protocolos() {
     printf "  ${CYAN}[3] ${WHITE}%-15s %b  ${CYAN}[12] ${WHITE}%-15s %b\n" "PYTHON PROXY" "$st_proxy" "CHECKUSER" "$st_chk"
     printf "  ${CYAN}[4] ${WHITE}%-15s %b  ${CYAN}[13] ${WHITE}%-15s %b\n" "STUNNEL4" "$st_stun" "ATKEN/HASH" "$st_atken"
     printf "  ${CYAN}[5] ${WHITE}%-15s %b  ${CYAN}[14] ${WHITE}%-15s %b\n" "SLOWDNS" "$st_dns" "FILEBROWSER" "$st_file"
-    printf "  ${CYAN}[6] ${WHITE}%-15s %b  ${CYAN}[15] ${WHITE}%-15s %b\n" "WS-EPRO" "$st_ws" "PANEL X-UI" "$st_xui"
+    printf "  ${CYAN}[6] ${WHITE}%-15s %b  ${CYAN}[15] ${WHITE}%-15s %b\n" "SHIELD-WS" "$st_sh" "PANEL X-UI" "$st_xui"
     printf "  ${CYAN}[7] ${WHITE}%-15s %b  ${CYAN}[16] ${WHITE}%-15s %b\n" "UDP-CUSTOM" "$st_udpc" "SSHGO" "$st_sshgo"
     printf "  ${CYAN}[8] ${WHITE}%-15s %b  ${CYAN}[17] ${WHITE}%-15s %b\n" "HYSTERIA v2" "$st_udph" "WIREGUARD" "$st_wg"
     printf "  ${CYAN}[9] ${WHITE}%-15s %b  ${CYAN}[18] ${WHITE}%-15s %b\n" "BADVPN" "$st_udp" "REINICIAR T." ""
@@ -949,7 +1003,7 @@ menu_protocolos() {
         3) gestor_servicio "SOCKS PYTHON" "mx-proxy" ;;
         4) gestor_servicio "STUNNEL (SSL)" "stunnel4" ;;
         5) sub_slowdns ;;
-        6) gestor_servicio "WS-EPRO" "ws-epro" ;;
+        6) sub_shield ; menu_protocolos ;;
         7) gestor_servicio "UDP-CUSTOM" "udp-custom" ;;
         8) sub_hysteria ; menu_protocolos ;;
         9) gestor_servicio "BADVPN-UDPGW" "badvpn" ;;
