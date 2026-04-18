@@ -44,24 +44,22 @@ class Proxy(threading.Thread):
     def run(self):
         target = None
         try:
-            self.client.settimeout(0.8)
+            self.client.settimeout(1.0) # Un poco más de tiempo para payloads densos
             client_buffer = b''
             
-            # Recolectar Handshake con soporte para Split
-            for _ in range(15): # Máximo 15 intentos de lectura
+            # Recolectar Handshake con soporte para Multi-Host Split
+            for _ in range(20): 
                 try:
                     chunk = self.client.recv(BUFLEN)
                     if not chunk: break
                     client_buffer += chunk
                     
-                    # Si ya tenemos un token válido, podemos dejar de esperar
+                    # Criterio de parada: Tener el token Y el cierre de la última parte
                     if b'MAX-' in client_buffer or b'X-Shield-Token:' in client_buffer:
-                        # Si además ya tiene el cierre de cabeceras de la SEGUNDA parte
-                        if client_buffer.count(b'\r\n\r\n') >= 2 or client_buffer.count(b'\n\n') >= 2:
+                        if client_buffer.endswith(b'\r\n\r\n') or client_buffer.endswith(b'\n\n'):
                             break
-                        # Si no hay split pero hay token y cierre normal
-                        if b'\r\n\r\n' in client_buffer:
-                            break
+                        # Si hay muchos datos, probablemente ya tenemos lo necesario
+                        if len(client_buffer) > 2048: break
                 except socket.timeout:
                     if len(client_buffer) > 0: break
                     else: continue
@@ -70,28 +68,26 @@ class Proxy(threading.Thread):
                 self.client.close()
                 return
 
-            # --- VALIDACIÓN SHIELD (Deep Scan) ---
+            # --- VALIDACIÓN SHIELD (Ultra Deep Scan) ---
             is_valid = False
             found_host = None
             
-            # 1. Búsqueda de X-Shield-Token en todo el buffer
-            if b'X-Shield-Token:' in client_buffer:
-                token = client_buffer.split(b'X-Shield-Token:')[1].split(b'\r\n')[0].strip().decode('utf-8')
-                found_host = decrypt_token(token)
-                if found_host: is_valid = True
-
-            # 2. Búsqueda de Host: MAX- en todo el buffer
-            if not is_valid and b'Host: MAX-' in client_buffer:
-                token = client_buffer.split(b'Host: MAX-')[1].split(b'\r\n')[0].strip().decode('utf-8')
-                found_host = decrypt_token(token)
-                if found_host: is_valid = True
-            
-            # 3. Fallback: buscar cualquier MAX- oculto
-            if not is_valid and b'MAX-' in client_buffer:
+            # Buscamos el token en cualquier parte del bloque HTTP
+            if b'MAX-' in client_buffer:
                 try:
-                   token = client_buffer.split(b'MAX-')[1].split(b'\r\n')[0].split(b' ')[0].strip().decode('utf-8')
-                   found_host = decrypt_token(token)
-                   if found_host: is_valid = True
+                    # Extraer el primer token que encontremos (formato robusto)
+                    token_part = client_buffer.split(b'MAX-')[1]
+                    # Cortar en el próximo separador común de encabezados
+                    token = token_part.split(b'\r')[0].split(b'\n')[0].split(b' ')[0].split(b';')[0].strip().decode('utf-8')
+                    found_host = decrypt_token(token)
+                    if found_host: is_valid = True
+                except: pass
+
+            if not is_valid and b'X-Shield-Token:' in client_buffer:
+                try:
+                    token = client_buffer.split(b'X-Shield-Token:')[1].split(b'\r\n')[0].strip().decode('utf-8')
+                    found_host = decrypt_token(token)
+                    if found_host: is_valid = True
                 except: pass
 
             if not is_valid:
@@ -102,7 +98,7 @@ class Proxy(threading.Thread):
             # Responder Handshake WebSocket
             self.client.send(RESPONSE_WS)
             
-            # Conexión al Backend
+            # Conexión al Backend (Dropbear/SSH)
             target = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             target.settimeout(3)
             target.connect(('127.0.0.1', TARGET_PORT))
