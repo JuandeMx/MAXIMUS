@@ -198,7 +198,6 @@ if systemctl is-active --quiet hysteria; then
     echo -e "\n${GREEN}=========================================================${NC}"
     echo -e "${GREEN} ✅ HYSTERIA v2 INSTALADO CORRECTAMENTE${NC}"
     echo -e "${CYAN} Rango Port-Hopping: $hy_range${NC}"
-    echo -e "${CYAN} Puerto Nativo:   $hy_port${NC}"
     echo -e "${CYAN} Contraseña:      $hy_pass${NC}"
     echo -e "${CYAN} Mascarada:       bing.com (Anti-DPI)${NC}"
     echo -e "${GREEN}=========================================================${NC}"
