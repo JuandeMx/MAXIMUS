@@ -15,6 +15,16 @@ if [[ -z "$ns_dom" ]]; then ns_dom="slow.vpsmx.store"; fi
 
 echo -e "\n\e[1;32m[+] Compilando e Instalando SlowDNS ($dns_port -> $fwd_port)...\e[0m"
 
+# Liberar el puerto 53 (Evitar choque con systemd-resolved)
+if [[ "$dns_port" == "53" ]]; then
+    echo -e "\e[1;33m    → Liberando puerto 53 (Desactivando systemd-resolved)...\e[0m"
+    systemctl stop systemd-resolved 2>/dev/null
+    systemctl disable systemd-resolved 2>/dev/null
+    rm -f /etc/resolv.conf
+    echo "nameserver 8.8.8.8" > /etc/resolv.conf
+    echo "nameserver 1.1.1.1" >> /etc/resolv.conf
+fi
+
 # Instalar Go si no existe
 if ! command -v go &>/dev/null; then
     echo -e "\e[1;33m    → Instalando compilador Go...\e[0m"
