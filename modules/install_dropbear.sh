@@ -12,7 +12,10 @@ if [[ -z "$drop_port" ]]; then
     exit 1
 fi
 
-echo -e "\n\e[1;32m[+] Configurando motor Dropbear en puerto $drop_port...\e[0m"
+echo -e "\n\e[1;32m[+] Instalando y configurando motor Dropbear en puerto $drop_port...\e[0m"
+
+# Instalar paquete Dropbear
+DEBIAN_FRONTEND=noninteractive apt-get install -y dropbear 2>/dev/null
 
 # Generar llaves criptográficas de Dropbear (por si falta)
 mkdir -p /etc/dropbear
