@@ -43,7 +43,7 @@ function loadTab(tabName) {
         dashboard: 'Dashboard',
         users: 'Gestión de Usuarios',
         services: 'Administrador de Protocolos',
-        generator: 'Generador de Cuentas',
+        accounts: 'Gestión de Cuentas',
         connections: 'Conexiones Activas'
     };
     document.getElementById('pageTitle').innerText = titles[tabName] || tabName;
@@ -269,8 +269,24 @@ async function fetchServices() {
         const res = await fetch('/api/service/status');
         if (res.status === 401) { window.location.href = '/login.html'; return; }
         const services = await res.json();
-        grid.innerHTML = services.map(s => `
-            <div class="service-card ${s.active ? 'online' : 'offline'}">
+        grid.innerHTML = services.map(s => {
+            const stateClass = !s.installed ? 'not-installed' : (s.active ? 'online' : 'offline');
+            const statusLabel = !s.installed ? 'NO INSTALADO' : (s.active ? 'ONLINE' : 'OFFLINE');
+            const statusClass = !s.installed ? 'off' : (s.active ? 'on' : 'off');
+
+            let actionBtns = '';
+            if (!s.installed && s.has_installer) {
+                actionBtns = `<button class="svc-btn install" title="Instalar" onclick="serviceAction('${s.id}','install')"><i class="fa-solid fa-download"></i></button>`;
+            } else if (s.installed) {
+                actionBtns = `
+                    <button class="svc-btn" title="Reiniciar" onclick="serviceAction('${s.id}','restart')"><i class="fa-solid fa-rotate-right"></i></button>
+                    <button class="svc-btn" title="${s.active ? 'Detener' : 'Iniciar'}" onclick="serviceAction('${s.id}','${s.active ? 'stop' : 'start'}')"><i class="fa-solid ${s.active ? 'fa-stop' : 'fa-play'}"></i></button>
+                    ${s.has_installer ? `<button class="svc-btn danger" title="Desinstalar" onclick="if(confirm('¿Desinstalar ${s.name}?')) serviceAction('${s.id}','uninstall')"><i class="fa-solid fa-trash-can"></i></button>` : ''}
+                `;
+            }
+
+            return `
+            <div class="service-card ${stateClass}">
                 <div class="svc-icon ${s.active ? 'on' : 'off'}">
                     <i class="fa-solid ${s.icon}"></i>
                 </div>
@@ -280,32 +296,67 @@ async function fetchServices() {
                     <div class="svc-port">Puerto: ${s.port}</div>
                 </div>
                 <div style="text-align:right">
-                    <div class="svc-status ${s.active ? 'on' : 'off'}">${s.active ? 'ONLINE' : 'OFFLINE'}</div>
+                    <div class="svc-status ${statusClass}">${statusLabel}</div>
                     <div class="svc-actions" style="margin-top:8px">
-                        <button class="svc-btn" title="Reiniciar" onclick="serviceAction('${s.id}','restart')"><i class="fa-solid fa-rotate-right"></i></button>
-                        <button class="svc-btn danger" title="Detener" onclick="serviceAction('${s.id}','stop')"><i class="fa-solid fa-stop"></i></button>
+                        ${actionBtns}
                     </div>
                 </div>
             </div>
-        `).join('');
+        `}).join('');
     } catch (e) {
         grid.innerHTML = '<div class="empty-state">Error al cargar servicios</div>';
     }
 }
 
 async function serviceAction(id, action) {
-    showToast(`⏳ ${action === 'restart' ? 'Reiniciando' : 'Deteniendo'} ${id}...`);
+    const labels = {restart:'Reiniciando', stop:'Deteniendo', start:'Iniciando', install:'Instalando', uninstall:'Desinstalando'};
+    showToast(`⏳ ${labels[action] || action} ${id}...`);
     try {
-        const res = await fetch('/api/service/restart', {
+        const res = await fetch('/api/service/action', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ id, action })
         });
         const data = await res.json();
-        showToast(data.active ? `✅ ${id} está ONLINE` : `⚠️ ${id} está OFFLINE`);
-        fetchServices();
+        if (data.success) {
+            if (action === 'install') showToast(`✅ ${id} instalado correctamente`);
+            else if (action === 'uninstall') showToast(`🗑️ ${id} desinstalado`);
+            else showToast(data.active ? `✅ ${id} está ONLINE` : `⚠️ ${id} está OFFLINE`);
+        } else {
+            showToast(`❌ ${data.error || 'Error desconocido'}`);
+        }
+        setTimeout(fetchServices, 1000);
     } catch (e) {
         showToast('❌ Error al gestionar servicio');
+    }
+}
+
+async function restartAllServices() {
+    if (!confirm('¿Reiniciar TODOS los servicios de red?')) return;
+    showToast('🔄 Reiniciando todos los servicios...');
+    const services = ['ssh', 'dropbear', 'stunnel4', 'mx-proxy', 'badvpn', 'mx-slowdns', 'ws-epro'];
+    for (const svc of services) {
+        await fetch('/api/service/action', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ id: svc, action: 'restart' })
+        }).catch(() => {});
+    }
+    showToast('✅ Todos los servicios han sido reiniciados');
+    setTimeout(fetchServices, 2000);
+}
+
+async function openXuiPanel() {
+    try {
+        const res = await fetch('/api/xui/info');
+        const data = await res.json();
+        if (data.installed && data.url) {
+            window.open(data.url, '_blank');
+        } else {
+            showToast('⚠️ X-UI no está instalado. Instálalo desde Servicios.');
+        }
+    } catch (e) {
+        showToast('❌ Error al consultar X-UI');
     }
 }
 

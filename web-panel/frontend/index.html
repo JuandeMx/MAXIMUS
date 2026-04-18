@@ -21,7 +21,7 @@
             <div class="brand-icon"><i class="fa-solid fa-ghost"></i></div>
             <div class="brand-text">MAXIMUS<span>MX</span></div>
         </div>
-        <div class="sidebar-version">ELITE v2.0</div>
+        <div class="sidebar-version">ELITE v2.1</div>
 
         <nav class="sidebar-nav">
             <a href="#" class="nav-link active" data-tab="dashboard">
@@ -36,9 +36,9 @@
                 <i class="fa-solid fa-server"></i>
                 <span>Servicios</span>
             </a>
-            <a href="#" class="nav-link" data-tab="generator">
-                <i class="fa-solid fa-wand-magic-sparkles"></i>
-                <span>Generador</span>
+            <a href="#" class="nav-link" data-tab="accounts">
+                <i class="fa-solid fa-id-card"></i>
+                <span>Cuentas</span>
             </a>
             <a href="#" class="nav-link" data-tab="connections">
                 <i class="fa-solid fa-network-wired"></i>
@@ -194,27 +194,83 @@
         <section id="tab-services" class="tab-panel">
             <div class="services-header">
                 <h3><i class="fa-solid fa-server"></i> Administrador de Protocolos</h3>
-                <button class="btn-action" onclick="fetchServices()"><i class="fa-solid fa-rotate"></i> Actualizar</button>
+                <div class="toolbar-actions">
+                    <button class="btn-action" onclick="restartAllServices()"><i class="fa-solid fa-arrows-rotate"></i> Reiniciar Todo</button>
+                    <button class="btn-action" onclick="fetchServices()"><i class="fa-solid fa-rotate"></i> Actualizar</button>
+                </div>
             </div>
             <div class="services-grid" id="servicesGrid">
                 <div class="empty-state"><i class="fa-solid fa-spinner fa-spin"></i> Cargando servicios...</div>
             </div>
         </section>
 
-        <!-- TAB: GENERATOR -->
-        <section id="tab-generator" class="tab-panel">
-            <div class="gen-grid">
-                <div class="gen-card" onclick="openGen('ssh')">
-                    <div class="gen-icon ssh"><i class="fa-solid fa-shield-halved"></i></div>
-                    <h3>SSH / SSL</h3>
-                    <p>Crear cuenta con acceso SSH, HTTP y SSL</p>
-                    <div class="gen-ports">Puertos: 22, 80, 443</div>
+        <!-- TAB: ACCOUNTS (GESTIÓN DE CUENTAS) -->
+        <section id="tab-accounts" class="tab-panel">
+            <div class="accounts-grid">
+                <!-- SSH / SSL -->
+                <div class="account-card" onclick="openGen('ssh')">
+                    <div class="acc-top">
+                        <div class="acc-icon ssh"><i class="fa-solid fa-shield-halved"></i></div>
+                        <span class="acc-badge">TCP</span>
+                    </div>
+                    <h3>SSH / DROPBEAR</h3>
+                    <p>Usuarios del sistema con acceso SSH, HTTP y SSL</p>
+                    <div class="acc-footer">
+                        <span class="acc-ports"><i class="fa-solid fa-plug"></i> Puertos: 22, 44, 80, 443</span>
+                        <button class="acc-btn"><i class="fa-solid fa-plus"></i> Crear</button>
+                    </div>
                 </div>
-                <div class="gen-card" onclick="openGen('hysteria')">
-                    <div class="gen-icon hy"><i class="fa-solid fa-rocket"></i></div>
+                <!-- Hysteria v2 -->
+                <div class="account-card" onclick="openGen('hysteria')">
+                    <div class="acc-top">
+                        <div class="acc-icon hy"><i class="fa-solid fa-rocket"></i></div>
+                        <span class="acc-badge hy">QUIC</span>
+                    </div>
                     <h3>Hysteria v2</h3>
-                    <p>Protocolo QUIC de ultra velocidad</p>
-                    <div class="gen-ports">Puertos: 2000-5000 UDP</div>
+                    <p>Protocolo QUIC premium de ultra velocidad</p>
+                    <div class="acc-footer">
+                        <span class="acc-ports"><i class="fa-solid fa-plug"></i> Puertos: 2000-5000 UDP</span>
+                        <button class="acc-btn hy"><i class="fa-solid fa-plus"></i> Crear</button>
+                    </div>
+                </div>
+                <!-- OpenVPN -->
+                <div class="account-card" onclick="showToast('⚠️ Gestionar desde consola MX > Cuentas > OpenVPN')">
+                    <div class="acc-top">
+                        <div class="acc-icon ovpn"><i class="fa-solid fa-shield"></i></div>
+                        <span class="acc-badge ovpn">UDP</span>
+                    </div>
+                    <h3>OpenVPN</h3>
+                    <p>Genera clientes .ovpn para conexiones VPN puras</p>
+                    <div class="acc-footer">
+                        <span class="acc-ports"><i class="fa-solid fa-plug"></i> Puerto: 1194</span>
+                        <button class="acc-btn ovpn"><i class="fa-solid fa-terminal"></i> Consola</button>
+                    </div>
+                </div>
+                <!-- X-UI Panel -->
+                <div class="account-card" onclick="openXuiPanel()">
+                    <div class="acc-top">
+                        <div class="acc-icon xui"><i class="fa-solid fa-table-columns"></i></div>
+                        <span class="acc-badge xui">V2RAY</span>
+                    </div>
+                    <h3>Panel X-UI</h3>
+                    <p>Administra inbounds VMess, VLESS, Trojan, Shadowsocks</p>
+                    <div class="acc-footer">
+                        <span class="acc-ports"><i class="fa-solid fa-plug"></i> Admin: 54321</span>
+                        <button class="acc-btn xui"><i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir Panel</button>
+                    </div>
+                </div>
+                <!-- UDP Custom -->
+                <div class="account-card" onclick="showToast('⚠️ UDP Custom se gestiona desde consola MX > Protocolos')">
+                    <div class="acc-top">
+                        <div class="acc-icon udp"><i class="fa-solid fa-bolt"></i></div>
+                        <span class="acc-badge udp">UDP</span>
+                    </div>
+                    <h3>UDP Custom</h3>
+                    <p>Optimizado para juegos y llamadas de baja latencia</p>
+                    <div class="acc-footer">
+                        <span class="acc-ports"><i class="fa-solid fa-plug"></i> Puertos: 7100-7300</span>
+                        <button class="acc-btn udp"><i class="fa-solid fa-terminal"></i> Consola</button>
+                    </div>
                 </div>
             </div>
         </section>

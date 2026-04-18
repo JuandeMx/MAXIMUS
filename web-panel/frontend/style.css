@@ -752,10 +752,98 @@ tr:hover td { background: rgba(255, 255, 255, 0.02); }
 }
 .toast.show { transform: translateY(0); opacity: 1; }
 
+/* ========== ACCOUNTS GRID ========== */
+.accounts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+}
+.account-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+.account-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--primary), transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+.account-card:hover::before { opacity: 1; }
+.account-card:hover {
+    border-color: var(--primary);
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px -12px rgba(6, 182, 212, 0.12);
+}
+.acc-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.acc-icon {
+    width: 52px; height: 52px;
+    border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem;
+}
+.acc-icon.ssh { background: rgba(6, 182, 212, 0.1); color: var(--primary); }
+.acc-icon.hy { background: rgba(245, 158, 11, 0.1); color: var(--accent); }
+.acc-icon.ovpn { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+.acc-icon.xui { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
+.acc-icon.udp { background: rgba(244, 63, 94, 0.1); color: #f43f5e; }
+.acc-badge {
+    font-size: 0.65rem; font-weight: 700; letter-spacing: 1.5px;
+    padding: 4px 10px; border-radius: 6px;
+    background: rgba(6, 182, 212, 0.1); color: var(--primary);
+}
+.acc-badge.hy { background: rgba(245, 158, 11, 0.1); color: var(--accent); }
+.acc-badge.ovpn { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+.acc-badge.xui { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
+.acc-badge.udp { background: rgba(244, 63, 94, 0.1); color: #f43f5e; }
+.account-card h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 6px; }
+.account-card p { font-size: 0.82rem; color: var(--text-dim); margin-bottom: 18px; line-height: 1.4; }
+.acc-footer { display: flex; justify-content: space-between; align-items: center; }
+.acc-ports { font-size: 0.72rem; color: var(--text-dim); }
+.acc-ports i { margin-right: 4px; }
+.acc-btn {
+    background: linear-gradient(135deg, var(--primary), #0891b2);
+    color: white; border: none;
+    padding: 8px 16px; border-radius: 8px;
+    font-size: 0.78rem; font-weight: 700;
+    cursor: pointer; transition: all 0.2s;
+    display: flex; align-items: center; gap: 6px;
+}
+.acc-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3); }
+.acc-btn.hy { background: linear-gradient(135deg, var(--accent), #d97706); }
+.acc-btn.hy:hover { box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3); }
+.acc-btn.ovpn { background: linear-gradient(135deg, var(--success), #059669); }
+.acc-btn.xui { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+.acc-btn.xui:hover { box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3); }
+.acc-btn.udp { background: linear-gradient(135deg, #f43f5e, #e11d48); }
+
+/* Service not-installed state */
+.service-card.not-installed {
+    border-left: 3px solid var(--text-dim);
+    opacity: 0.5;
+}
+.svc-btn.install {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: rgba(16, 185, 129, 0.3);
+    color: var(--success);
+}
+.svc-btn.install:hover { background: rgba(16, 185, 129, 0.2); }
+
 /* ========== RESPONSIVE ========== */
 @media (max-width: 1024px) {
     .stats-grid { grid-template-columns: repeat(2, 1fr); }
     .charts-grid { grid-template-columns: 1fr; }
+    .accounts-grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 768px) {
     .sidebar { transform: translateX(-260px); }
@@ -766,4 +854,5 @@ tr:hover td { background: rgba(255, 255, 255, 0.02); }
     .tab-panel { padding: 20px 16px; }
     .topbar { padding: 16px; }
     .services-grid { grid-template-columns: 1fr; }
+    .accounts-grid { grid-template-columns: 1fr; }
 }
