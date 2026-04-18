@@ -972,24 +972,21 @@ menu_protocolos() {
         st_ovpn="${RED}[OFF]${NC}"
     fi
 
-    st_squid="${RED}[OFF]${NC}"; st_chk="${GREEN}[ON]${NC}"
-    st_atken="${RED}[OFF]${NC}"; st_file="${RED}[OFF]${NC}"
+    st_chk="${GREEN}[ON]${NC}"
     if systemctl is-active --quiet x-ui 2>/dev/null; then st_xui="${GREEN}[ON]${NC}"; else st_xui="${RED}[OFF]${NC}"; fi
-    st_sshgo="${RED}[OFF]${NC}"; st_wg="${RED}[OFF]${NC}"
 
-    # Resumen (ordenado)
+    # Resumen (compacto)
     echo -e " ${CYAN}SSH:${WHITE} $P_SSH  ${CYAN}DROB:${WHITE} $P_DROP  ${CYAN}PROXY:${WHITE} $P_PROXY  ${CYAN}SSL:${WHITE} $P_STUN${NC}"
     echo -e " ${CYAN}UDPG:${WHITE} $P_BAD  ${CYAN}UDPC:${WHITE} $P_UDPC  ${CYAN}HYST:${WHITE} $P_HY  ${CYAN}OVPN:${WHITE} $P_OVPN${NC}"
     ui_hr
-    printf "  ${CYAN}[1] ${WHITE}%-15s %b  ${CYAN}[10] ${WHITE}%-15s %b\n" "SSH" "$st_ssh" "SQUID" "$st_squid"
-    printf "  ${CYAN}[2] ${WHITE}%-15s %b  ${CYAN}[11] ${WHITE}%-15s %b\n" "DROPBEAR" "$st_drop" "OPENVPN" "$st_ovpn"
-    printf "  ${CYAN}[3] ${WHITE}%-15s %b  ${CYAN}[12] ${WHITE}%-15s %b\n" "PYTHON PROXY" "$st_proxy" "CHECKUSER" "$st_chk"
-    printf "  ${CYAN}[4] ${WHITE}%-15s %b  ${CYAN}[13] ${WHITE}%-15s %b\n" "STUNNEL4" "$st_stun" "ATKEN/HASH" "$st_atken"
-    printf "  ${CYAN}[5] ${WHITE}%-15s %b  ${CYAN}[14] ${WHITE}%-15s %b\n" "SLOWDNS" "$st_dns" "FILEBROWSER" "$st_file"
-    printf "  ${CYAN}[6] ${WHITE}%-15s %b  ${CYAN}[15] ${WHITE}%-15s %b\n" "WS-EPRO" "$st_ws" "PANEL X-UI" "$st_xui"
-    printf "  ${CYAN}[7] ${WHITE}%-15s %b  ${CYAN}[16] ${WHITE}%-15s %b\n" "UDP-CUSTOM" "$st_udpc" "SSHGO" "$st_sshgo"
-    printf "  ${CYAN}[8] ${WHITE}%-15s %b  ${CYAN}[17] ${WHITE}%-15s %b\n" "HYSTERIA v2" "$st_udph" "WIREGUARD" "$st_wg"
-    printf "  ${CYAN}[9] ${WHITE}%-15s %b  ${CYAN}[18] ${WHITE}%-15s %b\n" "BADVPN" "$st_udp" "REINICIAR T." ""
+    printf "  ${CYAN}[1] ${WHITE}%-15s %b  ${CYAN}[7] ${WHITE}%-15s %b\n" "SSH" "$st_ssh" "OPENVPN" "$st_ovpn"
+    printf "  ${CYAN}[2] ${WHITE}%-15s %b  ${CYAN}[8] ${WHITE}%-15s %b\n" "DROPBEAR" "$st_drop" "SLOWDNS" "$st_dns"
+    printf "  ${CYAN}[3] ${WHITE}%-15s %b  ${CYAN}[9] ${WHITE}%-15s %b\n" "WS-EPRO" "$st_ws" "UDP-CUSTOM" "$st_udpc"
+    printf "  ${CYAN}[4] ${WHITE}%-15s %b  ${CYAN}[10] ${WHITE}%-15s %b\n" "PYTHON PROXY" "$st_proxy" "HYSTERIA v2" "$st_udph"
+    printf "  ${CYAN}[5] ${WHITE}%-15s %b  ${CYAN}[11] ${WHITE}%-15s %b\n" "STUNNEL4" "$st_stun" "PANEL X-UI" "$st_xui"
+    printf "  ${CYAN}[6] ${WHITE}%-15s %b  ${CYAN}[12] ${WHITE}%-15s %b\n" "BADVPN" "$st_udp" "CHECKUSER" "$st_chk"
+    ui_subhr
+    echo -e "  ${CYAN}[13]>${WHITE} REINICIAR TODOS LOS SERVICIOS${NC}"
     ui_hr
     echo -e "  ${WHITE}[0] VOLVER AL MENÚ PRINCIPAL${NC}"
     ui_hr
@@ -999,22 +996,17 @@ menu_protocolos() {
     case $opt_prot in
         1) gestor_servicio "SSH" "ssh" ;;
         2) gestor_servicio "DROPBEAR" "dropbear" ;;
-        3) gestor_servicio "SOCKS PYTHON" "mx-proxy" ;;
-        4) gestor_servicio "STUNNEL (SSL)" "stunnel4" ;;
-        5) sub_slowdns ;;
-        6) gestor_servicio "WS-EPRO" "ws-epro" ;;
-        7) gestor_servicio "UDP-CUSTOM" "udp-custom" ;;
-        8) sub_hysteria ; menu_protocolos ;;
-        9) gestor_servicio "BADVPN-UDPGW" "badvpn" ;;
-        10) gestor_servicio "SQUID" "squid" ;;
-        11) gestor_servicio "OPENVPN" "openvpn" ;;
+        3) gestor_servicio "WS-EPRO" "ws-epro" ;;
+        4) gestor_servicio "SOCKS PYTHON" "mx-proxy" ;;
+        5) gestor_servicio "STUNNEL (SSL)" "stunnel4" ;;
+        6) gestor_servicio "BADVPN-UDPGW" "badvpn" ;;
+        7) gestor_servicio "OPENVPN" "openvpn" ;;
+        8) sub_slowdns ;;
+        9) gestor_servicio "UDP-CUSTOM" "udp-custom" ;;
+        10) sub_hysteria ; menu_protocolos ;;
+        11) sub_xui ; menu_protocolos ;;
         12) gestor_servicio "CHECKUSER ONLINE" "checkuser" ;;
-        13) gestor_servicio "ATKEN AND HASH" "atken" ;;
-        14) gestor_servicio "FILEBROWSER" "filebrowser" ;;
-        15) sub_xui ; menu_protocolos ;;
-        16) gestor_servicio "SSHGO" "sshgo" ;;
-        17) gestor_servicio "WIREGUARD" "wireguard" ;;
-        18)
+        13)
             echo "🔄 Reiniciando toda la red..."
             systemctl restart mx-proxy dropbear stunnel4 badvpn mx-slowdns ssh 2>/dev/null
             sleep 2; menu_protocolos ;;
