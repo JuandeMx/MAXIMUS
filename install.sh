@@ -7,6 +7,17 @@ if [ "$EUID" -ne 0 ]; then
   exit 1
 fi
 
+# Auto-clonado si se corre desde Wget sin estructura de carpetas
+if [ ! -d "core" ] || [ ! -d "modules" ] || [ ! -f "MX" ]; then
+    echo -e "\e[1;36m[+] Descargando repositorio de GitHub...\e[0m"
+    apt-get install -y git >/dev/null 2>&1
+    rm -rf /tmp/MaximusVpsMx
+    git clone https://github.com/JuandeMx/MAXIMUS.git /tmp/MaximusVpsMx >/dev/null 2>&1
+    cd /tmp/MaximusVpsMx || exit
+    chmod +x install.sh
+    exec ./install.sh
+fi
+
 echo -e "\n\e[1;36m=========================================================\e[0m"
 echo -e "\e[1;36m          Iniciando Instalación de MaximusVpsMx          \e[0m"
 echo -e "\e[1;36m=========================================================\e[0m\n"
