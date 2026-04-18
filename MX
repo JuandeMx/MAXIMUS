@@ -887,13 +887,9 @@ menu_protocolos() {
     systemctl is-active --quiet ws-epro && st_ws="${GREEN}[ON]${NC}" || st_ws="${RED}[OFF]${NC}"
 
     # UDP-Custom
-    if [ -f /root/udp/udp-custom ]; then
-        if ps -ef | grep -q "[u]dp-custom"; then
-            P_UDPC="1-65535"
-            st_udpc="${GREEN}[ON]${NC}"
-        else
-            P_UDPC="--"; st_udpc="${RED}[OFF]${NC}"
-        fi
+    if systemctl is-active --quiet udp-custom 2>/dev/null; then
+        P_UDPC="7100-7300"
+        st_udpc="${GREEN}[ON]${NC}"
     else
         P_UDPC="--"; st_udpc="${RED}[OFF]${NC}"
     fi
