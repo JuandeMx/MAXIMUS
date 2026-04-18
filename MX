@@ -581,7 +581,7 @@ sub_slowdns() {
         echo -e "${CYAN} ├─ [6] Detener / Iniciar / Reiniciar Servicio${NC}"
         ui_subhr
         echo -e "${CYAN} ├─ [7] Ver Llave Pública Cliente${NC}"
-        echo -e "${CYAN} ├─ [8] Regenerar Llaves RSA${NC}"
+        echo -e "${CYAN} ├─ [8] Regenerar Llave Hex (DNSTT)${NC}"
         echo -e "${CYAN} └─ [0] Volver${NC}"
         ui_hr
         ui_prompt "Selecciona una opción: "
@@ -599,8 +599,13 @@ sub_slowdns() {
                echo -e "\n${RED}⚠️ Esto eliminará SlowDNS completamente.${NC}"
                read -p " ¿Estás seguro? (s/n): " conf_del
                if [[ "$conf_del" == "s" || "$conf_del" == "S" ]]; then
-                   systemctl disable --now mx-slowdns 2>/dev/null
-                   echo -e "${GREEN}✅ SlowDNS eliminado y desactivado.${NC}"
+                   systemctl stop mx-slowdns 2>/dev/null
+                   systemctl disable mx-slowdns 2>/dev/null
+                   rm -f /etc/systemd/system/mx-slowdns.service 2>/dev/null
+                   rm -rf /etc/MaximusVpsMx/slowdns 2>/dev/null
+                   rm -f /usr/local/bin/slowdns 2>/dev/null
+                   systemctl daemon-reload
+                   echo -e "${GREEN}✅ SlowDNS eliminado y purgado por completo.${NC}"
                fi
                sleep 2 ;;
             4)
@@ -647,10 +652,16 @@ sub_slowdns() {
                 echo -e "${YELLOW}⚠️ Esto invalidará las llaves actuales de los clientes.${NC}"
                 read -p " ¿Continuar? (s/n): " confirmar
                 if [ "$confirmar" == "s" ]; then
-                    openssl genrsa -out /etc/MaximusVpsMx/slowdns/server.key 2048 2>/dev/null
-                    openssl rsa -in /etc/MaximusVpsMx/slowdns/server.key -pubout -out /etc/MaximusVpsMx/slowdns/server.pub 2>/dev/null
-                    systemctl restart mx-slowdns 2>/dev/null
-                    echo -e "${GREEN}✅ Llaves regeneradas.${NC}"
+                    if [ -f /usr/local/bin/slowdns ]; then
+                        /usr/local/bin/slowdns -gen > /etc/MaximusVpsMx/slowdns/keys.txt
+                        grep "Private key:" /etc/MaximusVpsMx/slowdns/keys.txt | awk '{print $3}' > /etc/MaximusVpsMx/slowdns/server.key
+                        grep "Public key:" /etc/MaximusVpsMx/slowdns/keys.txt | awk '{print $3}' > /etc/MaximusVpsMx/slowdns/server.pub
+                        rm -f /etc/MaximusVpsMx/slowdns/keys.txt
+                        systemctl restart mx-slowdns 2>/dev/null
+                        echo -e "${GREEN}✅ Llaves DNSTT (Hex) regeneradas exitosamente.${NC}"
+                    else
+                        echo -e "${RED}❌ Motor SlowDNS no instalado. Instálalo primero.${NC}"
+                    fi
                 fi
                 sleep 2 ;;
             0) break ;;
