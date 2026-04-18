@@ -287,6 +287,9 @@ def service_action():
     data = request.json
     service_id = data.get('id')
     action = data.get('action')  # install, uninstall, start, stop, restart
+    port = data.get('port', '')
+    mode = data.get('mode', '')  # For stunnel: 1=direct, 2=proxy, 3=hybrid
+
     valid_ids = [s["id"] for s in SERVICE_MAP]
     if service_id not in valid_ids:
         return jsonify({"error": "Servicio no reconocido"}), 400
@@ -295,26 +298,57 @@ def service_action():
 
     if action == "install":
         installer = svc_entry.get("installer")
-        if installer:
-            path = f"/etc/MaximusVpsMx/modules/{installer}"
-            if os.path.exists(path):
-                run_command(f"bash {path}")
-                time.sleep(2)
-                return jsonify({"success": True, "message": f"{svc_entry['name']} instalación iniciada"})
-            else:
-                return jsonify({"error": "Módulo no encontrado"}), 400
-        return jsonify({"error": "Sin instalador disponible"}), 400
+        if not installer:
+            return jsonify({"error": "Sin instalador disponible"}), 400
+        path = f"/etc/MaximusVpsMx/modules/{installer}"
+        if not os.path.exists(path):
+            return jsonify({"error": "Módulo no encontrado en el servidor"}), 400
+
+        # Construct command with arguments based on service type
+        if service_id == "stunnel4":
+            # Stunnel needs: mode selection + port
+            ssl_port = port or "443"
+            stun_mode = mode or "1"
+            cmd = f"echo -e '{stun_mode}\\n{ssl_port}' | bash {path}"
+        elif service_id == "dropbear":
+            drop_port = port or "44"
+            cmd = f"echo '{drop_port}' | bash {path}"
+        elif service_id == "badvpn":
+            bad_port = port or "7300"
+            cmd = f"echo '{bad_port}' | bash {path}"
+        elif service_id == "mx-proxy":
+            proxy_port = port or "80"
+            cmd = f"bash {path} {proxy_port}"
+        elif service_id == "openvpn-server@server":
+            cmd = f"bash {path}"
+        elif service_id == "hysteria":
+            cmd = f"bash {path}"
+        elif service_id == "udp-custom":
+            cmd = f"bash {path}"
+        elif service_id == "x-ui":
+            cmd = f"bash {path}"
+        else:
+            cmd = f"bash {path}"
+
+        # Run in background so it doesn't block the API
+        run_command(f"nohup {cmd} > /tmp/mx_install_{service_id}.log 2>&1 &")
+        time.sleep(3)
+        active = is_service_active(service_id)
+        return jsonify({"success": True, "active": active, "message": f"{svc_entry['name']} instalación ejecutada"})
 
     elif action == "uninstall":
         run_command(f"systemctl stop {service_id} 2>/dev/null")
         run_command(f"systemctl disable {service_id} 2>/dev/null")
-        # Limpieza avanzada
         cleanup = {
             "stunnel4": "apt-get purge stunnel4 -y 2>/dev/null; rm -rf /etc/stunnel",
-            "dropbear": "apt-get purge dropbear -y 2>/dev/null",
+            "dropbear": "systemctl stop dropbear.socket 2>/dev/null; apt-get purge dropbear -y 2>/dev/null",
             "hysteria": "killall -9 hysteria 2>/dev/null; rm -rf /etc/hysteria",
-            "udp-custom": "killall -9 udp-custom 2>/dev/null; rm -rf /root/udp",
+            "udp-custom": "killall -9 udp-custom 2>/dev/null; rm -rf /root/udp; rm -f /etc/systemd/system/udp-custom.service",
             "x-ui": "systemctl stop x-ui; rm -rf /usr/local/x-ui /etc/x-ui /usr/bin/x-ui; rm -f /etc/systemd/system/x-ui.service",
+            "badvpn": "rm -f /etc/systemd/system/badvpn.service",
+            "mx-proxy": "rm -f /etc/systemd/system/mx-proxy.service",
+            "ws-epro": "rm -f /etc/systemd/system/ws-epro.service",
+            "mx-slowdns": "rm -f /etc/systemd/system/mx-slowdns.service",
         }
         if service_id in cleanup:
             run_command(cleanup[service_id])
@@ -322,13 +356,48 @@ def service_action():
         time.sleep(1)
         return jsonify({"success": True, "message": f"{svc_entry['name']} desinstalado"})
 
+    elif action == "change-port":
+        # Change port for running service
+        new_port = port
+        if not new_port:
+            return jsonify({"error": "Puerto no especificado"}), 400
+
+        if service_id == "dropbear":
+            run_command(f"sed -i 's/DROPBEAR_PORT=.*/DROPBEAR_PORT={new_port}/' /etc/default/dropbear")
+            run_command(f"ufw allow {new_port}/tcp 2>/dev/null")
+            run_command("systemctl restart dropbear")
+        elif service_id == "stunnel4":
+            run_command(f"sed -i 's/accept = .*/accept = {new_port}/' /etc/stunnel/stunnel.conf")
+            run_command(f"ufw allow {new_port}/tcp 2>/dev/null")
+            run_command("systemctl restart stunnel4")
+        elif service_id == "ssh":
+            run_command(f"sed -i 's/^Port .*/Port {new_port}/' /etc/ssh/sshd_config")
+            run_command(f"ufw allow {new_port}/tcp 2>/dev/null")
+            run_command("systemctl restart ssh")
+        elif service_id == "badvpn":
+            run_command(f"sed -i 's/--listen-addr 127.0.0.1:[0-9]*/--listen-addr 127.0.0.1:{new_port}/' /etc/systemd/system/badvpn.service")
+            run_command("systemctl daemon-reload")
+            run_command("systemctl restart badvpn")
+        elif service_id == "x-ui":
+            run_command(f"/usr/local/x-ui/x-ui setting -port {new_port} >/dev/null 2>&1")
+            run_command(f"ufw allow {new_port}/tcp 2>/dev/null")
+            run_command("systemctl restart x-ui")
+
+        time.sleep(1)
+        active = is_service_active(service_id)
+        return jsonify({"success": True, "active": active, "port": new_port})
+
     elif action in ("start", "stop", "restart"):
-        run_command(f"systemctl {action} {service_id} 2>/dev/null")
+        if action == "start":
+            run_command(f"systemctl enable --now {service_id} 2>/dev/null")
+        else:
+            run_command(f"systemctl {action} {service_id} 2>/dev/null")
         time.sleep(1)
         active = is_service_active(service_id)
         return jsonify({"success": True, "active": active})
 
     return jsonify({"error": "Acción no válida"}), 400
+
 
 @app.route('/api/connections')
 def active_connections():

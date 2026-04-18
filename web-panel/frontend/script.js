@@ -274,19 +274,8 @@ async function fetchServices() {
             const statusLabel = !s.installed ? 'NO INSTALADO' : (s.active ? 'ONLINE' : 'OFFLINE');
             const statusClass = !s.installed ? 'off' : (s.active ? 'on' : 'off');
 
-            let actionBtns = '';
-            if (!s.installed && s.has_installer) {
-                actionBtns = `<button class="svc-btn install" title="Instalar" onclick="serviceAction('${s.id}','install')"><i class="fa-solid fa-download"></i></button>`;
-            } else if (s.installed) {
-                actionBtns = `
-                    <button class="svc-btn" title="Reiniciar" onclick="serviceAction('${s.id}','restart')"><i class="fa-solid fa-rotate-right"></i></button>
-                    <button class="svc-btn" title="${s.active ? 'Detener' : 'Iniciar'}" onclick="serviceAction('${s.id}','${s.active ? 'stop' : 'start'}')"><i class="fa-solid ${s.active ? 'fa-stop' : 'fa-play'}"></i></button>
-                    ${s.has_installer ? `<button class="svc-btn danger" title="Desinstalar" onclick="if(confirm('¿Desinstalar ${s.name}?')) serviceAction('${s.id}','uninstall')"><i class="fa-solid fa-trash-can"></i></button>` : ''}
-                `;
-            }
-
             return `
-            <div class="service-card ${stateClass}">
+            <div class="service-card ${stateClass}" onclick='openSvcConfig(${JSON.stringify(s)})' style="cursor:pointer">
                 <div class="svc-icon ${s.active ? 'on' : 'off'}">
                     <i class="fa-solid ${s.icon}"></i>
                 </div>
@@ -297,8 +286,8 @@ async function fetchServices() {
                 </div>
                 <div style="text-align:right">
                     <div class="svc-status ${statusClass}">${statusLabel}</div>
-                    <div class="svc-actions" style="margin-top:8px">
-                        ${actionBtns}
+                    <div style="margin-top:8px;font-size:0.7rem;color:var(--text-dim)">
+                        <i class="fa-solid fa-gear"></i> Configurar
                     </div>
                 </div>
             </div>
@@ -358,6 +347,210 @@ async function openXuiPanel() {
     } catch (e) {
         showToast('❌ Error al consultar X-UI');
     }
+}
+
+// ========== SERVICE CONFIG MODAL ==========
+function openSvcConfig(svc) {
+    const modal = document.getElementById('svcModal');
+    const title = document.getElementById('svcModalTitle');
+    const body = document.getElementById('svcModalBody');
+
+    title.innerHTML = `<i class="fa-solid ${svc.icon}"></i> ${svc.name}`;
+
+    const statusBadge = !svc.installed
+        ? '<span class="svc-status off" style="display:inline-block">NO INSTALADO</span>'
+        : svc.active
+            ? '<span class="svc-status on" style="display:inline-block">ONLINE</span>'
+            : '<span class="svc-status off" style="display:inline-block">OFFLINE</span>';
+
+    let content = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding:14px;background:rgba(255,255,255,0.03);border-radius:12px">
+            <div>
+                <div style="font-weight:600">${svc.desc}</div>
+                <div style="font-size:0.8rem;color:var(--text-dim);margin-top:4px">Puerto actual: <strong style="color:var(--primary)">${svc.port}</strong></div>
+            </div>
+            ${statusBadge}
+        </div>
+    `;
+
+    // Si NO está instalado y tiene instalador → mostrar formulario de instalación
+    if (!svc.installed && svc.has_installer) {
+        content += buildInstallForm(svc);
+    }
+
+    // Si YA está instalado → mostrar controles
+    if (svc.installed) {
+        content += `<div style="display:flex;flex-direction:column;gap:10px">`;
+
+        // Cambiar Puerto
+        if (['ssh', 'dropbear', 'stunnel4', 'badvpn', 'x-ui'].includes(svc.id)) {
+            content += `
+                <div style="display:flex;gap:8px;align-items:center">
+                    <input type="number" id="svcNewPort" placeholder="Nuevo puerto..." value="${svc.port !== '--' ? svc.port : ''}" 
+                        style="flex:1;padding:11px 14px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:10px;color:white;font-size:0.88rem;outline:none">
+                    <button onclick="svcConfigAction('${svc.id}','change-port')" class="btn-primary" style="width:auto;margin:0;padding:11px 18px;white-space:nowrap">
+                        <i class="fa-solid fa-plug"></i> Cambiar Puerto
+                    </button>
+                </div>
+            `;
+        }
+
+        // Botones de control
+        content += `
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px">
+                <button onclick="svcConfigAction('${svc.id}','restart')" class="btn-primary" style="margin:0;background:linear-gradient(135deg,var(--primary),#0891b2)">
+                    <i class="fa-solid fa-rotate-right"></i> Reiniciar
+                </button>
+                <button onclick="svcConfigAction('${svc.id}','${svc.active ? 'stop' : 'start'}')" class="btn-primary" style="margin:0;background:${svc.active ? 'linear-gradient(135deg,var(--warning),#d97706)' : 'linear-gradient(135deg,var(--success),#059669)'}">
+                    <i class="fa-solid ${svc.active ? 'fa-stop' : 'fa-play'}"></i> ${svc.active ? 'Detener' : 'Iniciar'}
+                </button>
+            </div>
+        `;
+
+        // Reinstalar y Desinstalar
+        if (svc.has_installer) {
+            content += `
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px">
+                    <button onclick="svcConfigAction('${svc.id}','install')" class="btn-secondary" style="margin:0">
+                        <i class="fa-solid fa-download"></i> Reinstalar
+                    </button>
+                    <button onclick="if(confirm('¿Desinstalar ${svc.name}?')) svcConfigAction('${svc.id}','uninstall')" class="btn-secondary" style="margin:0;border-color:rgba(239,68,68,0.3);color:var(--danger)">
+                        <i class="fa-solid fa-trash-can"></i> Desinstalar
+                    </button>
+                </div>
+            `;
+        }
+
+        content += `</div>`;
+    }
+
+    body.innerHTML = content;
+    modal.classList.add('show');
+}
+
+function buildInstallForm(svc) {
+    let form = '<div style="border-top:1px solid var(--border);padding-top:18px;margin-top:4px">';
+    form += '<h4 style="margin-bottom:14px;font-size:0.95rem"><i class="fa-solid fa-download" style="color:var(--success);margin-right:8px"></i>Instalar ${svc.name}</h4>'.replace('${svc.name}', svc.name);
+
+    // Stunnel: opciones de modo
+    if (svc.id === 'stunnel4') {
+        form += `
+            <div class="field" style="margin-bottom:14px">
+                <label>Modo de conexión SSL</label>
+                <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+                    <label style="display:flex;align-items:center;gap:10px;padding:12px;background:rgba(255,255,255,0.03);border-radius:10px;border:1px solid var(--border);cursor:pointer">
+                        <input type="radio" name="stunMode" value="1" checked style="width:auto;margin:0">
+                        <div>
+                            <div style="font-weight:600;font-size:0.88rem;color:var(--text)">SSL Directo</div>
+                            <div style="font-size:0.75rem;color:var(--text-dim)">SSL → SSH · Máxima velocidad, sin Payloads</div>
+                        </div>
+                    </label>
+                    <label style="display:flex;align-items:center;gap:10px;padding:12px;background:rgba(255,255,255,0.03);border-radius:10px;border:1px solid var(--border);cursor:pointer">
+                        <input type="radio" name="stunMode" value="2" style="width:auto;margin:0">
+                        <div>
+                            <div style="font-weight:600;font-size:0.88rem;color:var(--text)">SSL + Proxy</div>
+                            <div style="font-size:0.75rem;color:var(--text-dim)">SSL → Proxy 80 → SSH · Para Payloads y apps HTTP</div>
+                        </div>
+                    </label>
+                    <label style="display:flex;align-items:center;gap:10px;padding:12px;background:rgba(255,255,255,0.03);border-radius:10px;border:1px solid var(--border);cursor:pointer">
+                        <input type="radio" name="stunMode" value="3" style="width:auto;margin:0">
+                        <div>
+                            <div style="font-weight:600;font-size:0.88rem;color:var(--text)">Híbrido Universal</div>
+                            <div style="font-size:0.75rem;color:var(--text-dim)">Acepta TODO automáticamente (BETA)</div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+        `;
+    }
+
+    // Campo de puerto
+    const defaultPorts = {
+        'stunnel4': '443', 'dropbear': '44', 'badvpn': '7300', 'mx-proxy': '80',
+        'ws-epro': '80', 'mx-slowdns': '53', 'udp-custom': '36712',
+    };
+    const defPort = defaultPorts[svc.id] || '';
+
+    if (defPort) {
+        form += `
+            <div class="field" style="margin-bottom:16px">
+                <label>Puerto de instalación</label>
+                <div class="field-input">
+                    <i class="fa-solid fa-plug"></i>
+                    <input type="number" id="svcInstallPort" value="${defPort}" placeholder="Puerto...">
+                </div>
+            </div>
+        `;
+    }
+
+    form += `
+        <button onclick="executeInstall('${svc.id}')" class="btn-primary" style="background:linear-gradient(135deg,var(--success),#059669)">
+            <i class="fa-solid fa-download"></i> INSTALAR ${svc.name.toUpperCase()}
+        </button>
+    `;
+    form += '</div>';
+    return form;
+}
+
+async function executeInstall(id) {
+    const portEl = document.getElementById('svcInstallPort');
+    const port = portEl ? portEl.value : '';
+    const modeEl = document.querySelector('input[name="stunMode"]:checked');
+    const mode = modeEl ? modeEl.value : '';
+
+    closeSvcModal();
+    showToast(`⏳ Instalando ${id}...`);
+
+    try {
+        const res = await fetch('/api/service/action', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ id, action: 'install', port, mode })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast(`✅ ${id} instalado correctamente`);
+        } else {
+            showToast(`❌ ${data.error || 'Error'}`);
+        }
+        setTimeout(fetchServices, 2000);
+    } catch (e) {
+        showToast('❌ Error de conexión');
+    }
+}
+
+async function svcConfigAction(id, action) {
+    const portEl = document.getElementById('svcNewPort');
+    const port = portEl ? portEl.value : '';
+
+    closeSvcModal();
+
+    const labels = {restart:'Reiniciando', stop:'Deteniendo', start:'Iniciando', install:'Reinstalando', uninstall:'Desinstalando', 'change-port':'Cambiando puerto de'};
+    showToast(`⏳ ${labels[action] || action} ${id}...`);
+
+    try {
+        const res = await fetch('/api/service/action', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ id, action, port })
+        });
+        const data = await res.json();
+        if (data.success) {
+            if (action === 'change-port') showToast(`✅ Puerto de ${id} cambiado a ${data.port}`);
+            else if (action === 'uninstall') showToast(`🗑️ ${id} desinstalado`);
+            else if (action === 'install') showToast(`✅ ${id} reinstalado`);
+            else showToast(data.active ? `✅ ${id} ONLINE` : `⚠️ ${id} OFFLINE`);
+        } else {
+            showToast(`❌ ${data.error || 'Error'}`);
+        }
+        setTimeout(fetchServices, 1500);
+    } catch (e) {
+        showToast('❌ Error al gestionar servicio');
+    }
+}
+
+function closeSvcModal() {
+    document.getElementById('svcModal').classList.remove('show');
 }
 
 // ========== CONNECTIONS ==========
