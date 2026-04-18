@@ -23,7 +23,28 @@ class Proxy(threading.Thread):
     def run(self):
         target = None
         try:
-            client_buffer = self.client.recv(BUFLEN)
+            self.client.settimeout(2.0)
+            client_buffer = b''
+            
+            # Recolectar datos con tolerancia al [split] de HTTP Custom
+            while True:
+                try:
+                    chunk = self.client.recv(BUFLEN)
+                    if not chunk: break
+                    client_buffer += chunk
+                    # Si ya recibimos un doble salto de línea, rompemos el ciclo
+                    if b'\r\n\r\n' in client_buffer or b'\n\n' in client_buffer:
+                        break
+                    # Si el payload usa un [split] malicioso sin \r\n\r\n, forzamos un chequeo HTTP temprano
+                    if len(client_buffer) > 10 and b'HTTP/' in client_buffer:
+                       if b'Upgrade' in client_buffer or b'\n' in client_buffer:
+                          break 
+                except socket.timeout:
+                    if len(client_buffer) > 0:
+                        break
+                    else:
+                        return
+
             if not client_buffer:
                 self.client.close()
                 return
@@ -39,10 +60,14 @@ class Proxy(threading.Thread):
             target.setblocking(1)
             self.client.setblocking(1)
 
-            # Enviar cualquier payload basura que venga después del header HTTP (rara vez)
+            # Extraer y enviar el cuerpo remanente si existiera
             body_start = client_buffer.find(b'\r\n\r\n')
             if body_start != -1 and len(client_buffer) > body_start + 4:
-                target.send(client_buffer[body_start + 4:])
+                # Comprobar que no estemos enviando headers HTTP crudos al SSH si fue un Payload Ofuscado con split
+                if b'SSH-' not in client_buffer[body_start + 4:]:
+                     pass # Probablemente restos de un Payload agresivo, se ignoran.
+                else:
+                     target.send(client_buffer[body_start + 4:])
             elif b'HTTP' not in client_buffer:
                 target.send(client_buffer)
 
