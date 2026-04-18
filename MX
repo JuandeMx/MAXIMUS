@@ -891,13 +891,13 @@ menu_protocolos() {
     # SSH (OpenSSH)
     P_SSH=$(grep "^Port" /etc/ssh/sshd_config 2>/dev/null | awk '{print $2}' | head -1)
     [ -z "$P_SSH" ] && P_SSH="22"
-    if netstat -tuln 2>/dev/null | grep -q ":${P_SSH} "; then st_ssh="${GREEN}[ON]${NC}"; else st_ssh="${RED}[OFF]${NC}"; fi
+    if netstat -tuln 2>/dev/null | grep -q ":${P_SSH} "; then st_ssh="${GREEN}[ON] ${NC}"; else st_ssh="${RED}[OFF]${NC}"; fi
 
     # Dropbear
     if dpkg -l dropbear 2>/dev/null | grep -q "^ii"; then
         P_DROP=$(grep "DROPBEAR_PORT=" /etc/default/dropbear 2>/dev/null | cut -d= -f2 | tr -d '"' | xargs)
         [ -z "$P_DROP" ] && P_DROP="44"
-        if netstat -tuln 2>/dev/null | grep -q ":${P_DROP} "; then st_drop="${GREEN}[ON]${NC}"; else st_drop="${RED}[OFF]${NC}"; fi
+        if netstat -tuln 2>/dev/null | grep -q ":${P_DROP} "; then st_drop="${GREEN}[ON] ${NC}"; else st_drop="${RED}[OFF]${NC}"; fi
     else
         P_DROP="--"; st_drop="${RED}[OFF]${NC}"
     fi
@@ -907,7 +907,7 @@ menu_protocolos() {
         P_PROXY=$(grep "ExecStart=" /etc/systemd/system/mx-proxy.service 2>/dev/null | awk '{print $NF}')
         P_PROXY="${P_PROXY%%-*}"
         [ -z "$P_PROXY" ] && P_PROXY="80"
-        if netstat -tuln 2>/dev/null | grep -q ":${P_PROXY} "; then st_proxy="${GREEN}[ON]${NC}"; else st_proxy="${RED}[OFF]${NC}"; fi
+        if netstat -tuln 2>/dev/null | grep -q ":${P_PROXY} "; then st_proxy="${GREEN}[ON] ${NC}"; else st_proxy="${RED}[OFF]${NC}"; fi
     else
         P_PROXY="--"; st_proxy="${RED}[OFF]${NC}"
     fi
@@ -916,7 +916,7 @@ menu_protocolos() {
     if [ -f /etc/stunnel/stunnel.conf ] && dpkg -l stunnel4 2>/dev/null | grep -q "^ii"; then
         P_STUN=$(grep "accept =" /etc/stunnel/stunnel.conf 2>/dev/null | awk '{print $3}' | head -1)
         [ -z "$P_STUN" ] && P_STUN="443"
-        if netstat -tuln 2>/dev/null | grep -q ":${P_STUN} "; then st_stun="${GREEN}[ON]${NC}"; else st_stun="${RED}[OFF]${NC}"; fi
+        if netstat -tuln 2>/dev/null | grep -q ":${P_STUN} "; then st_stun="${GREEN}[ON] ${NC}"; else st_stun="${RED}[OFF]${NC}"; fi
     else
         P_STUN="--"; st_stun="${RED}[OFF]${NC}"
     fi
@@ -926,7 +926,7 @@ menu_protocolos() {
         if ps -ef | grep -q "[b]advpn-udpgw"; then
             P_BAD=$(ps -ef | grep badvpn-udpgw | grep -v grep | grep -o ":[0-9]*" | head -1 | tr -d ':')
             [ -z "$P_BAD" ] && P_BAD="7300"
-            st_udp="${GREEN}[ON]${NC}"
+            st_udp="${GREEN}[ON] ${NC}"
         else
             P_BAD="--"; st_udp="${RED}[OFF]${NC}"
         fi
@@ -935,14 +935,14 @@ menu_protocolos() {
     fi
 
     # SlowDNS
-    systemctl is-active --quiet mx-slowdns && st_dns="${GREEN}[ON]${NC}" || st_dns="${RED}[OFF]${NC}"
+    systemctl is-active --quiet mx-slowdns && st_dns="${GREEN}[ON] ${NC}" || st_dns="${RED}[OFF]${NC}"
     # WS-EPRO
-    systemctl is-active --quiet ws-epro && st_ws="${GREEN}[ON]${NC}" || st_ws="${RED}[OFF]${NC}"
+    systemctl is-active --quiet ws-epro && st_ws="${GREEN}[ON] ${NC}" || st_ws="${RED}[OFF]${NC}"
 
     # UDP-Custom
     if systemctl is-active --quiet udp-custom 2>/dev/null; then
         P_UDPC="7100-7300"
-        st_udpc="${GREEN}[ON]${NC}"
+        st_udpc="${GREEN}[ON] ${NC}"
     else
         P_UDPC="--"; st_udpc="${RED}[OFF]${NC}"
     fi
@@ -951,7 +951,7 @@ menu_protocolos() {
     if [ -f /etc/hysteria/hysteria ]; then
         if systemctl is-active --quiet hysteria 2>/dev/null; then
             P_HY="2000-5000"
-            st_udph="${GREEN}[ON]${NC}"
+            st_udph="${GREEN}[ON] ${NC}"
         else
             P_HY="--"; st_udph="${RED}[OFF]${NC}"
         fi
@@ -967,13 +967,13 @@ menu_protocolos() {
         [ -z "$OVPN_PORT" ] && OVPN_PORT="1194"
         [ -z "$OVPN_PROTO" ] && OVPN_PROTO="udp"
         P_OVPN="${OVPN_PORT}/${OVPN_PROTO}"
-        systemctl is-active --quiet openvpn-server@server 2>/dev/null && st_ovpn="${GREEN}[ON]${NC}" || st_ovpn="${RED}[OFF]${NC}"
+        systemctl is-active --quiet openvpn-server@server 2>/dev/null && st_ovpn="${GREEN}[ON] ${NC}" || st_ovpn="${RED}[OFF]${NC}"
     else
         st_ovpn="${RED}[OFF]${NC}"
     fi
 
-    st_chk="${GREEN}[ON]${NC}"
-    if systemctl is-active --quiet x-ui 2>/dev/null; then st_xui="${GREEN}[ON]${NC}"; else st_xui="${RED}[OFF]${NC}"; fi
+    st_chk="${GREEN}[ON] ${NC}"
+    if systemctl is-active --quiet x-ui 2>/dev/null; then st_xui="${GREEN}[ON] ${NC}"; else st_xui="${RED}[OFF]${NC}"; fi
 
     # Resumen (compacto)
     echo -e " ${CYAN}SSH:${WHITE} $P_SSH  ${CYAN}DROB:${WHITE} $P_DROP  ${CYAN}PROXY:${WHITE} $P_PROXY  ${CYAN}SSL:${WHITE} $P_STUN${NC}"
