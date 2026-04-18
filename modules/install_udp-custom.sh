@@ -41,19 +41,23 @@ UDP_DIR="/etc/udp-custom"
 mkdir -p "$UDP_DIR"
 mkdir -p "/var/log/MaximusVpsMx"
 
-# Descargar el binario estable (Maximus Mirror Prioritario para modo 'system')
-echo -e "${YELLOW}[+] Descargando UDP-Custom estable desde Mirror Maximus ($BIN_ARCH)...${NC}"
-if curl -sL --connect-timeout 10 --max-time 60 -o "$UDP_DIR/udp-custom" "https://raw.githubusercontent.com/JuandeMx/MAXIMUS/main/bin/udp-custom-linux-${BIN_ARCH}"; then
-    echo -e "${GREEN}[✔] Descarga primaria exitosa (Mirror Maximus).${NC}"
+# Descargar el binario directamente desde la Bóveda de MAXIMUS (Binario blindado 100% estable)
+echo -e "${YELLOW}[+] Descargando UDP-Custom desde la Bóveda Local Maximus...${NC}"
+if curl -sL -f --connect-timeout 10 --max-time 60 -o "$UDP_DIR/udp-custom" "https://raw.githubusercontent.com/JuandeMx/MAXIMUS/main/bin/udp-custom-linux-${BIN_ARCH}"; then
+    echo -e "${GREEN}[✔] Descarga segura exitosa (Bóveda MAXIMUS).${NC}"
 else
-    # Fallback a Haris131
-    echo -e "${YELLOW}[!] Mirror fallido. Intentando descargar desde repositorio Haris131...${NC}"
-    if curl -sL --connect-timeout 10 --max-time 60 -o "$UDP_DIR/udp-custom" "https://github.com/Haris131/UDP-Custom/raw/main/udp-custom-linux-${BIN_ARCH}"; then
-        echo -e "${GREEN}[✔] Descarga desde Haris131 exitosa.${NC}"
-    else
-        echo -e "${RED}❌ Error: No se pudo descargar el binario de ninguna fuente.${NC}"
-        exit 1
-    fi
+    echo -e "${RED}❌ Error: No se pudo conectar a la Bóveda MAXIMUS.${NC}"
+    echo -e "${RED}   Verifica la conexión a internet del servidor.${NC}"
+    exit 1
+fi
+
+# VALIDACIÓN CRÍTICA DE INTEGRIDAD (Evitar archivos de 14 bytes/404)
+size=$(stat -c%s "$UDP_DIR/udp-custom" 2>/dev/null || echo 0)
+if [ "$size" -lt 1000000 ]; then
+    echo -e "${RED}❌ ERROR: El archivo descargado es corrupto o inválido ($size bytes).${NC}"
+    echo -e "${RED}   Probablemente el enlace Mirror cambió. Abortando para proteger el sistema.${NC}"
+    rm -f "$UDP_DIR/udp-custom"
+    exit 1
 fi
 
 chmod +x "$UDP_DIR/udp-custom"
