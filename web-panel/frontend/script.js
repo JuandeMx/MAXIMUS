@@ -76,7 +76,12 @@ function updateUI(data) {
     history.cpu.shift();
     history.ram.push(parseFloat(ramPerc));
     history.ram.shift();
-    if (mainChart) mainChart.update('none');
+    
+    if (mainChart) {
+        mainChart.data.datasets[0].data = [...history.cpu];
+        mainChart.data.datasets[1].data = [...history.ram];
+        mainChart.update('none');
+    }
 }
 
 function initChart() {
@@ -85,6 +90,15 @@ function initChart() {
 
     try {
         const ctx = canvas.getContext('2d');
+        
+        const cpuGrad = ctx.createLinearGradient(0, 0, 0, 250);
+        cpuGrad.addColorStop(0, 'rgba(6, 182, 212, 0.2)');
+        cpuGrad.addColorStop(1, 'rgba(6, 182, 212, 0)');
+
+        const ramGrad = ctx.createLinearGradient(0, 0, 0, 250);
+        ramGrad.addColorStop(0, 'rgba(139, 92, 246, 0.15)');
+        ramGrad.addColorStop(1, 'rgba(139, 92, 246, 0)');
+
         mainChart = new Chart(ctx, {
             type: 'line',
             data: {
@@ -92,23 +106,23 @@ function initChart() {
                 datasets: [
                     {
                         label: 'CPU',
-                        data: history.cpu,
+                        data: [...history.cpu],
                         borderColor: '#06b6d4',
                         borderWidth: 2,
                         tension: 0.4,
                         pointRadius: 0,
                         fill: true,
-                        backgroundColor: 'rgba(6, 182, 212, 0.1)'
+                        backgroundColor: cpuGrad
                     },
                     {
                         label: 'RAM',
-                        data: history.ram,
+                        data: [...history.ram],
                         borderColor: '#8b5cf6',
                         borderWidth: 2,
                         tension: 0.4,
                         pointRadius: 0,
                         fill: true,
-                        backgroundColor: 'rgba(139, 92, 246, 0.1)'
+                        backgroundColor: ramGrad
                     }
                 ]
             },
@@ -124,7 +138,8 @@ function initChart() {
                         grid: { color: 'rgba(255,255,255,0.05)' },
                         ticks: { color: '#475569', font: { size: 10 } }
                     }
-                }
+                },
+                interaction: { intersect: false, mode: 'index' }
             }
         });
     } catch (e) {
