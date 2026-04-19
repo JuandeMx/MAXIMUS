@@ -180,8 +180,6 @@ def stream():
             time.sleep(2)
     return Response(gen(), mimetype='text/event-stream', headers={'X-Accel-Buffering': 'no'})
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8082, threaded=True)
 
 # ====== USUARIOS ======
 
@@ -309,3 +307,6 @@ def service_action():
     if sid == 'ssh': sid = 'sshd'
     run_command(f"systemctl {act} {sid}")
     return jsonify({"success": True})
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=8082, threaded=True)
