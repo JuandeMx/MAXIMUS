@@ -386,34 +386,38 @@ window.runStunnelInstall = async function(type) {
         if(!confirm("¿Seguro que deseas desinstalar Stunnel4? Se borrarán sus certificados.")) return;
         showStunnelTerminal("Desinstalando Stunnel4...", false);
         const res = await fetch('/api/service/stunnel4/uninstall', {method: 'POST'});
-        showStunnelTerminal("Desinstalado con éxito.", true);
+        showStunnelTerminal("Desinstalado con éxito.", false);
         setTimeout(() => { switchViewStunnel('viewMain_stunnel'); fetchServices(); }, 2000);
         return;
     }
 
-    const output = document.getElementById('consoleOutput_stunnel');
     switchViewStunnel('terminal_stunnel');
-    output.innerHTML = "";
+    // Limpieza total para que solo se vea el mensaje solicitado
+    document.getElementById('consoleOutput_stunnel').innerHTML = "";
     
-    showStunnelTerminal(`Instalando ${type}... Conectando a terminal SSH real...`, false);
+    showStunnelTerminal(`Instalando, espere unos segundos por favor...`, false);
     
-    const es = new EventSource(`/api/service/install/stunnel4?type=` + encodeURIComponent(type));
-    
-    es.onmessage = (e) => {
-        if(e.data === "[DONE]") {
-            showStunnelTerminal("Instalación completada.", true);
-            es.close();
-            setTimeout(() => { switchViewStunnel('viewMain_stunnel'); fetchServices(); }, 3000);
+    try {
+        const res = await fetch('/api/service/install/stunnel4/simple', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ type })
+        });
+        const data = await res.json();
+        if(data.success) {
+            showStunnelTerminal(`¡Instalación de ${type} completada con éxito!`, false);
         } else {
-            showStunnelTerminal(e.data, true);
+            showStunnelTerminal(`Error de instalación: ${data.error}`, false);
         }
-    };
-
-    es.onerror = (e) => {
-        showStunnelTerminal("Conexión finalizada o error en pipe SSH.", true);
-        es.close();
-        setTimeout(() => { switchViewStunnel('viewMain_stunnel'); fetchServices(); }, 3000);
-    };
+    } catch(e) {
+        showStunnelTerminal(`Error de red al conectar al servidor.`, false);
+    }
+    
+    // Retorno automático tras 3 segundos
+    setTimeout(() => { 
+        switchViewStunnel('viewMain_stunnel'); 
+        fetchServices(); 
+    }, 3000);
 }
 
 function showStunnelTerminal(msg, append=false) {

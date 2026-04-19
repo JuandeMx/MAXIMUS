@@ -308,26 +308,17 @@ def service_action():
     run_command(f"systemctl {act} {sid}")
     return jsonify({"success": True})
 
-@app.route('/api/service/install/stunnel4')
-def install_stunnel4():
+@app.route('/api/service/install/stunnel4/simple', methods=['POST'])
+def install_stunnel4_simple():
     if 'auth' not in session: return jsonify({"error": "Unauthorized"}), 401
-    ctype = request.args.get('type', '1')
+    ctype = request.json.get('type', '1')
     option = "1"
-    if "Proxy" in ctype and "Directo" not in ctype: option = "2"
-    elif "Combinado" in ctype: option = "3"
+    if "Proxy" in ctype: option = "2"
+    elif "Universal" in ctype or "Combinado" in ctype: option = "3"
     
-    cmd = f'echo -e "{option}\\n\\n" | bash /etc/MaximusVpsMx/modules/install_stunnel4.sh'
-    def generate():
-        import re
-        ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
-        process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
-        for line in iter(process.stdout.readline, ''):
-            clean_line = ansi_escape.sub('', line).strip()
-            if clean_line: yield f"data: {clean_line}\n\n"
-        process.stdout.close()
-        process.wait()
-        yield "data: [DONE]\n\n"
-    return Response(generate(), mimetype='text/event-stream', headers={'X-Accel-Buffering': 'no'})
+    cmd = f'echo -e "{option}\\n443\\n" | bash /etc/MaximusVpsMx/modules/install_stunnel4.sh'
+    run_command(cmd)
+    return jsonify({"success": True})
 
 @app.route('/api/service/stunnel4/uninstall', methods=['POST'])
 def uninstall_stunnel4():
