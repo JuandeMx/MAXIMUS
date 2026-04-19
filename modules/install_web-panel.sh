@@ -70,21 +70,26 @@ EOF
         ufw allow 8082/tcp >/dev/null 2>&1
     fi
 
-    # 5. Iniciar y Verificar
-    echo -e "${GREEN}[+] Iniciando Panel Web...${NC}"
+    # 5. Iniciar y Verificar con Feedback Real
+    echo -e "${GREEN}[+] Recargando Systemd y activando servicio...${NC}"
     systemctl daemon-reload
     systemctl enable mx-webpanel >/dev/null 2>&1
+    
+    echo -e "${YELLOW}[+] Reiniciando Maximus Web Panel Backend...${NC}"
     systemctl restart mx-webpanel >/dev/null 2>&1
 
     # Pequeña pausa para asegurar el arranque
-    sleep 2
+    sleep 3
     if systemctl is-active --quiet mx-webpanel; then
+        IP_PUBLIC=$(curl -s ipv4.icanhazip.com)
         echo -e "${CYAN}---------------------------------------------------------${NC}"
-        echo -e "${GREEN}✅ Panel WEB v2.0 instalado y operativo.${NC}"
-        echo -e "${YELLOW} Acceso: http://$(curl -s ipv4.icanhazip.com):8082${NC}"
+        echo -e "${GREEN}✅ PANEL WEB v2.1 OPERATIVO Y VINCULADO AL KERNEL${NC}"
+        echo -e "${YELLOW} Acceso Local: http://$IP_PUBLIC:8082${NC}"
+        echo -e "${BLUE} Tip: Si no abre, verifica que el puerto 8082 esté libre.${NC}"
         echo -e "${CYAN}=========================================================${NC}"
     else
-        echo -e "${RED}❌ Error al iniciar el panel. Revisa 'journalctl -u mx-webpanel'${NC}"
+        echo -e "${RED}❌ ERROR CRÍTICO: El panel no pudo iniciar.${NC}"
+        echo -e "${YELLOW} Ejecuta: 'journalctl -u mx-webpanel -n 20' para debug.${NC}"
     fi
 }
 

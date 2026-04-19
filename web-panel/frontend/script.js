@@ -575,10 +575,23 @@ async function handleSpecAction(id, cmd) {
     else showToast('⚠️ Módulo avanzado en desarrollo');
 }
 
-async function svcConfigAction(id, action) {
-    await serviceAction(id, action);
-    const modal = document.getElementById('svcModal');
-    modal.classList.remove('show');
+// ========== STUBS PARA FUNCIONES AVANZADAS (Evita Bloqueos) ==========
+function showSshMenu() {
+    showToast('🚀 Abriendo Gestor SSH Avanzado...');
+    const sub = document.getElementById('svcSubMenu');
+    sub.innerHTML = `
+        <div style="padding:20px; background:#1a1f2e; border-radius:18px; border:1px solid #33415555">
+            <h3 style="color:white; font-size:1rem; font-weight:700; margin-bottom:12px">Gestión SSH</h3>
+            <button class="btn-primary" onclick="serviceAction('ssh','restart')" style="width:100%; margin-bottom:10px">REINICIAR SSH</button>
+            <button class="btn-primary" onclick="showToast('Módulo de Banner en Herramientas')" style="width:100%; background:var(--bg-elevated)">EDITAR BANNER</button>
+        </div>
+    `;
+    sub.style.display = 'block';
+}
+
+function showStunnelEditor() {
+    showToast('📝 Cargando editor de Stunnel...');
+    showServiceInfo('stunnel4'); // Reutilizamos el visor por ahora
 }
 
 // ========== SERVICE INFO PANEL ==========
@@ -799,13 +812,13 @@ async function executeInstall(id) {
     }
 }
 
-async function svcConfigAction(id, action) {
-    const portEl = document.getElementById('svcNewPort');
-    const port = portEl ? portEl.value : '';
+// svcConfigAction ya está definida más abajo o arriba, nos aseguramos que solo haya UNA versión operativa que maneje puertos.
+async function svcConfigAction(id, action, portValue = null) {
+    const portEl = document.getElementById('subPort');
+    const port = portValue || (portEl ? portEl.value : '');
 
     closeSvcModal();
-
-    const labels = {restart:'Reiniciando', stop:'Deteniendo', start:'Iniciando', install:'Reinstalando', uninstall:'Desinstalando', 'change-port':'Cambiando puerto de'};
+    const labels = {restart:'Reiniciando', stop:'Deteniendo', start:'Iniciando', install:'Instalando', uninstall:'Desinstalando', 'change-port':'Copiando puerto'};
     showToast(`⏳ ${labels[action] || action} ${id}...`);
 
     try {
@@ -816,16 +829,13 @@ async function svcConfigAction(id, action) {
         });
         const data = await res.json();
         if (data.success) {
-            if (action === 'change-port') showToast(`✅ Puerto de ${id} cambiado a ${data.port}`);
-            else if (action === 'uninstall') showToast(`🗑️ ${id} desinstalado`);
-            else if (action === 'install') showToast(`✅ ${id} reinstalado`);
-            else showToast(data.active ? `✅ ${id} ONLINE` : `⚠️ ${id} OFFLINE`);
+            showToast(`✅ Operación sobre ${id} completada`);
         } else {
             showToast(`❌ ${data.error || 'Error'}`);
         }
         setTimeout(fetchServices, 1500);
     } catch (e) {
-        showToast('❌ Error al gestionar servicio');
+        showToast('❌ Error al conectar con el servidor');
     }
 }
 

@@ -3,23 +3,26 @@
 # Target: Ubuntu 20.04 - 24.04 LTS
 
 if [ "$EUID" -ne 0 ]; then
-  echo "Por favor, corre este script como root (sudo su)"
+  echo -e "\e[1;31m[!] ERROR: Este instalador requiere privilegios de ROOT.\e[0m"
+  echo -e "\e[1;33m[TIP] Ejecuta 'sudo su' antes de correr este comando.\e[0m"
   exit 1
 fi
 
 # Auto-clonado si se corre desde Wget sin estructura de carpetas
 if [ ! -d "core" ] || [ ! -d "modules" ] || [ ! -f "MX" ]; then
-    echo -e "\e[1;36m[+] Descargando repositorio de GitHub...\e[0m"
+    echo -e "\e[1;36m[+] Descargando repositorio MaximusVpsMx (v2.1)...\e[0m"
     apt-get install -y git >/dev/null 2>&1
     rm -rf /tmp/MaximusVpsMx
-    git clone https://github.com/JuandeMx/MAXIMUS.git /tmp/MaximusVpsMx >/dev/null 2>&1
+    echo -e "\e[1;32m[+] Clonando desde GitHub...\e[0m"
+    git clone https://github.com/JuandeMx/MAXIMUS.git /tmp/MaximusVpsMx
     cd /tmp/MaximusVpsMx || exit
     chmod +x install.sh
+    echo -e "\e[1;32m[+] Iniciando ejecución del instalador maestro...\e[0m"
     exec ./install.sh
 fi
 
 echo -e "\n\e[1;36m=========================================================\e[0m"
-echo -e "\e[1;36m          Iniciando Instalación de MaximusVpsMx          \e[0m"
+echo -e "\e[1;33m          MAXIMUS ELITE PANEL - MASTER INSTALLER         \e[0m"
 echo -e "\e[1;36m=========================================================\e[0m\n"
 
 # 0. Limpieza y Preparación de Terreno (v6.2 Residual Fix)
