@@ -835,7 +835,66 @@ tr:hover td { background: rgba(255, 255, 255, 0.02); }
 .acc-icon.ovpn { background: rgba(16, 185, 129, 0.1); color: var(--success); }
 .acc-icon.xui { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
 .acc-icon.udp { background: rgba(244, 63, 94, 0.1); color: #f43f5e; }
-.acc-badge {
+/* Action Tiles (CLI Style) */
+.action-tile {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 18px 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    text-align: center;
+}
+.action-tile i { font-size: 1.4rem; color: var(--text-muted); opacity: 0.8; }
+.action-tile .action-label { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.5px; color: var(--text-dim); }
+
+.action-tile:hover {
+    background: var(--primary-glow);
+    border-color: var(--primary);
+    transform: translateY(-3px);
+}
+.action-tile:hover i { color: var(--primary); opacity: 1; transform: scale(1.1); }
+.action-tile:hover .action-label { color: var(--primary); }
+
+.action-tile.install { border-color: rgba(16, 185, 129, 0.3); }
+.action-tile.install:hover { background: rgba(16, 185, 129, 0.1); border-color: var(--success); }
+.action-tile.install:hover i, .action-tile.install:hover .action-label { color: var(--success); }
+
+.action-tile.uninstall:hover { border-color: var(--danger); background: rgba(244, 63, 94, 0.1); }
+.action-tile.uninstall:hover i, .action-tile.uninstall:hover .action-label { color: var(--danger); }
+
+/* Sub-menu Buttons */
+.btn-sub {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border);
+    padding: 14px 20px;
+    border-radius: 12px;
+    color: var(--text);
+    text-align: left;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+.btn-sub b { color: var(--primary); margin-right: 8px; }
+.btn-sub:hover {
+    background: var(--bg-elevated);
+    border-color: var(--primary);
+    padding-left: 24px;
+}
+
+.svc-submenu-container {
+    animation: slideDownFade 0.4s ease-out;
+}
+@keyframes slideDownFade {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
     font-size: 0.65rem; font-weight: 700; letter-spacing: 1.5px;
     padding: 4px 10px; border-radius: 6px;
     background: rgba(6, 182, 212, 0.1); color: var(--primary);
