@@ -189,13 +189,15 @@ h1 { font-size: 1.8rem; font-weight: 800; }
 .chart-box {
     position: relative;
     min-height: 250px;
-    display: flex;
-    flex-direction: column;
+    height: 100%;
 }
 
 .chart-box canvas {
-    flex: 1;
-    max-height: 100%;
+    position: absolute;
+    left: 0;
+    top: 50px; /* Offset for the h3 */
+    width: 100% !important;
+    height: calc(100% - 70px) !important;
 }
 
 h3 { font-size: 1rem; margin-bottom: 20px; color: var(--text-dim); }
