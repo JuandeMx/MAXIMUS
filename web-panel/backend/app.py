@@ -616,5 +616,253 @@ def xui_info():
         "key_path": "/etc/x-ui/server.key",
     })
 
+# ========== HERRAMIENTAS DE SISTEMA (Réplica exacta del MX terminal) ==========
+
+def run_command_full(cmd):
+    """Ejecuta comando y retorna stdout + stderr + exit code para log de consola"""
+    try:
+        result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=60)
+        return {
+            "stdout": result.stdout.strip(),
+            "stderr": result.stderr.strip(),
+            "exit_code": result.returncode
+        }
+    except subprocess.TimeoutExpired:
+        return {"stdout": "", "stderr": "TIMEOUT: Comando excedió 60s", "exit_code": -1}
+    except Exception as e:
+        return {"stdout": "", "stderr": str(e), "exit_code": -1}
+
+@app.route('/api/tools/optimize', methods=['POST'])
+def optimize_vps():
+    """Réplica exacta de MX opción 1 en menu_sistema: sync; drop_caches; swap; journal; apt clean; logs"""
+    if 'logged_in' not in session:
+        return jsonify({"error": "No autorizado"}), 401
+    log = []
+    # 1. Sync y dropear caches del kernel
+    r = run_command_full("sync; echo 3 > /proc/sys/vm/drop_caches")
+    log.append(f"[drop_caches] exit={r['exit_code']}")
+    # 2. Reset swap
+    r = run_command_full("swapoff -a 2>/dev/null; swapon -a 2>/dev/null")
+    log.append(f"[swap reset] exit={r['exit_code']}")
+    # 3. Vacuum journalctl (solo 1 día)
+    r = run_command_full("journalctl --vacuum-time=1d 2>/dev/null")
+    log.append(f"[journal vacuum] {r['stdout'][:100]}")
+    # 4. APT clean
+    r = run_command_full("apt-get clean 2>/dev/null")
+    log.append(f"[apt clean] exit={r['exit_code']}")
+    # 5. Eliminar logs rotados
+    r = run_command_full("find /var/log -type f -name '*.gz' -delete; find /var/log -type f -name '*.[0-9]' -delete")
+    log.append(f"[log cleanup] exit={r['exit_code']}")
+    # Estado post-optimización
+    ram_free = run_command("free -m | awk 'NR==2 {print $4}'")
+    log.append(f"[RAM libre post-optimización] {ram_free} MB")
+    return jsonify({"success": True, "log": log})
+
+@app.route('/api/tools/backup', methods=['POST'])
+def backup_users():
+    """Réplica de MX opción 3: tar -cvf /root/users_backup.tar passwd shadow users.db"""
+    if 'logged_in' not in session:
+        return jsonify({"error": "No autorizado"}), 401
+    r = run_command_full("tar -cvf /root/users_backup.tar /etc/passwd /etc/shadow /etc/MaximusVpsMx/users.db 2>/dev/null")
+    exists = os.path.exists("/root/users_backup.tar") if True else False
+    size = run_command("du -h /root/users_backup.tar 2>/dev/null | awk '{print $1}'") or "0"
+    return jsonify({
+        "success": r["exit_code"] == 0,
+        "path": "/root/users_backup.tar",
+        "size": size,
+        "log": r["stdout"].split('\n') if r["stdout"] else [],
+        "error": r["stderr"] if r["exit_code"] != 0 else ""
+    })
+
+@app.route('/api/tools/banner', methods=['GET'])
+def get_banner():
+    """Lee el banner actual de /etc/issue.net"""
+    if 'logged_in' not in session:
+        return jsonify({"error": "No autorizado"}), 401
+    banner = run_command("cat /etc/issue.net 2>/dev/null") or ""
+    return jsonify({"banner": banner})
+
+@app.route('/api/tools/banner', methods=['POST'])
+def set_banner():
+    """Escribe el banner en /etc/issue.net (el mismo archivo que edita nano en MX opción 2)"""
+    if 'logged_in' not in session:
+        return jsonify({"error": "No autorizado"}), 401
+    data = request.json
+    content = data.get('content', '')
+    try:
+        with open('/etc/issue.net', 'w') as f:
+            f.write(content)
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/tools/traffic')
+def traffic_monitor():
+    """Réplica de MX opción 4: vnstat + lectura directa de /proc/net/dev"""
+    if 'logged_in' not in session:
+        return jsonify({"error": "No autorizado"}), 401
+    iface = run_command("ip route show | grep default | awk '{print $5}'") or "eth0"
+    # vnstat summary (si está instalado)
+    vnstat_out = run_command("vnstat --json 2>/dev/null")
+    vnstat_data = None
+    if vnstat_out:
+        try:
+            vnstat_data = json.loads(vnstat_out)
+        except:
+            pass
+    # Lectura directa de /proc/net/dev (siempre disponible)
+    raw = run_command(f"cat /proc/net/dev | grep {iface}")
+    rx_bytes = tx_bytes = 0
+    if raw:
+        parts = raw.split()
+        if len(parts) >= 10:
+            rx_bytes = int(parts[1])
+            tx_bytes = int(parts[9])
+    # Tráfico por usuario (netstat)
+    per_user = run_command(
+        "netstat -antp 2>/dev/null | grep ESTABLISHED | grep -E ':22|:44|:80|:443' | "
+        "awk '{print $5}' | cut -d: -f1 | sort | uniq -c | sort -rn | head -10"
+    )
+    user_traffic = []
+    for line in (per_user or "").split('\n'):
+        line = line.strip()
+        if line:
+            parts = line.split()
+            if len(parts) >= 2:
+                user_traffic.append({"connections": int(parts[0]), "ip": parts[1]})
+
+    return jsonify({
+        "interface": iface,
+        "rx_bytes": rx_bytes, "tx_bytes": tx_bytes,
+        "rx_gb": round(rx_bytes / 1073741824, 2),
+        "tx_gb": round(tx_bytes / 1073741824, 2),
+        "vnstat": vnstat_data,
+        "top_ips": user_traffic
+    })
+
+@app.route('/api/tools/firewall')
+def firewall_status():
+    """Lee el estado real de UFW"""
+    if 'logged_in' not in session:
+        return jsonify({"error": "No autorizado"}), 401
+    status = run_command("ufw status 2>/dev/null")
+    active = "active" in (status or "").lower() and "inactive" not in (status or "").lower()
+    # Parsear reglas
+    rules = []
+    for line in (status or "").split('\n'):
+        line = line.strip()
+        if line and not line.startswith('Status') and not line.startswith('To') and not line.startswith('--'):
+            rules.append(line)
+    return jsonify({"active": active, "rules": rules, "raw": status})
+
+@app.route('/api/tools/firewall', methods=['POST'])
+def firewall_action():
+    """Acciones reales sobre UFW: enable, disable, allow, delete"""
+    if 'logged_in' not in session:
+        return jsonify({"error": "No autorizado"}), 401
+    data = request.json
+    action = data.get('action')  # enable, disable, allow, delete
+    port = data.get('port', '')
+    proto = data.get('proto', 'tcp')
+
+    if action == 'enable':
+        # Igual que MX: primero permitir puertos críticos, luego activar
+        r = run_command_full("ufw allow 22,44,80,443/tcp 2>/dev/null; ufw --force enable")
+        return jsonify({"success": True, "log": r["stdout"], "error": r["stderr"]})
+    elif action == 'disable':
+        r = run_command_full("ufw disable")
+        return jsonify({"success": True, "log": r["stdout"]})
+    elif action == 'allow':
+        if not port:
+            return jsonify({"error": "Puerto requerido"}), 400
+        r = run_command_full(f"ufw allow {port}/{proto} 2>/dev/null")
+        return jsonify({"success": r["exit_code"] == 0, "log": r["stdout"], "error": r["stderr"]})
+    elif action == 'delete':
+        if not port:
+            return jsonify({"error": "Puerto requerido"}), 400
+        r = run_command_full(f"ufw delete allow {port}/{proto} 2>/dev/null")
+        return jsonify({"success": r["exit_code"] == 0, "log": r["stdout"], "error": r["stderr"]})
+    return jsonify({"error": "Acción no válida"}), 400
+
+@app.route('/api/tools/cloudflare', methods=['GET'])
+def cloudflare_get():
+    """Lee la configuración actual de Cloudflare DDNS"""
+    if 'logged_in' not in session:
+        return jsonify({"error": "No autorizado"}), 401
+    conf_path = "/etc/MaximusVpsMx/cloudflare.conf"
+    config = {"token": "", "zone_id": "", "record": "", "active": False}
+    if os.path.exists(conf_path):
+        content = run_command(f"cat {conf_path}")
+        for line in (content or "").split('\n'):
+            if 'CF_API_TOKEN=' in line:
+                config["token"] = line.split('=', 1)[1].strip().strip('"')
+            elif 'CF_ZONE_ID=' in line:
+                config["zone_id"] = line.split('=', 1)[1].strip().strip('"')
+            elif 'CF_RECORD_NAME=' in line:
+                config["record"] = line.split('=', 1)[1].strip().strip('"')
+    # Verificar si el cron está activo
+    cron = run_command("crontab -l 2>/dev/null | grep cloudflare-ddns")
+    config["active"] = bool(cron)
+    return jsonify(config)
+
+@app.route('/api/tools/cloudflare', methods=['POST'])
+def cloudflare_action():
+    """Configurar, activar o desactivar Cloudflare DDNS (réplica MX opción 6)"""
+    if 'logged_in' not in session:
+        return jsonify({"error": "No autorizado"}), 401
+    data = request.json
+    action = data.get('action')  # save, enable, disable
+
+    if action == 'save':
+        token = data.get('token', '').strip()
+        zone_id = data.get('zone_id', '').strip()
+        record = data.get('record', '').strip()
+        if not token or not zone_id or not record:
+            return jsonify({"error": "Todos los campos son requeridos"}), 400
+        run_command("mkdir -p /etc/MaximusVpsMx")
+        conf = f'CF_API_TOKEN="{token}"\nCF_ZONE_ID="{zone_id}"\nCF_RECORD_NAME="{record}"\n'
+        try:
+            with open("/etc/MaximusVpsMx/cloudflare.conf", "w") as f:
+                f.write(conf)
+            return jsonify({"success": True})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    elif action == 'enable':
+        r = run_command_full(
+            '(crontab -l 2>/dev/null | grep -v "cloudflare-ddns"; '
+            'echo "*/5 * * * * /etc/MaximusVpsMx/modules/cloudflare-ddns.sh") | crontab -'
+        )
+        return jsonify({"success": r["exit_code"] == 0, "log": r["stdout"], "error": r["stderr"]})
+
+    elif action == 'disable':
+        r = run_command_full('crontab -l 2>/dev/null | grep -v "cloudflare-ddns" | crontab -')
+        return jsonify({"success": True})
+
+    return jsonify({"error": "Acción no válida"}), 400
+
+@app.route('/api/tools/exec', methods=['POST'])
+def exec_log():
+    """Endpoint de auditoría: ejecuta un comando y devuelve stdout+stderr+exit_code.
+    Solo para diagnóstico administrativo."""
+    if 'logged_in' not in session:
+        return jsonify({"error": "No autorizado"}), 401
+    data = request.json
+    cmd = data.get('cmd', '')
+    if not cmd:
+        return jsonify({"error": "Comando vacío"}), 400
+    # Lista blanca de comandos seguros
+    safe_prefixes = [
+        'systemctl status', 'systemctl is-active', 'cat /etc/', 'tail ',
+        'head ', 'ufw status', 'netstat', 'ss ', 'free ', 'df ', 'uptime',
+        'vnstat', 'whoami', 'id ', 'ls ', 'wc ', 'grep ', 'awk '
+    ]
+    allowed = any(cmd.strip().startswith(p) for p in safe_prefixes)
+    if not allowed:
+        return jsonify({"error": "Comando no permitido por seguridad"}), 403
+    r = run_command_full(cmd)
+    return jsonify(r)
+
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8082, threaded=True)

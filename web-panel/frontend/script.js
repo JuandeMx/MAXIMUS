@@ -919,7 +919,204 @@ function copyResult() {
     });
 }
 
-// ========== UTILS ==========
+// ========== HERRAMIENTAS DE SISTEMA (Réplica 1:1 del menu_sistema MX) ==========
+
+function showConsole(title, html) {
+    const con = document.getElementById('toolConsole');
+    const body = document.getElementById('toolConsoleBody');
+    con.style.display = 'block';
+    body.innerHTML = `<div style="font-weight:700;color:var(--primary);margin-bottom:12px;font-size:0.9rem"><i class="fa-solid fa-terminal" style="margin-right:6px"></i>${title}</div>${html}`;
+    con.scrollIntoView({ behavior: 'smooth' });
+}
+
+function logLine(text, type = 'info') {
+    const colors = { info: '#94a3b8', success: 'var(--success)', error: 'var(--danger)', warn: '#f59e0b' };
+    return `<div style="font-family:monospace;font-size:0.8rem;padding:4px 0;color:${colors[type] || colors.info}">${text}</div>`;
+}
+
+async function toolOptimize() {
+    showConsole('Optimizar VPS', logLine('⏳ Ejecutando optimización del sistema...', 'warn'));
+    try {
+        const res = await fetch('/api/tools/optimize', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+            let html = data.log.map(l => logLine(`✅ ${l}`, 'success')).join('');
+            showConsole('Optimizar VPS — Completado', html);
+            showToast('✅ VPS Optimizado');
+        } else {
+            showConsole('Error', logLine(`❌ ${data.error}`, 'error'));
+        }
+    } catch (e) { showConsole('Error', logLine('❌ Error de conexión con el backend', 'error')); }
+}
+
+async function toolBanner() {
+    showConsole('Editor de Banner', logLine('⏳ Cargando banner actual de /etc/issue.net...', 'warn'));
+    try {
+        const res = await fetch('/api/tools/banner');
+        const data = await res.json();
+        showConsole('Editor de Banner — /etc/issue.net', `
+            <textarea id="bannerEditor" style="width:100%;height:200px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:monospace;font-size:0.8rem;padding:12px;resize:vertical">${data.banner || ''}</textarea>
+            <button class="btn-primary" onclick="saveBanner()" style="margin-top:12px;width:100%"><i class="fa-solid fa-floppy-disk"></i> GUARDAR BANNER</button>
+        `);
+    } catch (e) { showConsole('Error', logLine('❌ Error de conexión', 'error')); }
+}
+
+async function saveBanner() {
+    const content = document.getElementById('bannerEditor').value;
+    try {
+        const res = await fetch('/api/tools/banner', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ content })
+        });
+        const data = await res.json();
+        if (data.success) showToast('✅ Banner guardado en /etc/issue.net');
+        else showToast(`❌ ${data.error}`);
+    } catch (e) { showToast('❌ Error de conexión'); }
+}
+
+async function toolBackup() {
+    showConsole('Respaldar Cuentas', logLine('⏳ Generando /root/users_backup.tar ...', 'warn'));
+    try {
+        const res = await fetch('/api/tools/backup', { method: 'POST' });
+        const data = await res.json();
+        let html = '';
+        if (data.success) {
+            html += logLine(`✅ Backup generado: ${data.path}`, 'success');
+            html += logLine(`📦 Tamaño: ${data.size}`, 'info');
+            if (data.log) data.log.forEach(l => { html += logLine(`  ${l}`, 'info'); });
+        } else {
+            html += logLine(`❌ Error: ${data.error}`, 'error');
+        }
+        showConsole('Backup', html);
+        if (data.success) showToast(`✅ Backup guardado: ${data.size}`);
+    } catch (e) { showConsole('Error', logLine('❌ Error de conexión', 'error')); }
+}
+
+async function toolTraffic() {
+    showConsole('Monitor de Tráfico', logLine('⏳ Consultando /proc/net/dev y netstat...', 'warn'));
+    try {
+        const res = await fetch('/api/tools/traffic');
+        const data = await res.json();
+        let html = '';
+        html += logLine(`📡 Interfaz: ${data.interface}`, 'info');
+        html += logLine(`⬇️ Descarga: ${data.rx_gb} GB (${data.rx_bytes.toLocaleString()} bytes)`, 'success');
+        html += logLine(`⬆️ Subida: ${data.tx_gb} GB (${data.tx_bytes.toLocaleString()} bytes)`, 'success');
+        if (data.top_ips && data.top_ips.length > 0) {
+            html += '<div style="margin-top:16px;font-weight:700;color:var(--text);font-size:0.85rem">Top IPs Conectadas:</div>';
+            html += '<table style="width:100%;margin-top:8px"><thead><tr><th style="text-align:left;color:#94a3b8;font-size:0.7rem">IP</th><th style="text-align:right;color:#94a3b8;font-size:0.7rem">Conexiones</th></tr></thead><tbody>';
+            data.top_ips.forEach(ip => {
+                html += `<tr><td style="font-family:monospace;font-size:0.8rem">${ip.ip}</td><td style="text-align:right;font-weight:700;color:var(--primary)">${ip.connections}</td></tr>`;
+            });
+            html += '</tbody></table>';
+        } else {
+            html += logLine('ℹ️ No hay conexiones activas', 'info');
+        }
+        showConsole('Monitor de Tráfico', html);
+    } catch (e) { showConsole('Error', logLine('❌ Error de conexión', 'error')); }
+}
+
+async function toolFirewall() {
+    showConsole('Firewall UFW', logLine('⏳ Consultando estado de UFW...', 'warn'));
+    try {
+        const res = await fetch('/api/tools/firewall');
+        const fw = await res.json();
+        let html = '';
+        html += logLine(`Estado: ${fw.active ? '🟢 ACTIVO' : '🔴 INACTIVO'}`, fw.active ? 'success' : 'error');
+        if (fw.rules && fw.rules.length > 0) {
+            html += '<div style="margin-top:12px;font-weight:700;color:var(--text);font-size:0.85rem">Reglas activas:</div>';
+            fw.rules.forEach(r => { html += logLine(`  ${r}`, 'info'); });
+        }
+        html += `
+        <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
+            <button class="btn-primary" onclick="fwAction('${fw.active ? 'disable' : 'enable'}')" style="flex:1;min-width:120px;background:${fw.active ? 'var(--danger)' : 'var(--success)'}">
+                <i class="fa-solid ${fw.active ? 'fa-power-off' : 'fa-shield-halved'}"></i> ${fw.active ? 'DESACTIVAR' : 'ACTIVAR'}
+            </button>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
+            <input type="number" id="fwPort" placeholder="Puerto" style="flex:1;padding:10px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;color:white;font-size:0.85rem">
+            <select id="fwProto" style="padding:10px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;color:white;font-size:0.85rem">
+                <option value="tcp">TCP</option>
+                <option value="udp">UDP</option>
+            </select>
+            <button class="btn-primary" onclick="fwAction('allow')" style="padding:10px 16px"><i class="fa-solid fa-plus"></i> Abrir</button>
+            <button class="btn-primary" onclick="fwAction('delete')" style="padding:10px 16px;background:var(--danger)"><i class="fa-solid fa-minus"></i> Cerrar</button>
+        </div>`;
+        showConsole('Firewall UFW', html);
+    } catch (e) { showConsole('Error', logLine('❌ Error de conexión', 'error')); }
+}
+
+async function fwAction(action) {
+    const port = document.getElementById('fwPort')?.value || '';
+    const proto = document.getElementById('fwProto')?.value || 'tcp';
+    try {
+        const res = await fetch('/api/tools/firewall', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ action, port, proto })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast(`✅ Firewall: ${action} ejecutado`);
+            toolFirewall(); // Refrescar
+        } else {
+            showToast(`❌ ${data.error}`);
+        }
+    } catch (e) { showToast('❌ Error de conexión'); }
+}
+
+async function toolCloudflare() {
+    showConsole('Cloudflare DDNS', logLine('⏳ Cargando configuración...', 'warn'));
+    try {
+        const res = await fetch('/api/tools/cloudflare');
+        const cf = await res.json();
+        let html = `
+            <div style="margin-bottom:14px">
+                ${logLine(`Estado CRON: ${cf.active ? '🟢 ACTIVO (cada 5 min)' : '🔴 INACTIVO'}`, cf.active ? 'success' : 'error')}
+            </div>
+            <div class="field" style="margin-bottom:12px">
+                <label style="color:#94a3b8;font-size:0.7rem;font-weight:600">API TOKEN</label>
+                <input type="text" id="cfToken" value="${cf.token}" placeholder="Tu Cloudflare API Token" style="width:100%;padding:10px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;color:white;font-family:monospace;font-size:0.8rem;margin-top:4px">
+            </div>
+            <div class="field" style="margin-bottom:12px">
+                <label style="color:#94a3b8;font-size:0.7rem;font-weight:600">ZONE ID</label>
+                <input type="text" id="cfZone" value="${cf.zone_id}" placeholder="Zone ID de Cloudflare" style="width:100%;padding:10px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;color:white;font-family:monospace;font-size:0.8rem;margin-top:4px">
+            </div>
+            <div class="field" style="margin-bottom:16px">
+                <label style="color:#94a3b8;font-size:0.7rem;font-weight:600">DOMINIO (Record Name)</label>
+                <input type="text" id="cfRecord" value="${cf.record}" placeholder="vpn.tudominio.com" style="width:100%;padding:10px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;color:white;font-family:monospace;font-size:0.8rem;margin-top:4px">
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button class="btn-primary" onclick="cfAction('save')" style="flex:1"><i class="fa-solid fa-floppy-disk"></i> GUARDAR</button>
+                <button class="btn-primary" onclick="cfAction('enable')" style="flex:1;background:var(--success)"><i class="fa-solid fa-play"></i> ACTIVAR CRON</button>
+                <button class="btn-primary" onclick="cfAction('disable')" style="flex:1;background:var(--danger)"><i class="fa-solid fa-stop"></i> DESACTIVAR</button>
+            </div>
+        `;
+        showConsole('Cloudflare DDNS', html);
+    } catch (e) { showConsole('Error', logLine('❌ Error de conexión', 'error')); }
+}
+
+async function cfAction(action) {
+    const body = { action };
+    if (action === 'save') {
+        body.token = document.getElementById('cfToken').value.trim();
+        body.zone_id = document.getElementById('cfZone').value.trim();
+        body.record = document.getElementById('cfRecord').value.trim();
+    }
+    try {
+        const res = await fetch('/api/tools/cloudflare', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast(`✅ Cloudflare: ${action} ejecutado`);
+            if (action !== 'save') toolCloudflare();
+        } else {
+            showToast(`❌ ${data.error}`);
+        }
+    } catch (e) { showToast('❌ Error de conexión'); }
+}
+
+
 async function logout() {
     await fetch('/api/logout');
     if (eventSource) eventSource.close();

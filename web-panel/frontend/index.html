@@ -44,6 +44,10 @@
                 <i class="fa-solid fa-network-wired"></i>
                 <span>Conexiones</span>
             </a>
+            <a href="#" class="nav-link" data-tab="tools">
+                <i class="fa-solid fa-toolbox"></i>
+                <span>Herramientas</span>
+            </a>
             <a href="#" class="nav-link" data-tab="settings">
                 <i class="fa-solid fa-gear"></i>
                 <span>Configuración</span>
@@ -319,6 +323,58 @@
                             <tr><td colspan="5" class="empty-state">Cargando conexiones...</td></tr>
                         </tbody>
                     </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB: TOOLS (Réplica de menu_sistema del MX) -->
+        <section id="tab-tools" class="tab-panel">
+            <div class="tools-grid">
+                <!-- 1. Optimizar VPS -->
+                <div class="panel-card tool-card" onclick="toolOptimize()">
+                    <div class="tool-icon" style="background:rgba(16,185,129,0.1);color:var(--success)"><i class="fa-solid fa-broom"></i></div>
+                    <h4>Optimizar VPS</h4>
+                    <p>Limpiar RAM, Caché, Swap, Logs rotados y Journal</p>
+                </div>
+                <!-- 2. Editor de Banner -->
+                <div class="panel-card tool-card" onclick="toolBanner()">
+                    <div class="tool-icon" style="background:rgba(139,92,246,0.1);color:#8b5cf6"><i class="fa-solid fa-pen-to-square"></i></div>
+                    <h4>Editor de Banner</h4>
+                    <p>Modificar /etc/issue.net (Banner SSH Global)</p>
+                </div>
+                <!-- 3. Backup -->
+                <div class="panel-card tool-card" onclick="toolBackup()">
+                    <div class="tool-icon" style="background:rgba(245,158,11,0.1);color:var(--accent)"><i class="fa-solid fa-box-archive"></i></div>
+                    <h4>Respaldar Cuentas</h4>
+                    <p>Generar /root/users_backup.tar (passwd + shadow + users.db)</p>
+                </div>
+                <!-- 4. Monitor de Tráfico -->
+                <div class="panel-card tool-card" onclick="toolTraffic()">
+                    <div class="tool-icon" style="background:rgba(6,182,212,0.1);color:var(--primary)"><i class="fa-solid fa-chart-bar"></i></div>
+                    <h4>Monitor de Tráfico</h4>
+                    <p>Tráfico por interfaz + Top IPs conectadas</p>
+                </div>
+                <!-- 5. Firewall UFW -->
+                <div class="panel-card tool-card" onclick="toolFirewall()">
+                    <div class="tool-icon" style="background:rgba(244,63,94,0.1);color:#f43f5e"><i class="fa-solid fa-shield-halved"></i></div>
+                    <h4>Firewall UFW</h4>
+                    <p>Activar/Desactivar + Gestionar puertos</p>
+                </div>
+                <!-- 6. Cloudflare DDNS -->
+                <div class="panel-card tool-card" onclick="toolCloudflare()">
+                    <div class="tool-icon" style="background:rgba(249,115,22,0.1);color:#f97316"><i class="fa-solid fa-cloud"></i></div>
+                    <h4>Cloudflare DDNS</h4>
+                    <p>Configurar Token + ZoneID + Dominio + Cron</p>
+                </div>
+            </div>
+            <!-- Console Log Output -->
+            <div class="panel-card" id="toolConsole" style="display:none; margin-top:24px">
+                <div class="card-toolbar">
+                    <h3><i class="fa-solid fa-terminal"></i> Consola de Sistema</h3>
+                    <button class="btn-action" onclick="document.getElementById('toolConsole').style.display='none'"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div id="toolConsoleBody" style="padding:16px; max-height:400px; overflow-y:auto">
+                    <!-- Dynamic content -->
                 </div>
             </div>
         </section>
