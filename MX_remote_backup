@@ -1,0 +1,1325 @@
+#!/bin/bash
+# MaximusVpsMx - Super Panel v11.0.0 (Premium)
+# Modificado para Submenús y Funciones Avanzadas + Hysteria v2 Manager
+
+# SEGURIDAD: Solo root puede ejecutar este panel
+if [ "$EUID" -ne 0 ]; then
+    echo -e "\033[1;31m❌ Acceso Denegado. Solo root puede usar MaximusVpsMx.\033[0m"
+    exit 1
+fi
+
+# --- COLORES GLOBALES ---
+RED='\033[1;31m'
+GREEN='\033[1;32m'
+BLUE='\033[1;34m'
+CYAN='\033[1;36m'
+YELLOW='\033[1;33m'
+WHITE='\033[1;37m'
+NC='\033[0m'
+
+# --- UI / THEME ---
+UI_WIDTH=55
+
+ui_hr() { echo -e "${CYAN}═══════════════════════════════════════════════════════${NC}"; }
+ui_subhr() { echo -e "${CYAN}───────────────────────────────────────────────────────${NC}"; }
+ui_prompt() { echo -ne "${YELLOW}$1${NC}"; }
+ui_pause() { read -p "Presiona Enter para volver..." ; }
+
+# --- ARTE Y ESTÉTICA ---
+draw_banner() {
+    clear
+    echo -e "${CYAN}"
+    if [ -f "/etc/MaximusVpsMx/ascii-text-art.txt" ]; then
+        cat "/etc/MaximusVpsMx/ascii-text-art.txt"
+    else
+        echo "   __  __             _                      "
+        echo "  |  \/  |           (_)                     "
+        echo "  | \\  / | __ ___  ___ _ __ ___  _   _ ___   "
+        echo "  | |\\/| |/ _\` \\ \\/ / | '_ \` _ \\| | | / __|  "
+        echo "  | |  | | (_| |>  <| | | | | | | |_| \\__ \\  "
+        echo "  |_|  |_|\\__,_/_/\\_\\_|_| |_| |_|\\__,_|___/  "
+        echo "  |_|  |_|\\__,_/_/\\_\\_|_| |_| |_|\\__,_|___/  "
+    fi
+    echo -e "${NC}"
+}
+
+ui_header() {
+    local title="$1"
+    draw_banner
+    ui_hr
+    if [ -n "$title" ]; then
+        echo -e "${YELLOW}           $title${NC}"
+        ui_hr
+    fi
+}
+
+# Telemetría Global
+get_telemetry() {
+    IP=$(wget -qO- ipv4.icanhazip.com 2>/dev/null)
+    [ -z "$IP" ] && IP="127.0.0.1"
+    OS=$(grep -w PRETTY_NAME /etc/os-release | cut -d= -f2 | tr -d '"')
+    [ -z "$OS" ] && OS="Ubuntu 20.04"
+    
+    FECHA=$(date +"%d-%m-%Y")
+    HORA=$(date +"%H:%M:%S")
+
+    # Disco
+    DISC_TOTAL=$(df -h / | awk 'NR==2 {print $2}')
+    DISC_USO=$(df -h / | awk 'NR==2 {print $3}')
+    DISC_FREE=$(df -h / | awk 'NR==2 {print $4}')
+    DISC_DISP=$(df -h / | awk 'NR==2 {print $4}')
+
+    # CPU
+    CORES=$(nproc)
+    CPU_USE=$(top -bn1 | grep load | awk '{printf "%.2f%%", $(NF-2) * 10}')
+    [ -z "$CPU_USE" ] && CPU_USE="0.00%"
+
+    # RAM
+    RAM_TOTAL=$(free -m | awk 'NR==2 {printf "%.2fGB", $2/1024}')
+    RAM_USO=$(free -m | awk 'NR==2 {printf "%.2fGB", $3/1024}')
+    RAM_FREE=$(free -m | awk 'NR==2 {printf "%.2fMB", $4}')
+    RAM_BUFF=$(awk '/Buffers:/ {printf("%.2fMB", $2/1024)}' /proc/meminfo)
+    RAM_CACHE=$(awk '/^Cached:/ {printf("%.2fMB", $2/1024)}' /proc/meminfo)
+
+    # Cuentas SSH
+    if [ -f /etc/MaximusVpsMx/users.db ]; then
+        TOTAL=$(wc -l < /etc/MaximusVpsMx/users.db)
+        ACTIVA=$(grep -v "^#" /etc/MaximusVpsMx/users.db | wc -l)
+        EXPIRADA=0
+        BLOQUEADA=0
+    else
+        TOTAL=0; ACTIVA=0; EXPIRADA=0; BLOQUEADA=0
+    fi
+}
+
+# --- SUBMENÚ DE USUARIOS ---
+menu_usuarios() {
+    ui_header "ADMINISTRACIÓN DE CUENTAS SSH / DROPBEAR"
+    echo -e "  ${CYAN}[1]>${WHITE} CREAR NUEVO USUARIO PREMIUM${NC}"
+    echo -e "  ${CYAN}[2]>${RED} REMOVER / ELIMINAR USUARIO${NC}"
+    echo -e "  ${CYAN}[3]>${WHITE} RENOVAR VENCIMIENTO${NC}"
+    echo -e "  ${CYAN}[4]>${YELLOW} CAMBIAR CONTRASEÑA${NC}"
+    echo -e "  ${CYAN}[5]>${WHITE} BLOQUEAR/DESBLOQUEAR USUARIO${NC}"
+    ui_subhr
+    echo -e "  ${CYAN}[7]>${GREEN} VER DETALLES DE TODOS LOS USUARIOS${NC}"
+    echo -e "  ${CYAN}[8]>${WHITE} MONITOR DE CONEXIONES ACTUALES${NC}"
+    echo -e "  ${CYAN}[10]>${WHITE} LIMPIAR USUARIOS VENCIDOS${NC}"
+    ui_subhr
+    echo -e "  ${CYAN}[12]>${WHITE} BACKUP DE BASE DE DATOS${NC}"
+    echo -e "  ${CYAN}[15]>${WHITE} CAMBIAR A MODO SSH/HWID/TOKEN${NC}"
+    ui_hr
+    echo -e "  ${WHITE}[0] VOLVER AL MENÚ ANTERIOR${NC}"
+    ui_hr
+    ui_prompt " Selecciona una opción: "
+    read opt_user
+
+    case $opt_user in
+        1)
+            echo -e "\n${YELLOW}▶ Crear Usuario Premium${NC}"
+            read -p " Nombre (1-20 chars): " user
+            read -p " Contraseña: " pass
+            read -p " Días de Duración: " dias
+            exp_date=$(date -d "+$dias days" +%Y-%m-%d)
+            rm -f /etc/passwd.lock /etc/shadow.lock /etc/group.lock /etc/gshadow.lock
+            useradd -e $exp_date -s /bin/false -M $user 2>/dev/null
+            echo "$user:$pass" | chpasswd
+            echo "$user:$pass:$exp_date" >> /etc/MaximusVpsMx/users.db
+            echo -e "${GREEN}✅ Usuario $user creado por $dias días.${NC}"
+            sleep 2; menu_usuarios
+            ;;
+        2)
+            echo -e "\n${RED}▶ Eliminar Sistema${NC}"
+            read -p " Username a destruir: " user
+            rm -f /etc/passwd.lock /etc/shadow.lock /etc/group.lock /etc/gshadow.lock
+            userdel -f $user 2>/dev/null
+            sed -i "/^$user:/d" /etc/MaximusVpsMx/users.db 2>/dev/null
+            echo -e "${GREEN}✅ Exterminado.${NC}"
+            sleep 2; menu_usuarios
+            ;;
+        3)
+            echo -e "\n${YELLOW}▶ Renovar Usuario${NC}"
+            read -p " Escribe el Username: " user
+            read -p " Días a Añadir: " dias
+            exp_date=$(date -d "+$dias days" +%Y-%m-%d)
+            chage -E $exp_date $user 2>/dev/null
+            old_pass=$(grep -w "^$user" /etc/MaximusVpsMx/users.db | cut -d: -f2)
+            sed -i "/^$user:/d" /etc/MaximusVpsMx/users.db
+            echo "$user:$old_pass:$exp_date" >> /etc/MaximusVpsMx/users.db
+            echo -e "${GREEN}✅ Usuario renovado.${NC}"
+            sleep 2; menu_usuarios
+            ;;
+        4)
+            echo -e "\n${YELLOW}▶ Editar Contraseña${NC}"
+            read -p " Escribe el Username: " user
+            read -p " Nueva Contraseña: " pass
+            echo "$user:$pass" | chpasswd
+            exp_date=$(grep -w "^$user" /etc/MaximusVpsMx/users.db | cut -d: -f3)
+            sed -i "/^$user:/d" /etc/MaximusVpsMx/users.db
+            echo "$user:$pass:$exp_date" >> /etc/MaximusVpsMx/users.db
+            echo -e "${GREEN}✅ Contraseña actualizada.${NC}"
+            sleep 2; menu_usuarios
+            ;;
+        5)
+            echo -e "\n${YELLOW}▶ Bloquear/Desbloquear Usuario${NC}"
+            read -p " Username a modificar: " user
+            estado=$(passwd -S $user 2>/dev/null | awk '{print $2}')
+            if [ "$estado" == "L" ]; then
+                usermod -U $user 2>/dev/null
+                echo -e "${GREEN}✅ Usuario $user DESBLOQUEADO.${NC}"
+            else
+                usermod -L $user 2>/dev/null
+                echo -e "${RED}🔒 Usuario $user BLOQUEADO.${NC}"
+            fi
+            sleep 2; menu_usuarios
+            ;;
+        6)
+            echo -e "\n${YELLOW}▶ Configurar Contraseña General (Próximamente)${NC}"
+            sleep 2; menu_usuarios
+            ;;
+        7)
+            echo -e "\n${YELLOW}▶ Detalles de Todos los Usuarios VIP:${NC}"
+            echo -e "${CYAN}================================================================${NC}"
+            printf "${WHITE}%-15s | %-15s | %-20s${NC}\n" "USUARIO" "CONTRASEÑA" "VENCIMIENTO"
+            echo -e "${CYAN}================================================================${NC}"
+            if [ -f /etc/MaximusVpsMx/users.db ]; then
+                while IFS=: read -r d_user d_pass d_exp; do
+                    printf " ${GREEN}%-14s${NC} | ${YELLOW}%-15s${NC} | ${RED}%-20s${NC}\n" "$d_user" "$d_pass" "$d_exp"
+                done < /etc/MaximusVpsMx/users.db
+            else
+                echo -e " ${RED}No hay usuarios registrados aún en la base de datos.${NC}"
+            fi
+            echo -e "${CYAN}================================================================${NC}"
+            read -p "Presiona Enter para volver..." ; menu_usuarios
+            ;;
+        8)
+            echo -e "\n${YELLOW}▶ Monitor de Usuarios Conectados AHORA Mismo:${NC}"
+            netstat -tnpa 2>/dev/null | grep ESTABLISHED | grep -E 'sshd|dropbear' | awk '{print $5}' | cut -d: -f1 | sort | uniq -c
+            read -p "Presiona Enter..." ; menu_usuarios
+            ;;
+        9)
+            echo -e "\n${YELLOW}▶ Limitador de Cuentas (Próximamente)${NC}"
+            sleep 2; menu_usuarios
+            ;;
+        10)
+            echo -e "\n${YELLOW}▶ Eliminando Usuarios Vencidos...${NC}"
+            today=$(date +%s)
+            ct=0
+            if [ -f /etc/MaximusVpsMx/users.db ]; then
+                while IFS=: read -r d_user d_pass d_exp; do
+                    exp_sec=$(date -d "$d_exp" +%s 2>/dev/null)
+                    if [ ! -z "$exp_sec" ] && [ "$today" -gt "$exp_sec" ]; then
+                        userdel -f "$d_user" 2>/dev/null
+                        sed -i "/^$d_user:/d" /etc/MaximusVpsMx/users.db
+                        echo -e "${RED}🗑️ Eliminado: $d_user (Venció el $d_exp)${NC}"
+                        ct=$((ct+1))
+                    fi
+                done < /etc/MaximusVpsMx/users.db
+                if [ "$ct" -eq 0 ]; then echo -e "${GREEN}No se encontraron usuarios vencidos.${NC}"; fi
+            fi
+            sleep 2; menu_usuarios
+            ;;
+        11)
+            echo -e "\n${RED}⚠️ ¡PELIGRO! ¿Eliminar TODOS los usuarios? (S/N): ${NC}"
+            read -p " Confirmar: " conf
+            if [[ "$conf" == "S" || "$conf" == "s" ]]; then
+                if [ -f /etc/MaximusVpsMx/users.db ]; then
+                    while IFS=: read -r d_user d_pass d_exp; do
+                        userdel -f "$d_user" 2>/dev/null
+                    done < /etc/MaximusVpsMx/users.db
+                    > /etc/MaximusVpsMx/users.db
+                    echo -e "${RED}🔥 Todos los usuarios han sido purgados.${NC}"
+                fi
+            fi
+            sleep 2; menu_usuarios
+            ;;
+        12)
+            echo -e "\n${YELLOW}▶ Generando Backup Manual de Cuentas...${NC}"
+            tar -cvf /root/users_backup.tar /etc/passwd /etc/shadow /etc/MaximusVpsMx/users.db 2>/dev/null
+            echo -e "${GREEN}✅ Guardado en /root/users_backup.tar${NC}"
+            sleep 2; menu_usuarios
+            ;;
+        13)
+            echo -e "\n${YELLOW}▶ Desactivar Contraseña Alfanumérica (Próximamente)${NC}"
+            sleep 2; menu_usuarios
+            ;;
+        14)
+            echo -e "\n${YELLOW}▶ Configuración del Administrador (Próximamente)${NC}"
+            sleep 2; menu_usuarios
+            ;;
+        15)
+            echo -e "\n${YELLOW}▶ Modo SSH/HWID/TOKEN (Próximamente)${NC}"
+            sleep 2; menu_usuarios
+            ;;
+        0) main_menu ;;
+        *) menu_usuarios ;;
+    esac
+}
+
+# --- ADMINISTRADOR DE CUENTAS POR PROTOCOLO ---
+menu_cuentas() {
+    while true; do
+        ui_header "G EST I Ó N   D E   C U E N T A S"
+        echo -e "  ${CYAN}[1]>${WHITE} SSH / DROPBEAR (Usuarios del sistema)${NC}"
+        echo -e "  ${CYAN}[2]>${WHITE} OPENVPN (Clientes .ovpn)${NC}"
+        echo -e "  ${CYAN}[3]>${WHITE} HYSTERIA v2 (Cuentas premium)${NC}"
+        echo -e "  ${CYAN}[4]>${WHITE} PANEL X-UI (Admin Inbounds)${NC}"
+        ui_subhr
+        echo -e "  ${WHITE}[0] VOLVER AL MENÚ PRINCIPAL${NC}"
+        ui_hr
+        ui_prompt " Selecciona una opción: "
+        read opt_acc
+
+        case $opt_acc in
+            1) menu_usuarios ;;
+            2)
+                while true; do
+                    ui_header "CUENTAS OPENVPN"
+                    echo -e "${CYAN}[1]>${WHITE} LISTAR CLIENTES${NC}"
+                    echo -e "${CYAN}[2]>${WHITE} CREAR CLIENTE (.ovpn)${NC}"
+                    echo -e "${CYAN}[3]>${RED} REVOCAR CLIENTE${NC}"
+                    ui_subhr
+                    echo -e "${CYAN}[0]${WHITE} Volver${NC}"
+                    ui_hr
+                    read -p " Opción: " ovpn_opt
+
+                    case $ovpn_opt in
+                        1)
+                            if [ -f /etc/MaximusVpsMx/modules/install_openvpn.sh ]; then
+                                bash /etc/MaximusVpsMx/modules/install_openvpn.sh --list-clients
+                            else
+                                echo -e "${RED}❌ Módulo OpenVPN no encontrado.${NC}"
+                            fi
+                            read -p "Presiona Enter..." ;;
+                        2)
+                            read -p " Nombre del cliente: " c
+                            if [ -z "$c" ]; then echo -e "${RED}Nombre inválido.${NC}"; sleep 2; continue; fi
+                            if [ -f /etc/MaximusVpsMx/modules/install_openvpn.sh ]; then
+                                bash /etc/MaximusVpsMx/modules/install_openvpn.sh --add-client "$c"
+                            else
+                                echo -e "${RED}❌ Módulo OpenVPN no encontrado.${NC}"
+                            fi
+                            read -p "Presiona Enter..." ;;
+                        3)
+                            read -p " Cliente a revocar: " c
+                            if [ -z "$c" ]; then echo -e "${RED}Nombre inválido.${NC}"; sleep 2; continue; fi
+                            if [ -f /etc/MaximusVpsMx/modules/install_openvpn.sh ]; then
+                                bash /etc/MaximusVpsMx/modules/install_openvpn.sh --revoke-client "$c"
+                            else
+                                echo -e "${RED}❌ Módulo OpenVPN no encontrado.${NC}"
+                            fi
+                            read -p "Presiona Enter..." ;;
+                        0) break ;;
+                        *) ;;
+                    esac
+                done
+                ;;
+            3) sub_hysteria ;;
+            4) sub_xui ;;
+            0) break ;;
+            *) ;;
+        esac
+    done
+}
+
+# --- PURGA NUCLEAR DEL SISTEMA ---
+purgar_sistema_total() {
+    clear
+    echo -e "${RED}☢️ INICIANDO PURGA NUCLEAR REFORZADA v4.4.2...${NC}"
+    echo -e "${YELLOW}Limpieza total de servicios, binarios y reglas de red.${NC}"
+    sleep 2
+
+    # 1. Detener y Deshabilitar Servicios Systemd
+    echo -e "${CYAN}[+] Fulminando servicios systemd...${NC}"
+    local services=("stunnel4" "dropbear" "mx-proxy" "badvpn" "mx-slowdns" "udp-custom" "hysteria" "ws-epro" "sshd" "ssh")
+    for srv in "${services[@]}"; do
+        systemctl stop "$srv" 2>/dev/null
+        systemctl disable "$srv" 2>/dev/null
+    done
+
+    # 2. Matar procesos por socket (Puertos críticos)
+    echo -e "${CYAN}[+] Cerrando sockets ocupados...${NC}"
+    local ports=("443/udp" "7300/udp" "36712/udp" "80/tcp" "443/tcp" "8080/tcp")
+    for p in "${ports[@]}"; do
+        fuser -k -n "$p" 2>/dev/null
+    done
+
+    # 3. Matar procesos por nombre (Fuerza bruta)
+    echo -e "${CYAN}[+] Matando procesos remanentes...${NC}"
+    local binaries=("stunnel4" "dropbear" "python3" "badvpn-udpgw" "udp-custom" "hysteria" "slowdns")
+    for bin in "${binaries[@]}"; do
+        pkill -9 "$bin" 2>/dev/null
+        killall -9 "$bin" 2>/dev/null
+    done
+
+    # 4. Eliminar Binarios de Rutas Globales
+    echo -e "${CYAN}[+] Eliminando binarios del sistema...${NC}"
+    rm -f /usr/local/bin/badvpn-udpgw 2>/dev/null
+    rm -f /usr/bin/badvpn-udpgw 2>/dev/null
+    rm -f /usr/bin/hysteria 2>/dev/null
+    rm -f /usr/local/bin/udp-custom 2>/dev/null
+    rm -f /usr/local/bin/MX 2>/dev/null
+
+    # 5. Limpiar Firewall UFW
+    echo -e "${CYAN}[+] Limpiando reglas de Firewall...${NC}"
+    local tcp_ports=(22 44 80 443 8080 8443)
+    for p in "${tcp_ports[@]}"; do ufw delete allow "$p/tcp" 2>/dev/null; done
+    local udp_ports=(443 7300 36712 53)
+    for p in "${udp_ports[@]}"; do ufw delete allow "$p/udp" 2>/dev/null; done
+
+    # 6. Borrar Carpetas de Configuración y Logs
+    echo -e "${CYAN}[+] Borrando rastros de configuración...${NC}"
+    rm -rf /etc/MaximusVpsMx
+    rm -rf /etc/hysteria
+    rm -rf /root/udp
+    rm -rf /etc/stunnel
+    rm -rf /var/log/MaximusVpsMx/*
+    rm -rf /etc/slowdns
+    rm -f /etc/issue.net
+
+    # 7. Eliminar Archivos de Servicio
+    echo -e "${CYAN}[+] Eliminando definiciones de servicio...${NC}"
+    rm -f /etc/systemd/system/mx-proxy.service 2>/dev/null
+    rm -f /etc/systemd/system/badvpn.service 2>/dev/null
+    rm -f /etc/systemd/system/mx-slowdns.service 2>/dev/null
+    rm -f /etc/systemd/system/udp-custom.service 2>/dev/null
+    rm -f /etc/systemd/system/hysteria.service 2>/dev/null
+    rm -f /etc/systemd/system/ws-epro.service 2>/dev/null
+
+    # 8. Purga APT
+    echo -e "${CYAN}[+] Purgando paquetes APT...${NC}"
+    DEBIAN_FRONTEND=noninteractive apt-get purge stunnel4 dropbear badvpn -y 2>/dev/null
+    apt-get autoremove -y 2>/dev/null
+
+    # 9. Recargar y Finalizar
+    systemctl daemon-reload
+    systemctl reset-failed 2>/dev/null
+    echo -e "${GREEN}✅ SISTEMA PURGADO AL 100%.${NC}"
+    sleep 2
+}
+
+# --- GESTOR DINÁMICO DE SERVICIOS ---
+gestor_servicio() {
+    local title="$1"
+    local srv="$2"
+    
+    while true; do
+        ui_header "AJUSTES: $title"
+        systemctl is-active --quiet "$srv" && st="${GREEN}[ON]${NC}" || st="${RED}[OFF]${NC}"
+        echo -e " Estado actual en el sistema: $st"
+        ui_subhr
+        echo -e "${CYAN} ├─ [1] Instalar $title${NC}"
+        echo -e "${CYAN} ├─ [2] Reinstalar $title${NC}"
+        echo -e "${CYAN} ├─ [3] Eliminar $title${NC}"
+        echo -e "${CYAN} ├─ [4] Cambiar Puerto(s)${NC}"
+        echo -e "${CYAN} ├─ [5] Ver Estado en Tiempo Real${NC}"
+        echo -e "${CYAN} ├─ [6] Detener / Iniciar / Reiniciar Servicio${NC}"
+        echo -e "${CYAN} └─ [0] Volver${NC}"
+        ui_hr
+        ui_prompt "Selecciona una opción: "
+        read g_opt
+        
+        case $g_opt in
+            1|2)
+               if [ -f "/etc/MaximusVpsMx/modules/install_${srv}.sh" ]; then
+                   bash "/etc/MaximusVpsMx/modules/install_${srv}.sh"
+               else
+                   echo -e "\n${YELLOW}▶ Módulo de $title en construcción.${NC}"; sleep 2
+               fi
+               ;;
+            3)
+                echo -e "\n${RED}⚠️ Esto eliminará $title completamente (incluyendo logs).${NC}"
+                read -p " ¿Estás seguro? (s/n): " conf_del
+                if [[ "$conf_del" == "s" || "$conf_del" == "S" ]]; then
+                    echo -e "${YELLOW}[+] Purgando servicio $title...${NC}"
+                    systemctl stop "$srv" 2>/dev/null
+                    systemctl disable "$srv" 2>/dev/null
+                    
+                    # Identificar puerto para limpieza de firewall
+                    local port_to_kill=""
+                    case $srv in
+                        stunnel4) port_to_kill=443 ;;
+                        dropbear) port_to_kill=44 ;;
+                        mx-proxy) port_to_kill=80 ;;
+                        badvpn) port_to_kill=7300 ;;
+                        udp-custom) port_to_kill=36712 ;;
+                        hysteria) port_to_kill=443 ;;
+                        openvpn)
+                            if [ -f /etc/openvpn/server/server.conf ]; then
+                                port_to_kill=$(grep -E '^port ' /etc/openvpn/server/server.conf 2>/dev/null | awk '{print $2}' | head -1)
+                                [ -z "$port_to_kill" ] && port_to_kill=1194
+                            else
+                                port_to_kill=1194
+                            fi
+                            ;;
+                    esac
+
+                    # Matar procesos remanentes por la fuerza
+                    echo -e "${YELLOW}[+] Asegurando cierre de puertos...${NC}"
+                    [ ! -z "$port_to_kill" ] && fuser -k "$port_to_kill/tcp" "$port_to_kill/udp" 2>/dev/null
+                    
+                    # Eliminar archivos
+                    rm -f "/etc/systemd/system/${srv}.service" 2>/dev/null
+                    rm -f "/etc/systemd/system/${srv}.service.d/override.conf" 2>/dev/null
+                    
+                    # Limpieza profunda según el servicio
+                    case $srv in
+                        stunnel4) 
+                            apt-get purge stunnel4 -y 2>/dev/null; rm -rf /etc/stunnel
+                            ufw delete allow 443/tcp 2>/dev/null ;;
+                        dropbear) 
+                            apt-get purge dropbear -y 2>/dev/null; rm -rf /etc/default/dropbear
+                            ufw delete allow 44/tcp 2>/dev/null ;;
+                        mx-proxy) 
+                            rm -rf /var/log/MaximusVpsMx/proxy.log
+                            ufw delete allow 80/tcp 2>/dev/null ;;
+                        badvpn)
+                            systemctl stop badvpn 2>/dev/null
+                            ufw delete allow 7300/udp 2>/dev/null ;;
+                        udp-custom)
+                            killall -9 udp-custom 2>/dev/null
+                            rm -rf /root/udp
+                            ufw delete allow 36712/udp 2>/dev/null
+                            ufw delete allow 36712/tcp 2>/dev/null ;;
+                        hysteria)
+                            killall -9 hysteria 2>/dev/null
+                            rm -rf /etc/hysteria
+                            ufw delete allow 443/udp 2>/dev/null ;;
+                        openvpn)
+                            systemctl disable --now openvpn-server@server 2>/dev/null
+                            apt-get purge openvpn easy-rsa -y 2>/dev/null
+                            apt-get autoremove -y 2>/dev/null
+                            rm -rf /etc/openvpn
+                            if [ -f /etc/openvpn/server/server.conf ]; then
+                                ovpn_port=$(grep -E '^port ' /etc/openvpn/server/server.conf 2>/dev/null | awk '{print $2}' | head -1)
+                                ovpn_proto=$(grep -E '^proto ' /etc/openvpn/server/server.conf 2>/dev/null | awk '{print $2}' | head -1)
+                                [ -z "$ovpn_port" ] && ovpn_port=1194
+                                [ -z "$ovpn_proto" ] && ovpn_proto=udp
+                                ufw delete allow "${ovpn_port}/${ovpn_proto}" 2>/dev/null
+                            else
+                                ufw delete allow 1194/udp 2>/dev/null
+                            fi
+                            ;;
+                    esac
+                    
+                    systemctl daemon-reload
+                    echo -e "${GREEN}✅ $title eliminado totalmente y puerto cerrado.${NC}"
+                fi
+                sleep 2 ;;
+            4)
+               if [ -f "/etc/MaximusVpsMx/modules/install_${srv}.sh" ]; then
+                   echo -e "\n${YELLOW}▶ Reinstalando con nuevo puerto...${NC}"
+                   bash "/etc/MaximusVpsMx/modules/install_${srv}.sh"
+               else
+                   echo -e "\n${YELLOW}▶ Módulo de $title en construcción.${NC}"; sleep 2
+               fi
+               ;;
+            5) 
+               ui_header "ESTADO: $title"
+               echo -e "${CYAN}================= REGISTRO DEL SERVICIO =================${NC}"
+               systemctl status "$srv" --no-pager | head -n 15
+               echo -e "${CYAN}=========================================================${NC}"
+               ui_pause ;;
+            6)
+               ui_header "CONTROL: $title"
+               echo -e "${CYAN} [1] Iniciar (Start & Enable)${NC}"
+               echo -e "${CYAN} [2] Detener (Stop & Disable)${NC}"
+               echo -e "${CYAN} [3] Reiniciar${NC}"
+               echo -e "${CYAN} [0] Volver${NC}"
+               ui_hr
+               ui_prompt "Selecciona: "
+               read ctrl_opt
+               case $ctrl_opt in
+                   1) systemctl enable --now "$srv" 2>/dev/null; echo -e "${GREEN}✅ $title Iniciado.${NC}"; sleep 1 ;;
+                   2) systemctl disable --now "$srv" 2>/dev/null; echo -e "${RED}⚠️ $title Detenido.${NC}"; sleep 1 ;;
+                   3) systemctl restart "$srv" 2>/dev/null; echo -e "${GREEN}✅ $title Reiniciado.${NC}"; sleep 1 ;;
+                   *) ;;
+               esac
+               ;;
+            0) break ;;
+            *) ;;
+        esac
+    done
+    menu_protocolos
+}
+
+# --- SUBMENU EXCLUSIVO SLOWDNS ---
+sub_slowdns() {
+    while true; do
+        ui_header "AJUSTES: SLOWDNS"
+        systemctl is-active --quiet mx-slowdns && st="${GREEN}[ON]${NC}" || st="${RED}[OFF]${NC}"
+        NS_DOMAIN=$(cat /etc/MaximusVpsMx/slowdns/ns-domain.conf 2>/dev/null || echo "no configurado")
+        echo -e " Estado: $st | Dominio NS: ${YELLOW}$NS_DOMAIN${NC}"
+        ui_subhr
+        echo -e "${CYAN} ├─ [1] Instalar SlowDNS${NC}"
+        echo -e "${CYAN} ├─ [2] Reinstalar SlowDNS${NC}"
+        echo -e "${CYAN} ├─ [3] Eliminar SlowDNS${NC}"
+        echo -e "${CYAN} ├─ [4] Cambiar Dominio NS${NC}"
+        echo -e "${CYAN} ├─ [5] Ver Estado en Tiempo Real${NC}"
+        echo -e "${CYAN} ├─ [6] Detener / Iniciar / Reiniciar Servicio${NC}"
+        ui_subhr
+        echo -e "${CYAN} ├─ [7] Ver Llave Pública Cliente${NC}"
+        echo -e "${CYAN} ├─ [8] Regenerar Llaves RSA${NC}"
+        echo -e "${CYAN} └─ [0] Volver${NC}"
+        ui_hr
+        ui_prompt "Selecciona una opción: "
+        read s_opt
+        
+        case $s_opt in
+            1|2)
+               if [ -f "/etc/MaximusVpsMx/modules/install_slowdns.sh" ]; then
+                   bash "/etc/MaximusVpsMx/modules/install_slowdns.sh"
+               else
+                   echo -e "\n${YELLOW}▶ Módulo de Instalar SlowDNS Próximamente.${NC}"; sleep 2
+               fi
+               ;;
+            3)
+               echo -e "\n${RED}⚠️ Esto eliminará SlowDNS completamente.${NC}"
+               read -p " ¿Estás seguro? (s/n): " conf_del
+               if [[ "$conf_del" == "s" || "$conf_del" == "S" ]]; then
+                   systemctl disable --now mx-slowdns 2>/dev/null
+                   echo -e "${GREEN}✅ SlowDNS eliminado y desactivado.${NC}"
+               fi
+               sleep 2 ;;
+            4)
+                read -p " Nuevo dominio NS (ej: slow.tudominio.com): " new_ns
+                echo "$new_ns" > /etc/MaximusVpsMx/slowdns/ns-domain.conf
+                sed -i "s|slow\.vpsmx\.store|$new_ns|g" /etc/systemd/system/mx-slowdns.service
+                systemctl daemon-reload; systemctl restart mx-slowdns 2>/dev/null
+                echo -e "${GREEN}✅ Dominio NS actualizado a: $new_ns${NC}"; sleep 2 ;;
+            5) 
+               ui_header "ESTADO: SLOWDNS"
+               echo -e "${CYAN}================= REGISTRO SLOWDNS =================${NC}"
+               systemctl status mx-slowdns --no-pager | head -n 15
+               echo -e "${CYAN}====================================================${NC}"
+               ui_pause ;;
+            6)
+               ui_header "CONTROL: SLOWDNS"
+               echo -e "${CYAN} [1] Iniciar (Start & Enable)${NC}"
+               echo -e "${CYAN} [2] Detener (Stop & Disable)${NC}"
+               echo -e "${CYAN} [3] Reiniciar${NC}"
+               echo -e "${CYAN} [0] Volver${NC}"
+               ui_hr
+               ui_prompt "Selecciona: "
+               read ctrl_opt
+               case $ctrl_opt in
+                   1) systemctl enable --now mx-slowdns 2>/dev/null; echo -e "${GREEN}✅ SlowDNS Iniciado.${NC}"; sleep 1 ;;
+                   2) systemctl disable --now mx-slowdns 2>/dev/null; echo -e "${RED}⚠️ SlowDNS Detenido.${NC}"; sleep 1 ;;
+                   3) systemctl restart mx-slowdns 2>/dev/null; echo -e "${GREEN}✅ SlowDNS Reiniciado.${NC}"; sleep 1 ;;
+                   *) ;;
+               esac
+               ;;
+            7)
+                ui_header "LLAVE PÚBLICA SLOWDNS"
+                echo -e "${CYAN}════════════════════════════════════════${NC}"
+                if [ -f /etc/MaximusVpsMx/slowdns/server.pub ]; then
+                    echo -e "${YELLOW}$(cat /etc/MaximusVpsMx/slowdns/server.pub)${NC}"
+                    echo -e "${GREEN}📋 Copia esta llave en tu app tuneladora${NC}"
+                    echo -e "${GREEN}🌐 DNS Server: $NS_DOMAIN${NC}"
+                else
+                    echo -e "${RED}❌ No se encontraron llaves. Faltó generar.${NC}"
+                fi
+                echo -e "${CYAN}════════════════════════════════════════${NC}"
+                ui_pause ;;
+            8)
+                echo -e "${YELLOW}⚠️ Esto invalidará las llaves actuales de los clientes.${NC}"
+                read -p " ¿Continuar? (s/n): " confirmar
+                if [ "$confirmar" == "s" ]; then
+                    openssl genrsa -out /etc/MaximusVpsMx/slowdns/server.key 2048 2>/dev/null
+                    openssl rsa -in /etc/MaximusVpsMx/slowdns/server.key -pubout -out /etc/MaximusVpsMx/slowdns/server.pub 2>/dev/null
+                    systemctl restart mx-slowdns 2>/dev/null
+                    echo -e "${GREEN}✅ Llaves regeneradas.${NC}"
+                fi
+                sleep 2 ;;
+            0) break ;;
+            *) ;;
+        esac
+    done
+    menu_protocolos
+}
+
+# --- SUBMENÚ X-UI PANEL (V2RAY/XRAY) ---
+sub_xui() {
+    while true; do
+        ui_header "PANEL X-UI (V2RAY/XRAY)"
+        systemctl is-active --quiet x-ui 2>/dev/null && xui_st="${GREEN}[ON]${NC}" || xui_st="${RED}[OFF]${NC}"
+        # Obtener puerto de sqlite o por defecto
+        if [ -f /etc/x-ui/x-ui.db ]; then
+            xui_port=$(sqlite3 /etc/x-ui/x-ui.db "SELECT value FROM settings WHERE key='webPort';" 2>/dev/null)
+        fi
+        [ -z "$xui_port" ] && [ -f /usr/local/x-ui/x-ui ] && xui_port="54321"
+        [ -z "$xui_port" ] && xui_port="--"
+
+        echo -e " Estatus: $xui_st   Puerto Web: ${WHITE}$xui_port${NC}"
+        ui_subhr
+        echo -e "${CYAN} [1] INSTALAR O REINSTALAR X-UI${NC}"
+        echo -e "${CYAN} [2] DESINSTALAR X-UI COMPLETAMENTE${NC}"
+        ui_subhr
+        echo -e "${CYAN} [3] CAMBIAR PUERTO DEL PANEL WEB${NC}"
+        echo -e "${CYAN} [4] ABRIR PANEL WEB${NC}"
+        ui_hr
+        echo -e "${CYAN} [0] VOLVER${NC}"
+        ui_hr
+        ui_prompt "Selecciona: " ; read opt_xui
+
+        case $opt_xui in
+            1)
+                bash /etc/MaximusVpsMx/modules/install_xui.sh
+                ;;
+            2)
+                echo -e "\n${RED}⚠️ Esto eliminará el panel X-UI y todos sus usuarios.${NC}"
+                read -p " ¿Estás seguro? (s/n): " conf_del
+                if [[ "$conf_del" == "s" || "$conf_del" == "S" ]]; then
+                    echo -e "${YELLOW}[+] Deteniendo y limpiando X-UI...${NC}"
+                    systemctl stop x-ui 2>/dev/null
+                    systemctl disable x-ui 2>/dev/null
+                    rm -rf /usr/local/x-ui
+                    rm -rf /etc/x-ui
+                    rm -f /usr/bin/x-ui
+                    rm -f /etc/systemd/system/x-ui.service
+                    systemctl daemon-reload
+                    echo -e "${GREEN}✅ Panel X-UI desinstalado.${NC}"
+                    sleep 2
+                fi
+                ;;
+            3)
+                if [ "$xui_port" == "--" ]; then
+                    echo -e "\n${RED}Primero debes instalar X-UI.${NC}"; sleep 2
+                else
+                    echo -e "\n${YELLOW}▶ Cambiar Puerto del Panel X-UI${NC}"
+                    read -p " Ingresa el nuevo puerto (ej. 54321): " n_port
+                    if [[ "$n_port" =~ ^[0-9]+$ ]]; then
+                        /usr/local/x-ui/x-ui setting -port $n_port >/dev/null 2>&1
+                        ufw allow $n_port/tcp >/dev/null 2>&1
+                        systemctl restart x-ui
+                        echo -e "${GREEN}✅ Puerto cambiado a $n_port.${NC}"
+                    else
+                        echo -e "${RED}Puerto inválido.${NC}"
+                    fi
+                    sleep 2
+                fi
+                ;;
+            4)
+                if [ "$xui_port" == "--" ]; then
+                    echo -e "\n${RED}Primero debes instalar X-UI.${NC}"; sleep 2
+                else
+                    IP=$(wget -qO- ipv4.icanhazip.com 2>/dev/null)
+                    [ -z "$IP" ] && IP="Tu-IP"
+                    ui_header "ACCESO PANEL X-UI"
+                    echo -e "${CYAN}▶ URL DE ACCESO AL PANEL:${NC}"
+                    echo -e "${WHITE}http://$IP:$xui_port/${NC}"
+                    ui_hr
+                    echo -e "${YELLOW}🔑 RUTAS DE CERTIFICADOS TLS (Para quitar alerta):${NC}"
+                    echo -e "${WHITE}Public Key Path:${CYAN} /etc/x-ui/server.crt${NC}"
+                    echo -e "${WHITE}Private Key Path:${CYAN} /etc/x-ui/server.key${NC}"
+                    echo -e "Copia el link y pégalo en tu navegador."
+                    ui_pause
+                fi
+                ;;
+            0) break ;;
+            *) ;;
+        esac
+    done
+}
+
+# --- SUBMENÚ HYSTERIA v2 ---
+sub_hysteria() {
+    while true; do
+        ui_header "HYSTERIA v2 (CUENTAS PREMIUM)"
+        # Detección de estatus
+        systemctl is-active --quiet hysteria && hy_st="${GREEN}[ON]${NC}" || hy_st="${RED}[OFF]${NC}"
+        hy_port=$(grep 'listen:' /etc/hysteria/config.yaml 2>/dev/null | grep -o '[0-9]*' | head -1)
+        [ -z "$hy_port" ] && hy_port="443"
+
+        echo -e " Estatus: $hy_st   Puerto: ${WHITE}$hy_port${NC}"
+        ui_subhr
+        echo -e "${CYAN} [1] CREAR USUARIO HYSTERIA${NC}"
+        echo -e "${CYAN} [2] ELIMINAR / RENOVAR USUARIO${NC}"
+        echo -e "${CYAN} [3] LISTAR CUENTAS ACTIVAS${NC}"
+        ui_subhr
+        echo -e "${CYAN} [4] MONITOR DE CONEXIONES${NC}"
+        echo -e "${CYAN} [5] CONFIGURACIÓN GLOBAL (Puerto/Obfs)${NC}"
+        echo -e "${CYAN} [6] INSTALAR / REINSTALAR MOTOR H2${NC}"
+        ui_hr
+        echo -e "${CYAN} [0] VOLVER${NC}"
+        ui_hr
+        ui_prompt "Selecciona: " ; read opt_hy
+
+        case $opt_hy in
+            1)
+                echo -e "\n${YELLOW}▶ Nuevo Usuario Hysteria${NC}"
+                read -p " Nombre de Usuario: " hy_user
+                read -p " Contraseña/Key: " hy_pass
+                read -p " Días de Duración: " hy_days
+                read -p " Límite Bajada (Mbps): " hy_down
+                read -p " Límite Subida (Mbps): " hy_up
+                
+                exp_date=$(date -d "+$hy_days days" +%Y-%m-%d)
+                # user:pass:expiry:up_m:down_m
+                echo "$hy_user:$hy_pass:$exp_date:$hy_up:$hy_down" >> /etc/MaximusVpsMx/hysteria_users.db
+                
+                # Generar enlace hy2
+                server_ip=$(wget -qO- ipv4.icanhazip.com)
+                obfs_val=$(grep 'password:' /etc/hysteria/config.yaml | tail -1 | awk '{print $NF}')
+                echo -e "\n${GREEN}✅ Usuario $hy_user Creado Correctamente.${NC}"
+                echo -e "${CYAN}Expiración: $exp_date${NC}"
+                echo -e "${WHITE}-------------------------------------------------------${NC}"
+                echo -e "${YELLOW}📋 ENLACE HY2:${NC}"
+                echo -e "${WHITE}hy2://$hy_pass@$server_ip:$hy_port?insecure=1&sni=bing.com&obfs=salamander&obfs-password=$obfs_val#$hy_user${NC}"
+                echo -e "${WHITE}-------------------------------------------------------${NC}"
+                read -p "Presiona Enter..." ;;
+            2)
+                echo -e "\n${YELLOW}▶ Eliminar Usuario Hysteria${NC}"
+                read -p " Nombre a eliminar: " user_del
+                sed -i "/^$user_del:/d" /etc/MaximusVpsMx/hysteria_users.db
+                echo -e "${RED}✅ Usuario $user_del eliminado.${NC}"; sleep 2 ;;
+            3)
+                echo -e "\n${YELLOW}▶ Cuentas Activas Hysteria v2${NC}"
+                echo -e "${CYAN}-------------------------------------------------------${NC}"
+                printf "${WHITE}%-12s | %-12s | %-10s | %-10s\n${NC}" "USUARIO" "EXPIRACIÓN" "LIMIT UP" "LIMIT DOWN"
+                echo -e "${CYAN}-------------------------------------------------------${NC}"
+                while IFS=: read -r huser hpass hexp hup hdown; do
+                    printf "%-12s | %-12s | %-10s | %-10s\n" "$huser" "$hexp" "${hup}M" "${hdown}M"
+                done < /etc/MaximusVpsMx/hysteria_users.db
+                ui_pause ;;
+            4)
+                echo -e "\n${YELLOW}▶ Monitor Hysteria (Presiona Ctrl+C para salir)...${NC}"
+                tail -f /var/log/MaximusVpsMx/hysteria_auth.log &
+                journalctl -u hysteria -f
+                kill %1 2>/dev/null ;;
+            5)
+                echo -e "\n${YELLOW}▶ Configuración Global Hysteria${NC}"
+                nano /etc/hysteria/config.yaml
+                systemctl restart hysteria 2>/dev/null ;;
+            6)
+                bash /etc/MaximusVpsMx/modules/install_hysteria.sh ;;
+            0) break ;;
+        esac
+    done
+}
+
+# --- SUBMENÚ DE PROTOCOLOS ---
+menu_protocolos() {
+    ui_header "A D M I N I S T R A D O R   D E   P R O T O C O L O S"
+    # --- DETECCIÓN DINÁMICA DE PUERTOS Y ESTATUS (Doble Verificación) ---
+
+    # SSH (OpenSSH)
+    P_SSH=$(grep "^Port" /etc/ssh/sshd_config 2>/dev/null | awk '{print $2}' | head -1)
+    [ -z "$P_SSH" ] && P_SSH="22"
+    if netstat -tuln 2>/dev/null | grep -q ":${P_SSH} "; then st_ssh="${GREEN}[ON]${NC}"; else st_ssh="${RED}[OFF]${NC}"; fi
+
+    # Dropbear
+    if dpkg -l dropbear 2>/dev/null | grep -q "^ii"; then
+        P_DROP=$(grep "DROPBEAR_PORT=" /etc/default/dropbear 2>/dev/null | cut -d= -f2 | tr -d '"' | xargs)
+        [ -z "$P_DROP" ] && P_DROP="44"
+        if netstat -tuln 2>/dev/null | grep -q ":${P_DROP} "; then st_drop="${GREEN}[ON]${NC}"; else st_drop="${RED}[OFF]${NC}"; fi
+    else
+        P_DROP="--"; st_drop="${RED}[OFF]${NC}"
+    fi
+
+    # Proxy Python
+    if [ -f /etc/systemd/system/mx-proxy.service ]; then
+        P_PROXY=$(grep "ExecStart=" /etc/systemd/system/mx-proxy.service 2>/dev/null | awk '{print $NF}')
+        P_PROXY="${P_PROXY%%-*}"
+        [ -z "$P_PROXY" ] && P_PROXY="80"
+        if netstat -tuln 2>/dev/null | grep -q ":${P_PROXY} "; then st_proxy="${GREEN}[ON]${NC}"; else st_proxy="${RED}[OFF]${NC}"; fi
+    else
+        P_PROXY="--"; st_proxy="${RED}[OFF]${NC}"
+    fi
+
+    # Stunnel (SSL)
+    if [ -f /etc/stunnel/stunnel.conf ] && dpkg -l stunnel4 2>/dev/null | grep -q "^ii"; then
+        P_STUN=$(grep "accept =" /etc/stunnel/stunnel.conf 2>/dev/null | awk '{print $3}' | head -1)
+        [ -z "$P_STUN" ] && P_STUN="443"
+        if netstat -tuln 2>/dev/null | grep -q ":${P_STUN} "; then st_stun="${GREEN}[ON]${NC}"; else st_stun="${RED}[OFF]${NC}"; fi
+    else
+        P_STUN="--"; st_stun="${RED}[OFF]${NC}"
+    fi
+
+    # BadVPN (UDP)
+    if [ -f /usr/local/bin/badvpn-udpgw ]; then
+        if ps -ef | grep -q "[b]advpn-udpgw"; then
+            P_BAD=$(ps -ef | grep badvpn-udpgw | grep -v grep | grep -o ":[0-9]*" | head -1 | tr -d ':')
+            [ -z "$P_BAD" ] && P_BAD="7300"
+            st_udp="${GREEN}[ON]${NC}"
+        else
+            P_BAD="--"; st_udp="${RED}[OFF]${NC}"
+        fi
+    else
+        P_BAD="--"; st_udp="${RED}[OFF]${NC}"
+    fi
+
+    # SlowDNS
+    systemctl is-active --quiet mx-slowdns && st_dns="${GREEN}[ON]${NC}" || st_dns="${RED}[OFF]${NC}"
+    # WS-EPRO
+    systemctl is-active --quiet ws-epro && st_ws="${GREEN}[ON]${NC}" || st_ws="${RED}[OFF]${NC}"
+
+    # UDP-Custom
+    if [ -f /root/udp/udp-custom ]; then
+        if ps -ef | grep -q "[u]dp-custom"; then
+            P_UDPC="1-65535"
+            st_udpc="${GREEN}[ON]${NC}"
+        else
+            P_UDPC="--"; st_udpc="${RED}[OFF]${NC}"
+        fi
+    else
+        P_UDPC="--"; st_udpc="${RED}[OFF]${NC}"
+    fi
+
+    # Hysteria v2
+    if [ -f /etc/hysteria/hysteria ]; then
+        if ps -ef | grep -q "[h]ysteria"; then
+            P_HY=$(grep 'listen:' /etc/hysteria/config.yaml 2>/dev/null | grep -o '[0-9]*')
+            [ -z "$P_HY" ] && P_HY="443"
+            st_udph="${GREEN}[ON]${NC}"
+        else
+            P_HY="--"; st_udph="${RED}[OFF]${NC}"
+        fi
+    else
+        P_HY="--"; st_udph="${RED}[OFF]${NC}"
+    fi
+
+    # OpenVPN
+    P_OVPN="--"
+    if [ -f /etc/openvpn/server/server.conf ]; then
+        OVPN_PORT=$(grep -E '^port ' /etc/openvpn/server/server.conf 2>/dev/null | awk '{print $2}' | head -1)
+        OVPN_PROTO=$(grep -E '^proto ' /etc/openvpn/server/server.conf 2>/dev/null | awk '{print $2}' | head -1)
+        [ -z "$OVPN_PORT" ] && OVPN_PORT="1194"
+        [ -z "$OVPN_PROTO" ] && OVPN_PROTO="udp"
+        P_OVPN="${OVPN_PORT}/${OVPN_PROTO}"
+        systemctl is-active --quiet openvpn-server@server 2>/dev/null && st_ovpn="${GREEN}[ON]${NC}" || st_ovpn="${RED}[OFF]${NC}"
+    else
+        st_ovpn="${RED}[OFF]${NC}"
+    fi
+
+    st_squid="${RED}[OFF]${NC}"; st_chk="${GREEN}[ON]${NC}"
+    st_atken="${RED}[OFF]${NC}"; st_file="${RED}[OFF]${NC}"
+    if systemctl is-active --quiet x-ui 2>/dev/null; then st_xui="${GREEN}[ON]${NC}"; else st_xui="${RED}[OFF]${NC}"; fi
+    st_sshgo="${RED}[OFF]${NC}"; st_wg="${RED}[OFF]${NC}"
+
+    # Resumen (ordenado)
+    echo -e " ${CYAN}SSH:${WHITE} $P_SSH  ${CYAN}DROB:${WHITE} $P_DROP  ${CYAN}PROXY:${WHITE} $P_PROXY  ${CYAN}SSL:${WHITE} $P_STUN${NC}"
+    echo -e " ${CYAN}UDPG:${WHITE} $P_BAD  ${CYAN}UDPC:${WHITE} $P_UDPC  ${CYAN}HYST:${WHITE} $P_HY  ${CYAN}OVPN:${WHITE} $P_OVPN${NC}"
+    ui_hr
+    printf "  ${CYAN}[1] ${WHITE}%-15s %b  ${CYAN}[10] ${WHITE}%-15s %b\n" "SSH" "$st_ssh" "SQUID" "$st_squid"
+    printf "  ${CYAN}[2] ${WHITE}%-15s %b  ${CYAN}[11] ${WHITE}%-15s %b\n" "DROPBEAR" "$st_drop" "OPENVPN" "$st_ovpn"
+    printf "  ${CYAN}[3] ${WHITE}%-15s %b  ${CYAN}[12] ${WHITE}%-15s %b\n" "PYTHON PROXY" "$st_proxy" "CHECKUSER" "$st_chk"
+    printf "  ${CYAN}[4] ${WHITE}%-15s %b  ${CYAN}[13] ${WHITE}%-15s %b\n" "STUNNEL4" "$st_stun" "ATKEN/HASH" "$st_atken"
+    printf "  ${CYAN}[5] ${WHITE}%-15s %b  ${CYAN}[14] ${WHITE}%-15s %b\n" "SLOWDNS" "$st_dns" "FILEBROWSER" "$st_file"
+    printf "  ${CYAN}[6] ${WHITE}%-15s %b  ${CYAN}[15] ${WHITE}%-15s %b\n" "WS-EPRO" "$st_ws" "PANEL X-UI" "$st_xui"
+    printf "  ${CYAN}[7] ${WHITE}%-15s %b  ${CYAN}[16] ${WHITE}%-15s %b\n" "UDP-CUSTOM" "$st_udpc" "SSHGO" "$st_sshgo"
+    printf "  ${CYAN}[8] ${WHITE}%-15s %b  ${CYAN}[17] ${WHITE}%-15s %b\n" "HYSTERIA v2" "$st_udph" "WIREGUARD" "$st_wg"
+    printf "  ${CYAN}[9] ${WHITE}%-15s %b  ${CYAN}[18] ${WHITE}%-15s %b\n" "BADVPN" "$st_udp" "REINICIAR T." ""
+    ui_hr
+    echo -e "  ${WHITE}[0] VOLVER AL MENÚ PRINCIPAL${NC}"
+    ui_hr
+    ui_prompt " Selecciona una opción: "
+    read opt_prot
+    
+    case $opt_prot in
+        1) gestor_servicio "SSH" "ssh" ;;
+        2) gestor_servicio "DROPBEAR" "dropbear" ;;
+        3) gestor_servicio "SOCKS PYTHON" "mx-proxy" ;;
+        4) gestor_servicio "STUNNEL (SSL)" "stunnel4" ;;
+        5) sub_slowdns ;;
+        6) gestor_servicio "WS-EPRO" "ws-epro" ;;
+        7) gestor_servicio "UDP-CUSTOM" "udp-custom" ;;
+        8) sub_hysteria ; menu_protocolos ;;
+        9) gestor_servicio "BADVPN-UDPGW" "badvpn" ;;
+        10) gestor_servicio "SQUID" "squid" ;;
+        11) gestor_servicio "OPENVPN" "openvpn" ;;
+        12) gestor_servicio "CHECKUSER ONLINE" "checkuser" ;;
+        13) gestor_servicio "ATKEN AND HASH" "atken" ;;
+        14) gestor_servicio "FILEBROWSER" "filebrowser" ;;
+        15) sub_xui ; menu_protocolos ;;
+        16) gestor_servicio "SSHGO" "sshgo" ;;
+        17) gestor_servicio "WIREGUARD" "wireguard" ;;
+        18)
+            echo "🔄 Reiniciando toda la red..."
+            systemctl restart mx-proxy dropbear stunnel4 badvpn mx-slowdns ssh 2>/dev/null
+            sleep 2; menu_protocolos ;;
+        0) main_menu ;;
+        *) menu_protocolos ;;
+    esac
+}
+
+# --- SUBMENÚ DE SISTEMA ---
+menu_sistema() {
+    ui_header "H E R R A M I E N T A S   Y   S I S T E M A"
+    ufw status | grep -q "active" && fw_st="${GREEN}[Activo]${NC}" || fw_st="${RED}[Inactivo]${NC}"
+    crontab -l 2>/dev/null | grep -q "cloudflare-ddns" && cf_st="${GREEN}[Activo]${NC}" || cf_st="${RED}[Inactivo]${NC}"
+
+    echo -e "  ${CYAN}[1]>${WHITE} Optimizar VPS (Limpiar RAM y Caché)${NC}"
+    echo -e "  ${CYAN}[2]>${WHITE} Editor de Banner Global (SSH/Issue)${NC}"
+    echo -e "  ${CYAN}[3]>${WHITE} Respaldar Cuentas Localmente${NC}"
+    echo -e "  ${CYAN}[4]>${WHITE} Monitor de Tráfico (vnstat)${NC}"
+    ui_subhr
+    echo -e "  ${CYAN}[5]>${WHITE} Firewall UFW Config          | $fw_st${NC}"
+    echo -e "  ${CYAN}[6]>${WHITE} Cloudflare DDNS              | $cf_st${NC}"
+    ui_hr
+    echo -e "  ${WHITE}[0] VOLVER AL MENÚ PRINCIPAL${NC}"
+    ui_hr
+    ui_prompt " Selecciona una opción: "
+    read opt_sys
+    
+    case $opt_sys in
+        1)
+            echo -e "\n${YELLOW}▶ Iniciando Limpieza Profunda y Optimización...${NC}"
+            
+            # 1. Limpieza de Memoria RAM
+            echo -ne "${CYAN}[+] Liberando Memoria RAM...${NC}"
+            sync; echo 3 > /proc/sys/vm/drop_caches
+            swapoff -a && swapon -a
+            echo -e " ${GREEN}[OK]${NC}"
+
+            # 2. Limpieza de Logs del Sistema (Journald)
+            echo -ne "${CYAN}[+] Purgando Journald (Semanas previas)...${NC}"
+            journalctl --vacuum-time=1d > /dev/null 2>&1
+            echo -e " ${GREEN}[OK]${NC}"
+
+            # 3. Limpieza de Caché APT
+            echo -ne "${CYAN}[+] Limpiando caché de paquetes APT...${NC}"
+            apt-get clean > /dev/null 2>&1
+            echo -e " ${GREEN}[OK]${NC}"
+
+            # 4. Super Limpieza de Logs (Archivos antiguos y rotados)
+            echo -ne "${CYAN}[+] Eliminando historiales de log (.gz, .1, .log.*)...${NC}"
+            find /var/log -type f -name "*.[0-9]" -delete > /dev/null 2>&1
+            find /var/log -type f -name "*.gz" -delete > /dev/null 2>&1
+            find /var/log -type f -name "*.log.*" -delete > /dev/null 2>&1
+            
+            # Vaciar los logs activos
+            find /var/log -type f -name "*.log" -exec truncate -s 0 {} + > /dev/null 2>&1
+            rm -rf /var/log/MaximusVpsMx/* 2>/dev/null
+            echo -e " ${GREEN}[OK]${NC}"
+
+            echo -e "\n${GREEN}✅ VPS OPTIMIZADO: Se han liberado GB de espacio en disco.${NC}"
+            sleep 2; menu_sistema ;;
+        2)
+            echo -e "\n${YELLOW}▶ Ingrese nuevo texto HTML para el Banner (Ctrl+O para guardar, Ctrl+X para salir)${NC}"
+            sleep 3
+            nano /etc/issue.net
+            menu_sistema ;;
+        3)
+            echo -e "\n${YELLOW}▶ Generando Backup...${NC}"
+            tar -cvf /root/users_backup.tar /etc/passwd /etc/shadow 2>/dev/null
+            echo -e "${GREEN}✅ Guardado en /root/users_backup.tar${NC}"
+            sleep 2; menu_sistema ;;
+        4)
+            echo -e "\n${YELLOW}▶ Tráfico de Red (Mes actual)${NC}"
+            vnstat -m
+            ui_pause ; menu_sistema ;;
+        5)
+            echo -e "\n${YELLOW}▶ Administrador de Firewall UFW${NC}"
+            read -p "¿Qué deseas hacer? [1=Activar Seguro, 2=Desactivar]: " actf
+            if [ "$actf" == "1" ]; then
+                echo "Permitiendo puertos críticos..."
+                ufw allow 22/tcp 2>/dev/null; ufw allow 44/tcp 2>/dev/null; ufw allow 80/tcp 2>/dev/null; ufw allow 443/tcp 2>/dev/null; ufw allow 7300/udp 2>/dev/null
+                ufw --force enable
+                echo -e "${GREEN}✅ Firewall Activado y Blindado.${NC}"
+            elif [ "$actf" == "2" ]; then
+                ufw disable
+                echo -e "${RED}⚠️ Firewall Apagado.${NC}"
+            fi
+            sleep 2; menu_sistema ;;
+        6)
+            ui_header "CLOUDFLARE DDNS"
+            echo -e "${GREEN} [1] Configurar Credenciales de Cloudflare${NC}"
+            echo -e "${GREEN} [2] Activar DDNS (Cada 5 minutos)${NC}"
+            echo -e "${RED} [3] Desactivar DDNS${NC}"
+            echo -e "${YELLOW} [4] Forzar Comprobación AHORA${NC}"
+            echo -e "${YELLOW} [5] Ver Log de Cambios de IP${NC}"
+            echo -e "${YELLOW} [6] Ver Configuración Actual${NC}"
+            echo -e "${RED} [0] Volver${NC}"
+            read -p "Opción DDNS: " opt_cf
+
+            case $opt_cf in
+                1)
+                    echo -e "\n${YELLOW}▶ Configurar Cloudflare DDNS${NC}"
+                    echo -e "${WHITE}Necesitas los siguientes datos de tu cuenta Cloudflare:${NC}"
+                    echo -e "${CYAN}(Encuéntralos en: dash.cloudflare.com → API Tokens)${NC}\n"
+                    read -p " 🔑 API Token: " cf_token
+                    read -p " 🌐 Zone ID: " cf_zone
+                    read -p " 📛 Dominio (ej: vpsmx.tudominio.com): " cf_domain
+                    
+                    cat > /etc/MaximusVpsMx/cloudflare.conf << CFEOF
+# Cloudflare DDNS Config - MaximusVpsMx
+CF_API_TOKEN="$cf_token"
+CF_ZONE_ID="$cf_zone"
+CF_RECORD_NAME="$cf_domain"
+CFEOF
+                    chmod 600 /etc/MaximusVpsMx/cloudflare.conf
+                    echo -e "\n${GREEN}✅ Credenciales guardadas de forma segura.${NC}"
+                    sleep 2; menu_sistema ;;
+                2)
+                    if [ ! -f /etc/MaximusVpsMx/cloudflare.conf ]; then
+                        echo -e "${RED}❌ Primero configura las credenciales (Opción 1).${NC}"
+                        sleep 2; menu_sistema
+                        return
+                    fi
+                    chmod +x /etc/MaximusVpsMx/modules/cloudflare-ddns.sh
+                    # Agregar al cron cada 5 minutos
+                    (crontab -l 2>/dev/null | grep -v "cloudflare-ddns"; echo "*/5 * * * * /etc/MaximusVpsMx/modules/cloudflare-ddns.sh") | crontab -
+                    # Ejecutar una vez inmediatamente
+                    /etc/MaximusVpsMx/modules/cloudflare-ddns.sh
+                    echo -e "${GREEN}✅ DDNS Activado. Comprobará tu IP cada 5 minutos.${NC}"
+                    sleep 2; menu_sistema ;;
+                3)
+                    crontab -l 2>/dev/null | grep -v "cloudflare-ddns" | crontab -
+                    echo -e "${RED}⚠️ DDNS Desactivado. Ya no se comprobará la IP.${NC}"
+                    sleep 2; menu_sistema ;;
+                4)
+                    echo -e "\n${YELLOW}▶ Ejecutando comprobación manual...${NC}"
+                    if [ -f /etc/MaximusVpsMx/modules/cloudflare-ddns.sh ]; then
+                        /etc/MaximusVpsMx/modules/cloudflare-ddns.sh
+                        echo -e "${GREEN}✅ Comprobación completada.${NC}"
+                    else
+                        echo -e "${RED}❌ Script no encontrado.${NC}"
+                    fi
+                    sleep 2; menu_sistema ;;
+                5)
+                    echo -e "\n${YELLOW}▶ Últimos cambios de IP registrados:${NC}"
+                    if [ -f /var/log/MaximusVpsMx/cloudflare-ddns.log ]; then
+                        tail -20 /var/log/MaximusVpsMx/cloudflare-ddns.log
+                    else
+                        echo -e "${RED}No hay logs aún.${NC}"
+                    fi
+                    ui_pause ; menu_sistema ;;
+                6)
+                    echo -e "\n${YELLOW}▶ Configuración Actual:${NC}"
+                    if [ -f /etc/MaximusVpsMx/cloudflare.conf ]; then
+                        source /etc/MaximusVpsMx/cloudflare.conf
+                        echo -e " Token: ${GREEN}${CF_API_TOKEN:0:8}...****${NC}"
+                        echo -e " Zone:  ${GREEN}$CF_ZONE_ID${NC}"
+                        echo -e " Dominio: ${GREEN}$CF_RECORD_NAME${NC}"
+                        echo -e " IP Actual: ${CYAN}$(curl -s https://api.ipify.org)${NC}"
+                    else
+                        echo -e "${RED}No configurado aún.${NC}"
+                    fi
+                    ui_pause ; menu_sistema ;;
+                *) menu_sistema ;;
+            esac
+            ;;
+        99)
+            echo -e "\n${RED}================ ¡¡PELIGRO!! ================${NC}"
+            read -p "¿Estás 100% seguro de destruir MaximusVpsMx? [S/N]: " desc
+            if [[ "$desc" == "S" || "$desc" == "s" ]]; then
+                echo -e "${RED}🔥 INICIANDO PURGA MASIVA...${NC}"
+                systemctl stop stunnel4 dropbear mx-proxy badvpn 2>/dev/null
+                killall -9 stunnel4 dropbear python3 badvpn-udpgw 2>/dev/null
+                rm -rf /etc/MaximusVpsMx
+                rm -f /usr/local/bin/MX
+                rm -f /etc/systemd/system/mx-proxy.service
+                rm -f /etc/systemd/system/badvpn.service
+                apt-get purge stunnel4 dropbear -y 2>/dev/null
+                systemctl daemon-reload
+                echo -e "${GREEN}✅ VUELO COMPLETADO. El servidor vuelve a ser de fábrica.${NC}"
+                exit
+            else
+                menu_sistema
+            fi
+            ;;
+        0) main_menu ;;
+        *) menu_sistema ;;
+    esac
+}
+
+# --- SUBMENÚ DE REINSTALACIÓN / ACTUALIZACIÓN ---
+menu_mantenimiento() {
+    ui_header "MANTENIMIENTO Y ACTUALIZACIÓN"
+    echo -e "  ${CYAN}[1]>${WHITE} ACTUALIZACIÓN INTELIGENTE (Mantiene Datos)${NC}"
+    echo -e "      ${WHITE}→ Respalda usuarios y configuraciones.${NC}"
+    echo -e "  ${CYAN}[2]>${RED} REINSTALACIÓN LIMPIA (Borra Todo)${NC}"
+    echo -e "      ${WHITE}→ Deja el panel como nuevo de fábrica.${NC}"
+    ui_subhr
+    echo -e "  ${CYAN}[0]${WHITE} Volver al Menú Principal${NC}"
+    ui_hr
+    ui_prompt " Selecciona una opción: "
+    read mant_opt
+
+    case $mant_opt in
+        1)
+            echo -e "\n${YELLOW}▶ Iniciando Actualización Inteligente...${NC}"
+            cd /tmp || exit
+            echo -e "${CYAN}[+] Creando respaldo temporal de datos vitales...${NC}"
+            mkdir -p /tmp/MX_BACKUP
+            [ -f /etc/MaximusVpsMx/users.db ] && cp /etc/MaximusVpsMx/users.db /tmp/MX_BACKUP/
+            [ -f /etc/MaximusVpsMx/cloudflare.conf ] && cp /etc/MaximusVpsMx/cloudflare.conf /tmp/MX_BACKUP/
+            [ -f /etc/MaximusVpsMx/slowdns/ns-domain.conf ] && cp /etc/MaximusVpsMx/slowdns/ns-domain.conf /tmp/MX_BACKUP/
+            [ -f /etc/stunnel/stunnel.pem ] && cp /etc/stunnel/stunnel.pem /tmp/MX_BACKUP/
+            [ -f /etc/default/dropbear ] && cp /etc/default/dropbear /tmp/MX_BACKUP/
+            
+            echo -e "${CYAN}[+] Limpiando archivos del panel actual...${NC}"
+            systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns 2>/dev/null
+            rm -rf /etc/MaximusVpsMx
+            rm -f /usr/local/bin/MX
+            
+            echo -e "${CYAN}[+] Descargando última versión de GitHub...${NC}"
+            rm -rf /tmp/MaximusVpsMx
+            apt-get install -y git 2>/dev/null
+            git clone https://github.com/JuandeMx/MAXIMUS.git /tmp/MaximusVpsMx
+            
+            echo -e "${CYAN}[+] Ejecutando instalador...${NC}"
+            cd /tmp/MaximusVpsMx && chmod +x install.sh && bash install.sh
+            
+            echo -e "${CYAN}[+] Restaurando respaldo de datos...${NC}"
+            [ -f /tmp/MX_BACKUP/users.db ] && cp /tmp/MX_BACKUP/users.db /etc/MaximusVpsMx/
+            [ -f /tmp/MX_BACKUP/cloudflare.conf ] && cp /tmp/MX_BACKUP/cloudflare.conf /etc/MaximusVpsMx/
+            [ -f /tmp/MX_BACKUP/ns-domain.conf ] && cp /tmp/MX_BACKUP/ns-domain.conf /etc/MaximusVpsMx/slowdns/
+            [ -f /tmp/MX_BACKUP/stunnel.pem ] && cp /tmp/MX_BACKUP/stunnel.pem /etc/stunnel/
+            [ -f /tmp/MX_BACKUP/dropbear ] && cp /tmp/MX_BACKUP/dropbear /etc/default/
+            
+            rm -rf /tmp/MX_BACKUP
+            echo -e "\n${GREEN}✅ ACTUALIZACION COMPLETADA EXITOSAMENTE.${NC}"
+            echo -e "${YELLOW}Presiona Enter para volver a iniciar el panel...${NC}"
+            read
+            MX
+            exit
+            ;;
+        2)
+            echo -e "\n${RED}⚠️ REINSTALACION LIMPIA SELECCIONADA${NC}"
+            read -p "¿Estás 100% seguro de borrar TODO? [S/N]: " conf_clean
+            if [[ "$conf_clean" == "S" || "$conf_clean" == "s" ]]; then
+                purgar_sistema_total
+                
+                cd /tmp || exit
+                echo -e "${CYAN}[+] Instalando versión limpia de GitHub...${NC}"
+                rm -rf /tmp/MaximusVpsMx
+                apt-get install -y git 2>/dev/null
+                git clone https://github.com/JuandeMx/MAXIMUS.git /tmp/MaximusVpsMx
+                cd /tmp/MaximusVpsMx && chmod +x install.sh && bash install.sh
+                
+                echo -e "\n${GREEN}✅ REINSTALACION LIMPIA COMPLETADA.${NC}"
+                echo -e "${YELLOW}Presiona Enter...${NC}"
+                read
+                MX
+                exit
+            else
+                menu_mantenimiento
+            fi
+            ;;
+        0) main_menu ;;
+        *) menu_mantenimiento ;;
+    esac
+}
+
+# --- MENÚ AJUSTES DEL SCRIPT ---
+menu_ajustes_script() {
+    while true; do
+        ui_header "CONFIGURACIÓN DEL SCRIPT"
+        echo -e "  ${CYAN}[1]>${WHITE} ACTUALIZAR PANEL (GitHub Sync)${NC}"
+        echo -e "  ${CYAN}[2]>${WHITE} REINSTALAR PANEL (Forzar Limpieza)${NC}"
+        echo -e "  ${CYAN}[3]>${WHITE} CAMBIAR BANNER SSH (issue.net/Dropbear)${NC}"
+        ui_subhr
+        echo -e "  ${WHITE}[0] VOLVER AL MENÚ ANTERIOR${NC}"
+        ui_hr
+        ui_prompt " Selecciona una opción: "
+        read opt_aj
+
+        case $opt_aj in
+            1) menu_mantenimiento ;;
+            2) 
+               echo -e "\n${RED}⚠️ REINSTALACION FORZADA SELECCIONADA${NC}"
+               read -p "¿Deseas purgar TODO antes de reinstalar? [S/N]: " conf_p
+               if [[ "$conf_p" == "S" || "$conf_p" == "s" ]]; then
+                   purgar_sistema_total
+                   # Re-clonar e instalar
+                   cd /tmp || exit
+                   rm -rf /tmp/MaximusVpsMx
+                   git clone https://github.com/JuandeMx/MAXIMUS.git /tmp/MaximusVpsMx
+                   cd /tmp/MaximusVpsMx && chmod +x install.sh && bash install.sh
+               else
+                   echo -e "\n${YELLOW}▶ Reinstalando componentes base sin purgar...${NC}"
+                   bash /etc/MaximusVpsMx/install.sh
+               fi
+               sleep 2 ;;
+            3)
+               echo -e "\n${YELLOW}▶ Configuración del Banner SSH${NC}"
+               echo -e "${CYAN}Escribe el nuevo mensaje para tus clientes:${NC}"
+               read -p " > " new_banner
+               echo -e "$new_banner" > /etc/issue.net
+               echo -e "${GREEN}✅ Banner actualizado correctamente.${NC}"
+               sleep 2 ;;
+            4) 
+               echo -e "\n${RED}================ ¡¡PELIGRO!! ================${NC}"
+               read -p "¿Estás 100% seguro de destruir MaximusVpsMx? [S/N]: " desc
+               if [[ "$desc" == "S" || "$desc" == "s" ]]; then
+                   purgar_sistema_total
+                   echo -e "${GREEN}✅ VUELO COMPLETADO. Servidor de fábrica.${NC}"
+                   exit
+               fi
+               ;;
+            0) main_menu ;;
+        esac
+    done
+}
+
+# --- MENÚ PRINCIPAL ---
+main_menu() {
+    get_telemetry
+    ui_header "P A N E L   P R I N C I P A L"
+    printf "${CYAN} S.O:    ${WHITE}%-25s ${CYAN}Fecha: ${WHITE}%-10s${NC}\n" "$OS" "$FECHA"
+    printf "${CYAN} IP:     ${WHITE}%-25s ${CYAN}Hora:  ${WHITE}%-10s${NC}\n" "$IP" "$HORA"
+    ui_subhr
+    echo -e " ${CYAN}Disco / CPU${NC}"
+    printf " ${CYAN}Total:  ${WHITE}%-9s ${CYAN}Dispo: ${WHITE}%-9s ${CYAN}Cores:  ${WHITE}%-9s${NC}\n" "$DISC_TOTAL" "$DISC_DISP" "$CORES"
+    printf " ${CYAN}En Uso: ${WHITE}%-9s ${CYAN}Libre: ${WHITE}%-9s ${CYAN}En Uso: ${WHITE}%-9s${NC}\n" "$DISC_USO" "$DISC_FREE" "$CPU_USE"
+    ui_subhr
+    echo -e " ${CYAN}Memoria RAM${NC}"
+    printf " ${CYAN}Total:  ${WHITE}%-9s ${CYAN}En Uso: ${WHITE}%-9s ${CYAN}Libre: ${WHITE}%-9s${NC}\n" "$RAM_TOTAL" "$RAM_USO" "$RAM_FREE"
+    printf " ${CYAN}Buffer: ${WHITE}%-9s ${CYAN}Cache:  ${WHITE}%-9s${NC}\n" "$RAM_BUFF" "$RAM_CACHE"
+    ui_hr
+    printf "    ${CYAN}ACTIVOS: ${WHITE}%-3s  ${RED}EXPIRADOS: ${WHITE}%-3s  ${CYAN}TOTAL: ${WHITE}%-3s${NC}\n" "$ACTIVA" "$EXPIRADA" "$TOTAL"
+    ui_hr
+    echo -e "  ${CYAN}[1]>${WHITE} USUARIOS / CUENTAS (SSH, OVPN, HYST, XUI)${NC}"
+    ui_subhr
+    echo -e "  ${CYAN}[2]>${WHITE} CONFIGURACIÓN DE PROTOCOLO / SERVICIOS${NC}"
+    echo -e "  ${CYAN}[3]>${WHITE} HERRAMIENTAS EXTRAS / SISTEMA${NC}"
+    ui_subhr
+    echo -e "  ${CYAN}[4]>${WHITE} CONFIGURACIÓN DEL SCRIPT${NC}"
+    echo -e "  ${CYAN}[5]>${WHITE} IDIOMA / LANGUAGE${NC}"
+    ui_subhr
+    echo -e "  ${CYAN}[6]>${RED} [!] DESINSTALAR PANEL${NC}"
+    ui_subhr
+    echo -e "  ${CYAN}[9]>${GREEN} ACTUALIZAR / REINSTALAR PANEL${NC}"
+    ui_hr
+    echo -e "  ${WHITE}[0] SALIR DEL VPS     [7] SALIR SCRIPT    [8] REINICIAR${NC}"
+    ui_hr
+    ui_prompt " Selecciona una opción: "
+    read main_opt
+
+    case $main_opt in
+        1) menu_cuentas ;;
+        2) menu_protocolos ;;
+        3) menu_sistema ;;
+        4) menu_ajustes_script ;;
+        5) echo -e "\n${YELLOW}▶ Idioma Actual: Español${NC}"; sleep 2; main_menu ;;
+        6) 
+            echo -e "\n${RED}================ ¡¡PELIGRO!! ================${NC}"
+            read -p "¿Estás 100% seguro de destruir MaximusVpsMx? [S/N]: " desc
+            if [[ "$desc" == "S" || "$desc" == "s" ]]; then
+                echo -e "${RED}🔥 INICIANDO PURGA MASIVA...${NC}"
+                systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns 2>/dev/null
+                killall -9 stunnel4 dropbear python3 badvpn-udpgw 2>/dev/null
+                rm -rf /etc/MaximusVpsMx
+                rm -f /usr/local/bin/MX
+                rm -f /etc/systemd/system/mx-proxy.service
+                rm -f /etc/systemd/system/badvpn.service
+                rm -f /etc/systemd/system/mx-slowdns.service
+                apt-get purge stunnel4 dropbear -y 2>/dev/null
+                systemctl daemon-reload
+                echo -e "${GREEN}✅ VUELO COMPLETADO. El servidor vuelve a ser de fábrica.${NC}"
+                exit
+            else
+                main_menu
+            fi
+            ;;
+        7) clear; exit ;;
+        8) echo -e "${YELLOW}🔄 Reiniciando VPS...${NC}"; reboot ;;
+        9) menu_mantenimiento ;;
+        0) clear; exit ;;
+        *) main_menu ;;
+    esac
+}
+
+# Inicializar
+main_menu

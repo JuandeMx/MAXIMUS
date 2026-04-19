@@ -533,46 +533,52 @@ function openSvcConfig(svc) {
             </div>
         `;
 
-        // Fila 3: Info específica por servicio
-        if (svc.id === 'mx-slowdns') {
-            content += `
-                <div class="action-tile info" onclick="showServiceInfo('${svc.id}')" style="grid-column: span 2; border-color: rgba(139,92,246,0.3)">
-                    <i class="fa-solid fa-key" style="color:#8b5cf6"></i>
-                    <div class="action-label" style="color:#8b5cf6">VER LLAVE PÚBLICA</div>
-                </div>
-            `;
-        } else if (svc.id === 'x-ui') {
-            content += `
-                <div class="action-tile info" onclick="showServiceInfo('${svc.id}')" style="grid-column: span 2; border-color: rgba(139,92,246,0.3)">
-                    <i class="fa-solid fa-arrow-up-right-from-square" style="color:#8b5cf6"></i>
-                    <div class="action-label" style="color:#8b5cf6">ABRIR PANEL WEB</div>
-                </div>
-            `;
-        } else if (svc.id === 'stunnel4') {
-            content += `
-                <div class="action-tile info" onclick="showServiceInfo('${svc.id}')" style="grid-column: span 2; border-color: rgba(6,182,212,0.2)">
-                    <i class="fa-solid fa-file-lines"></i>
-                    <div class="action-label">VER CONFIGURACIÓN</div>
-                </div>
-            `;
-        }
+        // Fila 3: Acciones Específicas Quirúrgicas
+    const specActions = {
+        'ssh': { label: 'GESTIÓN SSH', icon: 'fa-terminal', color: '#06b6d4', cmd: 'ssh' },
+        'mx-slowdns': { label: 'VER LLAVE PÚBLICA', icon: 'fa-key', color: '#8b5cf6', cmd: 'info' },
+        'x-ui': { label: 'ABRIR PANEL XRAY', icon: 'fa-arrow-up-right-from-square', color: '#f59e0b', cmd: 'panel' },
+        'stunnel4': { label: 'EDITOR SSL', icon: 'fa-file-code', color: '#10b981', cmd: 'edit' },
+        'hysteria': { label: 'CERTIFICADOS', icon: 'fa-certificate', color: '#ef4444', cmd: 'cert' }
+    };
 
-        // Fila Final: START/STOP
+    if (specActions[svc.id]) {
+        const sa = specActions[svc.id];
         content += `
-            <div class="action-tile ${svc.active ? 'stop' : 'start'}" onclick="svcConfigAction('${svc.id}','${svc.active ? 'stop' : 'start'}')" style="grid-column: span 2; margin-top: 4px; border-color: ${svc.active ? 'var(--danger)' : 'var(--success)'}">
-                <i class="fa-solid ${svc.active ? 'fa-stop' : 'fa-play'}"></i>
-                <div class="action-label">${svc.active ? 'DETENER SERVICIO' : 'INICIAR SERVICIO'}</div>
+            <div class="action-tile info" onclick="handleSpecAction('${svc.id}','${sa.cmd}')" style="grid-column: span 2; border-color: ${sa.color}33">
+                <i class="fa-solid ${sa.icon}" style="color:${sa.color}"></i>
+                <div class="action-label" style="color:${sa.color}">${sa.label}</div>
             </div>
         `;
     }
 
-    content += `</div>`;
+    // Fila Final: START/STOP
+    content += `
+        <div class="action-tile ${svc.active ? 'stop' : 'start'}" onclick="svcConfigAction('${svc.id}','${svc.active ? 'stop' : 'start'}')" style="grid-column: span 2; margin-top: 8px; border: 2px solid ${svc.active ? '#ef4444' : '#10b981'}">
+            <i class="fa-solid ${svc.active ? 'fa-stop' : 'fa-play'}"></i>
+            <div class="action-label">${svc.active ? 'DETENER SERVICIO' : 'INICIAR SERVICIO'}</div>
+        </div>
+    `;
 
-    // Contenedor para Sub-Menús + Info (oculto por defecto)
-    content += `<div id="svcSubMenu" class="svc-submenu-container" style="display:none; margin-top: 20px; border-top: 1px solid var(--border); padding-top: 20px;"></div>`;
+    content += `</div>`;
+    content += `<div id="svcSubMenu" class="svc-submenu-container" style="display:none; margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border)"></div>`;
 
     body.innerHTML = content;
     modal.classList.add('show');
+}
+
+async function handleSpecAction(id, cmd) {
+    if (id === 'mx-slowdns') showServiceInfo(id);
+    else if (id === 'stunnel4') showStunnelEditor();
+    else if (id === 'x-ui') openXuiPanel();
+    else if (id === 'ssh') showSshMenu();
+    else showToast('⚠️ Módulo avanzado en desarrollo');
+}
+
+async function svcConfigAction(id, action) {
+    await serviceAction(id, action);
+    const modal = document.getElementById('svcModal');
+    modal.classList.remove('show');
 }
 
 // ========== SERVICE INFO PANEL ==========
@@ -1064,34 +1070,24 @@ async function fwAction(action) {
 }
 
 async function toolCloudflare() {
-    showConsole('Cloudflare DDNS', logLine('⏳ Cargando configuración...', 'warn'));
+    showConsole('Cloudflare DDNS', logLine('⏳ Cargando configuración sincronizada...', 'warn'));
     try {
         const res = await fetch('/api/tools/cloudflare');
         const cf = await res.json();
         let html = `
-            <div style="margin-bottom:14px">
-                ${logLine(`Estado CRON: ${cf.active ? '🟢 ACTIVO (cada 5 min)' : '🔴 INACTIVO'}`, cf.active ? 'success' : 'error')}
+            <div style="margin-bottom:12px">${logLine(`Sincronización Cron: ${cf.active ? '🟢 ACTIVA' : '🔴 INACTIVA'}`, cf.active ? 'success' : 'error')}</div>
+            <div style="margin-bottom:12px">
+                <label style="color:#94a3b8;font-size:0.7rem;font-weight:600">DOMINIO / RECORD</label>
+                <input type="text" id="cfRecord" value="${cf.record}" placeholder="vpn.dominio.com" style="width:100%;padding:10px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:10px;color:white;font-family:monospace;font-size:0.8rem">
             </div>
-            <div class="field" style="margin-bottom:12px">
-                <label style="color:#94a3b8;font-size:0.7rem;font-weight:600">API TOKEN</label>
-                <input type="text" id="cfToken" value="${cf.token}" placeholder="Tu Cloudflare API Token" style="width:100%;padding:10px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;color:white;font-family:monospace;font-size:0.8rem;margin-top:4px">
+            <div style="display:flex;gap:8px">
+                <button class="btn-primary" onclick="cfAction('enable')" style="flex:1;background:var(--success)"><i class="fa-solid fa-play"></i> ACTIVAR</button>
+                <button class="btn-primary" onclick="cfAction('disable')" style="flex:1;background:var(--danger)"><i class="fa-solid fa-stop"></i> PARAR</button>
             </div>
-            <div class="field" style="margin-bottom:12px">
-                <label style="color:#94a3b8;font-size:0.7rem;font-weight:600">ZONE ID</label>
-                <input type="text" id="cfZone" value="${cf.zone_id}" placeholder="Zone ID de Cloudflare" style="width:100%;padding:10px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;color:white;font-family:monospace;font-size:0.8rem;margin-top:4px">
-            </div>
-            <div class="field" style="margin-bottom:16px">
-                <label style="color:#94a3b8;font-size:0.7rem;font-weight:600">DOMINIO (Record Name)</label>
-                <input type="text" id="cfRecord" value="${cf.record}" placeholder="vpn.tudominio.com" style="width:100%;padding:10px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;color:white;font-family:monospace;font-size:0.8rem;margin-top:4px">
-            </div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap">
-                <button class="btn-primary" onclick="cfAction('save')" style="flex:1"><i class="fa-solid fa-floppy-disk"></i> GUARDAR</button>
-                <button class="btn-primary" onclick="cfAction('enable')" style="flex:1;background:var(--success)"><i class="fa-solid fa-play"></i> ACTIVAR CRON</button>
-                <button class="btn-primary" onclick="cfAction('disable')" style="flex:1;background:var(--danger)"><i class="fa-solid fa-stop"></i> DESACTIVAR</button>
-            </div>
+            <div style="margin-top:12px;font-size:0.7rem;color:var(--text-dim)">* Use 'Configurar' para editar Token y ZoneID.</div>
         `;
-        showConsole('Cloudflare DDNS', html);
-    } catch (e) { showConsole('Error', logLine('❌ Error de conexión', 'error')); }
+        showConsole('Cloudflare DDNS Sync', html);
+    } catch (e) { showConsole('Error', logLine('❌ Error de conexión Cloudflare', 'error')); }
 }
 
 async function cfAction(action) {

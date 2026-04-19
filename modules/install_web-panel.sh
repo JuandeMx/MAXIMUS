@@ -21,56 +21,71 @@ ensure_root() {
 install_web_panel() {
     ensure_root
     echo -e "${CYAN}=========================================================${NC}"
-    echo -e "${YELLOW}           INSTALANDO MAXIMUS WEB PANEL v1.0${NC}"
+    echo -e "${YELLOW}           INSTALANDO MAXIMUS WEB PANEL v2.0 (ROOT)${NC}"
     echo -e "${CYAN}=========================================================${NC}"
 
-    # 1. Instalar dependencias
-    echo -e "${GREEN}[+] Instalando Python3-Flask...${NC}"
+    # 1. Instalar dependencias esenciales
+    echo -e "${GREEN}[+] Instalando dependencias (Python, SQLite, VNStat)...${NC}"
     apt-get update -y >/dev/null 2>&1
-    apt-get install -y python3-flask python3-pip >/dev/null 2>&1
+    apt-get install -y python3-flask python3-pip sqlite3 vnstat net-tools curl ufw >/dev/null 2>&1
     
     # 2. Preparar Directorio
-    echo -e "${GREEN}[+] Preparando archivos del proyecto...${NC}"
+    echo -e "${GREEN}[+] Sincronizando archivos del panel...${NC}"
     mkdir -p "$WEB_DIR/backend" "$WEB_DIR/frontend"
     
-    # Copiar archivos (asumiendo que están en la carpeta temporal de git)
-    # CP_PATH se define durante la ejecución del panel principal
     if [ -d "./web-panel" ]; then
         cp -r ./web-panel/* "$WEB_DIR/"
     fi
 
-    # 3. Crear Servicio Systemd
-    echo -e "${GREEN}[+] Configurando servicio mx-webpanel...${NC}"
+    chmod +x "$WEB_DIR/backend/app.py"
+
+    # 3. Crear Servicio Systemd (Fuerza ROOT)
+    echo -e "${GREEN}[+] Configurando servicio mx-webpanel (Privilegios Root)...${NC}"
     cat > /etc/systemd/system/mx-webpanel.service <<EOF
 [Unit]
-Description=MaximusVpsMx Web Panel Backend
+Description=MaximusVpsMx Web Panel Backend v2.0 (Root)
 After=network.target
 
 [Service]
 Type=simple
 User=root
+Group=root
 WorkingDirectory=$WEB_DIR/backend
 ExecStart=/usr/bin/python3 app.py
 Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
     # 4. Configurar Firewall
-    echo -e "${GREEN}[+] Ajustando Firewall UFW (Puerto 8082)...${NC}"
-    ufw allow 8082/tcp >/dev/null 2>&1
+    if ufw status | grep -q "inactive"; then
+        echo -e "${YELLOW}[!] UFW está inactivo. Permitiendo puerto 8082...${NC}"
+        ufw allow 8082/tcp >/dev/null 2>&1
+    else
+        echo -e "${GREEN}[+] Ajustando Firewall UFW (Puerto 8082)...${NC}"
+        ufw allow 8082/tcp >/dev/null 2>&1
+    fi
 
-    # 5. Iniciar
+    # 5. Iniciar y Verificar
     echo -e "${GREEN}[+] Iniciando Panel Web...${NC}"
     systemctl daemon-reload
     systemctl enable mx-webpanel >/dev/null 2>&1
     systemctl restart mx-webpanel >/dev/null 2>&1
 
-    echo -e "${CYAN}---------------------------------------------------------${NC}"
-    echo -e "${GREEN}✅ Panel WEB instalado correctamente.${NC}"
-    echo -e "${YELLOW} Acceso: http://$(wget -qO- ipv4.icanhazip.com):8082${NC}"
-    echo -e "${CYAN}=========================================================${NC}"
+    # Pequeña pausa para asegurar el arranque
+    sleep 2
+    if systemctl is-active --quiet mx-webpanel; then
+        echo -e "${CYAN}---------------------------------------------------------${NC}"
+        echo -e "${GREEN}✅ Panel WEB v2.0 instalado y operativo.${NC}"
+        echo -e "${YELLOW} Acceso: http://$(curl -s ipv4.icanhazip.com):8082${NC}"
+        echo -e "${CYAN}=========================================================${NC}"
+    else
+        echo -e "${RED}❌ Error al iniciar el panel. Revisa 'journalctl -u mx-webpanel'${NC}"
+    fi
 }
 
 uninstall_web_panel() {
