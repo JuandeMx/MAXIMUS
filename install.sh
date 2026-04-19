@@ -140,14 +140,34 @@ chown -R root:root /etc/MaximusVpsMx
 
 
 
-# 8. Sincronización final de Panel Web
+# 8. Sincronización final de Panel Web (CORE v3.1)
+echo -e "\e[1;32m[+] Realizando limpieza nuclear del panel previo...\e[0m"
+systemctl stop mx-webpanel >/dev/null 2>&1
+rm -rf /etc/MaximusVpsMx/web-panel
+
+echo -e "\e[1;32m[+] Instalando Motor Maximus CORE v3.1...\e[0m"
+mkdir -p /etc/MaximusVpsMx/web-panel/backend
+mkdir -p /etc/MaximusVpsMx/web-panel/frontend
+cp -r "$SCRIPT_DIR/web-panel/"* /etc/MaximusVpsMx/web-panel/
+
+# Corregir permisos
+chmod +x /etc/MaximusVpsMx/web-panel/backend/app.py
+
+# Asegurar Firewall 8082
+ufw allow 8082/tcp >/dev/null 2>&1
+
+# Reiniciar Servicio
 if systemctl list-unit-files | grep -q "mx-webpanel.service"; then
-    echo -e "\e[1;32m[+] Sincronizando y reiniciando Maximus Web Panel...\e[0m"
+    echo -e "\e[1;32m[+] Reiniciando Servicio de Telemetría...\e[0m"
+    systemctl daemon-reload
     systemctl restart mx-webpanel 2>/dev/null
+else
+    echo -e "\e[1;33m[!] Servicio mx-webpanel no detectado. Instalando ahora...\e[0m"
+    bash /etc/MaximusVpsMx/modules/install_web-panel.sh
 fi
 
 echo -e "\n\e[1;36m=========================================================\e[0m"
-echo -e "\e[1;32m[+] Instalación Base Completada.\e[0m"
+echo -e "\e[1;32m[+] Instalación Base + CORE v3.1 Completada.\e[0m"
 echo -e "\e[1;33m[!] Acceso Panel Web: http://$(curl -s ipv4.icanhazip.com):8082\e[0m"
 echo -e "\e[1;36m=========================================================\e[0m\n"
 
