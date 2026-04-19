@@ -168,6 +168,26 @@
         </div>
     </div>
 
+    <!-- Modal Renovar Usuario -->
+    <div id="renewModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Añadir Días a: <span id="renewUnameDisplay" style="color:var(--primary)"></span></h3>
+                <span class="close-modal" onclick="closeRenewModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="field">
+                    <label>Cantidad de días a sumar a su fecha actual:</label>
+                    <input type="number" id="renewDays" value="30" min="1" onkeypress="if(event.key === 'Enter') submitRenewForm()">
+                </div>
+                <input type="hidden" id="renewUnameStore" value="">
+                <button class="btn-primary" onclick="submitRenewForm()" style="width:100%; margin-top:10px; background:#10b981; color:#fff">
+                    <i class="fa-solid fa-floppy-disk"></i> Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast Notification -->
     <div id="toast" class="toast">Notificación</div>
 

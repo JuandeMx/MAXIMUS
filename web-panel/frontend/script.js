@@ -264,9 +264,22 @@ window.submitUserForm = async function() {
 window.deleteUser = async function(username) {
     if(confirm(`¿Eliminar al usuario ${username}?`)) await executeUserAction('/api/users/delete', {username}, "Usuario eliminado");
 }
-window.renewUser = async function(username) {
-    const days = prompt("Días a agregar:", "30");
-    if(days) await executeUserAction('/api/users/renew', {username, days}, `Usuario renovado por ${days} días`);
+window.renewUser = function(username) {
+    document.getElementById('renewUnameDisplay').innerText = username;
+    document.getElementById('renewUnameStore').value = username;
+    document.getElementById('renewDays').value = "30";
+    document.getElementById('renewModal').classList.add('show');
+}
+window.closeRenewModal = function() {
+    document.getElementById('renewModal').classList.remove('show');
+}
+window.submitRenewForm = async function() {
+    const username = document.getElementById('renewUnameStore').value;
+    const days = document.getElementById('renewDays').value;
+    if(!days || days < 1) return showToast("Monto inválido de días");
+    
+    closeRenewModal();
+    await executeUserAction('/api/users/renew', {username, days}, `Se sumaron ${days} días a ${username}`);
 }
 window.toggleLock = async function(username) {
     await executeUserAction('/api/users/toggle-lock', {username}, "Estado de bloqueo modificado");
