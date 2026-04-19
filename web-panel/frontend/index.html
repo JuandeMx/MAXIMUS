@@ -12,17 +12,17 @@
 <body class="dash-v3">
     <div class="glow-bg"></div>
     
-    <aside class="sidebar">
+    <aside class="sidebar" id="sidebar">
         <div class="logo">
             <i class="fa-solid fa-ghost"></i>
             <span>MAXIMUS<span>MX</span></span>
         </div>
         <div class="version">CORE v3.1</div>
         <nav>
-            <a href="#" class="active"><i class="fa-solid fa-gauge"></i> Dashboard</a>
-            <a href="#" class="disabled"><i class="fa-solid fa-users"></i> Usuarios</a>
-            <a href="#" class="disabled"><i class="fa-solid fa-server"></i> Servicios</a>
-            <a href="#" class="disabled"><i class="fa-solid fa-gear"></i> Ajustes</a>
+            <a href="#" class="nav-link active" data-tab="dashboard"><i class="fa-solid fa-gauge"></i> Dashboard</a>
+            <a href="#" class="nav-link" data-tab="users"><i class="fa-solid fa-users"></i> Usuarios</a>
+            <a href="#" class="nav-link" data-tab="services"><i class="fa-solid fa-server"></i> Servicios</a>
+            <a href="#" class="nav-link disabled" data-tab="settings"><i class="fa-solid fa-gear"></i> Ajustes</a>
         </nav>
         <div class="status-box">
             <div class="indicator"><span class="dot" id="stream-dot"></span> <span id="stream-text">Conectando...</span></div>
@@ -32,74 +32,142 @@
 
     <main class="content">
         <header>
-            <h1>Dashboard Principal</h1>
+            <h1 id="pageTitle">Dashboard Principal</h1>
             <div class="uptime">Uptime: <span id="val-uptime">--</span></div>
         </header>
 
-        <div class="stats-grid">
-            <div class="card">
-                <div class="card-head"><span>CPU LOAD</span><i class="fa-solid fa-microchip"></i></div>
-                <div class="card-body">
-                    <div class="val" id="val-cpu">0%</div>
-                    <div class="sub" id="val-cpu-detail">-- cores · --</div>
+        <!-- PANEL DASHBOARD -->
+        <div id="tab-dashboard" class="tab-panel active">
+            <div class="stats-grid">
+                <div class="card">
+                    <div class="card-head"><span>CPU LOAD</span><i class="fa-solid fa-microchip"></i></div>
+                    <div class="card-body">
+                        <div class="val" id="val-cpu">0%</div>
+                        <div class="sub" id="val-cpu-detail">-- cores · --</div>
+                    </div>
+                    <div class="progress-bar"><div class="fill" id="fill-cpu" style="width:0%"></div></div>
                 </div>
-                <div class="progress-bar"><div class="fill" id="fill-cpu" style="width:0%"></div></div>
+
+                <div class="card">
+                    <div class="card-head"><span>RAM</span><i class="fa-solid fa-memory"></i></div>
+                    <div class="card-body">
+                        <div class="val" id="val-ram">0%</div>
+                        <div class="sub" id="val-ram-detail">-- / -- MB</div>
+                    </div>
+                    <div class="progress-bar"><div class="fill" id="fill-ram" style="width:0%"></div></div>
+                </div>
+
+                <div class="card">
+                    <div class="card-head"><span>DISCO</span><i class="fa-solid fa-hard-drive"></i></div>
+                    <div class="card-body">
+                        <div class="val" id="val-disk">0%</div>
+                        <div class="sub" id="val-disk-detail">-- / --</div>
+                    </div>
+                    <div class="progress-bar"><div class="fill" id="fill-disk" style="width:0%"></div></div>
+                </div>
+
+                <div class="card highlight">
+                    <div class="card-head"><span>ONLINE</span><i class="fa-solid fa-wifi"></i></div>
+                    <div class="card-body">
+                        <div class="val big" id="val-online">0</div>
+                        <div class="sub">Total: <span id="val-users">0</span> cuentas</div>
+                    </div>
+                </div>
             </div>
 
-            <div class="card">
-                <div class="card-head"><span>RAM</span><i class="fa-solid fa-memory"></i></div>
-                <div class="card-body">
-                    <div class="val" id="val-ram">0%</div>
-                    <div class="sub" id="val-ram-detail">-- / -- MB</div>
+            <div class="charts-area">
+                <div class="chart-box">
+                    <h3>Monitor de Recursos</h3>
+                    <canvas id="mainChart"></canvas>
                 </div>
-                <div class="progress-bar"><div class="fill" id="fill-ram" style="width:0%"></div></div>
-            </div>
-
-            <div class="card">
-                <div class="card-head"><span>DISCO</span><i class="fa-solid fa-hard-drive"></i></div>
-                <div class="card-body">
-                    <div class="val" id="val-disk">0%</div>
-                    <div class="sub" id="val-disk-detail">-- / --</div>
-                </div>
-                <div class="progress-bar"><div class="fill" id="fill-disk" style="width:0%"></div></div>
-            </div>
-
-            <div class="card highlight">
-                <div class="card-head"><span>ONLINE</span><i class="fa-solid fa-wifi"></i></div>
-                <div class="card-body">
-                    <div class="val big" id="val-online">0</div>
-                    <div class="sub">Total: <span id="val-users">0</span> cuentas</div>
+                <div class="info-box">
+                    <h3>Información de Red</h3>
+                    <div class="net-row">
+                        <div class="net-item down">
+                            <i class="fa-solid fa-download"></i>
+                            <span>Descarga</span>
+                            <div id="val-rx">0 GB</div>
+                        </div>
+                        <div class="net-item up">
+                            <i class="fa-solid fa-upload"></i>
+                            <span>Subida</span>
+                            <div id="val-tx">0 GB</div>
+                        </div>
+                    </div>
+                    <div class="sys-info">
+                        <div class="line"><span>Host:</span> <span id="val-host">--</span></div>
+                        <div class="line"><span>Kernel:</span> <span id="val-kernel">--</span></div>
+                        <div class="line"><span>OS:</span> <span id="val-os">--</span></div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="charts-area">
-            <div class="chart-box">
-                <h3>Monitor de Recursos</h3>
-                <canvas id="mainChart"></canvas>
+        <!-- PANEL USUARIOS -->
+        <div id="tab-users" class="tab-panel">
+            <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
+                <button class="btn-primary" onclick="openCreateUserModal()">+ Crear Usuario</button>
             </div>
-            <div class="info-box">
-                <h3>Información de Red</h3>
-                <div class="net-row">
-                    <div class="net-item down">
-                        <i class="fa-solid fa-download"></i>
-                        <span>Descarga</span>
-                        <div id="val-rx">0 GB</div>
-                    </div>
-                    <div class="net-item up">
-                        <i class="fa-solid fa-upload"></i>
-                        <span>Subida</span>
-                        <div id="val-tx">0 GB</div>
-                    </div>
-                </div>
-                <div class="sys-info">
-                    <div class="line"><span>Host:</span> <span id="val-host">--</span></div>
-                    <div class="line"><span>Kernel:</span> <span id="val-kernel">--</span></div>
-                    <div class="line"><span>OS:</span> <span id="val-os">--</span></div>
-                </div>
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Usuario</th>
+                            <th>Límite</th>
+                            <th>Caducidad</th>
+                            <th>Días Restantes</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="userListBody">
+                        <tr><td colspan="6" style="text-align:center">Cargando...</td></tr>
+                    </tbody>
+                </table>
             </div>
         </div>
+
+        <!-- PANEL SERVICIOS -->
+        <div id="tab-services" class="tab-panel">
+            <div class="services-grid" id="servicesGrid">
+                <div class="empty-state">Cargando servicios...</div>
+            </div>
+        </div>
+
     </main>
+
+    <!-- Modal Crear/Editar Usuario -->
+    <div id="userModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="userModalTitle">Crear Usuario</h3>
+                <span class="close-modal" onclick="closeUserModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="field">
+                    <label>Nombre de Usuario</label>
+                    <input type="text" id="uname" placeholder="Ej: mario">
+                </div>
+                <div class="field">
+                    <label>Contraseña</label>
+                    <input type="text" id="upass" placeholder="Ej: 12345">
+                </div>
+                <div class="field" id="daysField">
+                    <label>Días de Validez</label>
+                    <input type="number" id="udays" value="30">
+                </div>
+                <div class="field">
+                    <label>Límite de Conexiones</label>
+                    <input type="number" id="ulimit" value="1">
+                </div>
+                <input type="hidden" id="editMode" value="0">
+                <button class="btn-primary" onclick="submitUserForm()" style="width:100%; margin-top:10px">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">Notificación</div>
 
     <script src="script.js"></script>
 </body>

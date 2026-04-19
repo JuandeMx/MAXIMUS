@@ -22,6 +22,59 @@ def run_command(cmd):
         return result.stdout.strip()
     except: return ""
 
+def run_command_full(cmd):
+    try:
+        result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=60)
+        return {
+            "stdout": result.stdout.strip(),
+            "stderr": result.stderr.strip(),
+            "code": result.returncode
+        }
+    except Exception as e:
+        return {"stdout": "", "stderr": str(e), "code": 1}
+
+def is_installed(name):
+    checks = {
+        "ssh": "dpkg -l openssh-server 2>/dev/null | grep -q '^ii'",
+        "dropbear": "test -f /etc/default/dropbear",
+        "ws-epro": "test -f /etc/systemd/system/ws-epro.service",
+        "mx-proxy": "test -f /etc/systemd/system/mx-proxy.service",
+        "stunnel4": "test -f /etc/stunnel/stunnel.conf",
+        "badvpn": "test -f /usr/local/bin/badvpn-udpgw",
+        "x-ui": "test -f /usr/local/x-ui/x-ui",
+    }
+    cmd = checks.get(name, f"systemctl list-unit-files | grep -q '{name}.service'")
+    return subprocess.run(cmd, shell=True).returncode == 0
+
+def is_service_active(name):
+    if name == "ssh": name = "sshd"
+    return subprocess.run(f"systemctl is-active --quiet {name}", shell=True).returncode == 0
+
+def get_port_for_service(name):
+    ports = {
+        "ssh": run_command("grep '^Port' /etc/ssh/sshd_config | awk '{print $2}' | head -1") or "22",
+        "dropbear": run_command("grep 'DROPBEAR_PORT=' /etc/default/dropbear | cut -d= -f2 | tr -d '\"'") or "44",
+        "stunnel4": run_command("grep 'accept =' /etc/stunnel/stunnel.conf | awk '{print $3}' | head -1") or "443",
+        "mx-proxy": "80",
+        "badvpn": "7300",
+        "ws-epro": "80",
+        "udp-custom": "7100-7300",
+        "mx-slowdns": "53/UDP",
+    }
+    return ports.get(name, "--")
+
+SERVICE_MAP = [
+    {"id": "ssh", "name": "SSH", "icon": "fa-terminal", "desc": "Acceso Principal Secure Shell"},
+    {"id": "dropbear", "name": "Dropbear", "icon": "fa-shield-halved", "desc": "SSH de bajo consumo"},
+    {"id": "stunnel4", "name": "Stunnel4", "icon": "fa-lock", "desc": "Túnel SSL/TLS"},
+    {"id": "ws-epro", "name": "WS-EPRO", "icon": "fa-globe", "desc": "WebSocket Proxy Python"},
+    {"id": "mx-proxy", "name": "Python Proxy", "icon": "fa-code", "desc": "Proxy HTTP Custom"},
+    {"id": "badvpn", "name": "BadVPN", "icon": "fa-satellite-dish", "desc": "UDP Gateway para Juegos"},
+    {"id": "mx-slowdns", "name": "SlowDNS", "icon": "fa-tower-broadcast", "desc": "Túnel DNS over UDP"},
+    {"id": "udp-custom", "name": "UDP Custom", "icon": "fa-bolt", "desc": "Protocolo UDP Optimizado"}
+]
+
+
 # --- Telemetría de Bajo Nivel (Lectura Directa) ---
 
 def get_cpu_raw():
@@ -129,3 +182,130 @@ def stream():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8082, threaded=True)
+
+# ====== USUARIOS ======
+
+@app.route('/api/users/list')
+def list_users():
+    if 'auth' not in session: return jsonify({"error": "Unauthorized"}), 401
+    users = []
+    if os.path.exists(USERS_DB):
+        today = datetime.datetime.now()
+        with open(USERS_DB, "r") as f:
+            for line in f:
+                p = line.strip().split(':')
+                if len(p) >= 3:
+                    try:
+                        exp = datetime.datetime.strptime(p[2], "%Y-%m-%d")
+                        days = (exp - today).days
+                        status = "Active" if days >= 0 else "Expired"
+                    except: days, status = 0, "Unknown"
+                    users.append({
+                        "username": p[0], "password": p[1], "expiry": p[2],
+                        "status": status, "days_left": max(0, days), "limit": p[3] if len(p)>3 else "1",
+                        "type": "SSH/SSL"
+                    })
+    return jsonify(users)
+
+@app.route('/api/users/create', methods=['POST'])
+def create_user():
+    if 'auth' not in session: return jsonify({"error": "Unauthorized"}), 401
+    d = request.json
+    un = d.get('username')
+    pw = d.get('password')
+    exp_days = int(d.get('days', 30))
+    limit = d.get('limit', '1')
+    
+    if run_command(f"id -u {un}") != "": return jsonify({"error": "Usuario ya existe"})
+    
+    exp_date = (datetime.datetime.now() + datetime.timedelta(days=exp_days)).strftime('%Y-%m-%d')
+    run_command(f"useradd -M -s /bin/false -e {exp_date} {un}")
+    run_command(f"echo '{un}:{pw}' | chpasswd")
+    
+    if not os.path.exists(os.path.dirname(USERS_DB)): os.makedirs(os.path.dirname(USERS_DB))
+    with open(USERS_DB, "a") as f: f.write(f"{un}:{pw}:{exp_date}:{limit}\n")
+    return jsonify({"success": True})
+
+@app.route('/api/users/delete', methods=['POST'])
+def delete_user():
+    if 'auth' not in session: return jsonify({"error": "Unauthorized"}), 401
+    un = request.json.get('username')
+    run_command(f"userdel -f {un}")
+    if os.path.exists(USERS_DB):
+        lines = open(USERS_DB).readlines()
+        with open(USERS_DB, 'w') as f:
+            for l in lines:
+                if not l.startswith(f"{un}:"): f.write(l)
+    return jsonify({"success": True})
+
+@app.route('/api/users/edit', methods=['POST'])
+def edit_user():
+    if 'auth' not in session: return jsonify({"error": "Unauthorized"}), 401
+    d = request.json
+    un = d.get('username')
+    pw = d.get('password')
+    limit = d.get('limit')
+    
+    if pw: run_command(f"echo '{un}:{pw}' | chpasswd")
+    
+    if os.path.exists(USERS_DB):
+        lines = open(USERS_DB).readlines()
+        with open(USERS_DB, 'w') as f:
+            for l in lines:
+                if l.startswith(f"{un}:"):
+                    p = l.strip().split(':')
+                    db_pw = pw if pw else p[1]
+                    db_exp = p[2]
+                    db_lim = limit if limit else (p[3] if len(p)>3 else "1")
+                    f.write(f"{un}:{db_pw}:{db_exp}:{db_lim}\n")
+                else: f.write(l)
+    return jsonify({"success": True})
+
+@app.route('/api/users/renew', methods=['POST'])
+def renew_user():
+    if 'auth' not in session: return jsonify({"error": "Unauthorized"}), 401
+    un, days = request.json.get('username'), request.json.get('days')
+    new_exp = ""
+    if os.path.exists(USERS_DB):
+        lines = open(USERS_DB).readlines()
+        with open(USERS_DB, 'w') as f:
+            for l in lines:
+                if l.startswith(f"{un}:"):
+                    p = l.strip().split(':')
+                    cur_exp = datetime.datetime.strptime(p[2], "%Y-%m-%d")
+                    new_e = cur_exp + datetime.timedelta(days=int(days))
+                    new_exp = new_e.strftime("%Y-%m-%d")
+                    f.write(f"{p[0]}:{p[1]}:{new_exp}:{p[3] if len(p)>3 else '1'}\n")
+                else: f.write(l)
+    if new_exp: run_command(f"chage -E {new_exp} {un}")
+    return jsonify({"success": True, "new_expiry": new_exp})
+
+@app.route('/api/users/toggle-lock', methods=['POST'])
+def toggle_lock():
+    if 'auth' not in session: return jsonify({"error": "Unauthorized"}), 401
+    un = request.json.get('username')
+    st = run_command(f"passwd -S {un}")
+    is_locked = " L " in st
+    if is_locked: run_command(f"usermod -U {un}")
+    else: run_command(f"usermod -L {un}")
+    return jsonify({"success": True, "locked": not is_locked})
+
+# ====== SERVICIOS ======
+
+@app.route('/api/service/status')
+def services_status():
+    if 'auth' not in session: return jsonify({"error": "Unauthorized"}), 401
+    res = []
+    for s in SERVICE_MAP:
+        installed = is_installed(s["id"])
+        active = is_service_active(s["id"]) if installed else False
+        res.append({**s, "installed": installed, "active": active, "port": get_port_for_service(s["id"])})
+    return jsonify(res)
+
+@app.route('/api/service/action', methods=['POST'])
+def service_action():
+    if 'auth' not in session: return jsonify({"error": "Unauthorized"}), 401
+    sid, act = request.json.get('id'), request.json.get('action')
+    if sid == 'ssh': sid = 'sshd'
+    run_command(f"systemctl {act} {sid}")
+    return jsonify({"success": True})
