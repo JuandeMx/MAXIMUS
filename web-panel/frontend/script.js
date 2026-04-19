@@ -327,7 +327,7 @@ async function fetchServices() {
                 label.innerText = 'ONLINE';
                 label.className = 'proto-status-text proto-status-online';
                 accent.style.background = '#4ade80';
-                btnToggle.innerHTML = '⏹️ Detener Servicio';
+                btnToggle.innerHTML = '🔄 Reiniciar Servicio';
                 btnToggle.style.pointerEvents = 'auto';
                 btnToggle.style.opacity = '1';
             } else {
@@ -353,41 +353,67 @@ window.switchViewStunnel = function(viewId) {
 }
 
 window.toggleStunnelService = async function() {
-    const action = stunnelIsOnline ? 'stop' : 'start';
+    const action = (!stunnelIsOnline) ? 'start' : 'restart';
     await window.svcAction('stunnel4', action);
+    setTimeout(fetchServices, 1000);
 }
 
 window.promptStunnelPort = async function() {
     const newPort = prompt("Introduce el nuevo puerto para Stunnel4:", stunnelPort);
     if (newPort && !isNaN(newPort)) {
-        showStunnelTerminal(`Cambiando puerto a: ${newPort}. Nota: Faltan ganchos backend para aplicar el cambio real en el archivo config de Stunnel.`, false);
-        setTimeout(() => switchViewStunnel('viewMain_stunnel'), 8000);
+        showStunnelTerminal(`Cambiando puerto a: ${newPort}...`, false);
+        try {
+            const res = await fetch('/api/service/stunnel4/port', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({port: newPort})
+            });
+            const data = await res.json();
+            if(data.success) {
+                showStunnelTerminal("Puerto cambiado exitosamente. Reiniciando servicio...", true);
+                setTimeout(() => { switchViewStunnel('viewMain_stunnel'); fetchServices(); }, 2000);
+            } else {
+                showStunnelTerminal("Error cambiando el puerto.", true);
+            }
+        } catch(e) {
+            showStunnelTerminal("Error de red conectando con el backend.", true);
+        }
     }
 }
 
-window.runStunnelInstall = function(type) {
+window.runStunnelInstall = async function(type) {
+    if(type === 'uninstall') {
+        if(!confirm("¿Seguro que deseas desinstalar Stunnel4? Se borrarán sus certificados.")) return;
+        showStunnelTerminal("Desinstalando Stunnel4...", false);
+        const res = await fetch('/api/service/stunnel4/uninstall', {method: 'POST'});
+        showStunnelTerminal("Desinstalado con éxito.", true);
+        setTimeout(() => { switchViewStunnel('viewMain_stunnel'); fetchServices(); }, 2000);
+        return;
+    }
+
     const output = document.getElementById('consoleOutput_stunnel');
     switchViewStunnel('terminal_stunnel');
-    
     output.innerHTML = "";
-    const steps = [
-        `Iniciando entorno de instalación en la VPS...`,
-        `Perfil de inyección seleccionado: ${type}`,
-        `Analizando dependencias de Stunnel4...`,
-        `(ℹ️ Nota: Esta función corre visualmente mientras se empareja con los scripts de bash reales en futuras builds)`,
-        `Instalación de ${type} COMPLETADA con éxito.`
-    ];
-
-    let i = 0;
-    const interval = setInterval(() => {
-        if(i < steps.length) {
-            showStunnelTerminal(steps[i], true);
-            i++;
+    
+    showStunnelTerminal(`Instalando ${type}... Conectando a terminal SSH real...`, false);
+    
+    const es = new EventSource(`/api/service/install/stunnel4?type=` + encodeURIComponent(type));
+    
+    es.onmessage = (e) => {
+        if(e.data === "[DONE]") {
+            showStunnelTerminal("Instalación completada.", true);
+            es.close();
+            setTimeout(() => { switchViewStunnel('viewMain_stunnel'); fetchServices(); }, 3000);
         } else {
-            clearInterval(interval);
-            setTimeout(() => switchViewStunnel('viewMain_stunnel'), 5000);
+            showStunnelTerminal(e.data, true);
         }
-    }, 700);
+    };
+
+    es.onerror = (e) => {
+        showStunnelTerminal("Conexión finalizada o error en pipe SSH.", true);
+        es.close();
+        setTimeout(() => { switchViewStunnel('viewMain_stunnel'); fetchServices(); }, 3000);
+    };
 }
 
 function showStunnelTerminal(msg, append=false) {

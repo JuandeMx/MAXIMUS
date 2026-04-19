@@ -308,5 +308,41 @@ def service_action():
     run_command(f"systemctl {act} {sid}")
     return jsonify({"success": True})
 
+@app.route('/api/service/install/stunnel4')
+def install_stunnel4():
+    if 'auth' not in session: return jsonify({"error": "Unauthorized"}), 401
+    ctype = request.args.get('type', '1')
+    option = "1"
+    if "Proxy" in ctype and "Directo" not in ctype: option = "2"
+    elif "Combinado" in ctype: option = "3"
+    
+    cmd = f'echo -e "{option}\\n\\n" | bash /etc/MaximusVpsMx/modules/install_stunnel4.sh'
+    def generate():
+        import re
+        ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+        process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
+        for line in iter(process.stdout.readline, ''):
+            clean_line = ansi_escape.sub('', line).strip()
+            if clean_line: yield f"data: {clean_line}\n\n"
+        process.stdout.close()
+        process.wait()
+        yield "data: [DONE]\n\n"
+    return Response(generate(), mimetype='text/event-stream', headers={'X-Accel-Buffering': 'no'})
+
+@app.route('/api/service/stunnel4/uninstall', methods=['POST'])
+def uninstall_stunnel4():
+    if 'auth' not in session: return jsonify({"error": "Unauthorized"}), 401
+    run_command("systemctl stop stunnel4; apt-get purge stunnel4 -y; rm -rf /etc/stunnel")
+    return jsonify({"success": True})
+
+@app.route('/api/service/stunnel4/port', methods=['POST'])
+def port_stunnel4():
+    if 'auth' not in session: return jsonify({"error": "Unauthorized"}), 401
+    port = request.json.get('port')
+    if port and port.isdigit():
+        run_command(f"sed -i 's/accept = .*/accept = {port}/g' /etc/stunnel/stunnel.conf && systemctl restart stunnel4")
+        return jsonify({"success": True})
+    return jsonify({"success": False, "error": "Invalid port"})
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8082, threaded=True)
