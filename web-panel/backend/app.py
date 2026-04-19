@@ -409,6 +409,47 @@ def service_action():
     return jsonify({"error": "Acción no válida"}), 400
 
 
+@app.route('/api/service/info/<service_id>')
+def service_info(service_id):
+    if 'logged_in' not in session:
+        return jsonify({"error": "No autorizado"}), 401
+
+    info = {"id": service_id}
+
+    if service_id == "mx-slowdns":
+        ns_domain = run_command("cat /etc/MaximusVpsMx/slowdns/ns-domain.conf 2>/dev/null") or "no configurado"
+        pub_key = run_command("cat /etc/MaximusVpsMx/slowdns/server.pub 2>/dev/null") or ""
+        info["ns_domain"] = ns_domain.strip()
+        info["public_key"] = pub_key.strip()
+        info["installed"] = is_installed("mx-slowdns")
+        info["active"] = is_service_active("mx-slowdns")
+
+    elif service_id == "x-ui":
+        ip = run_command("wget -qO- ipv4.icanhazip.com 2>/dev/null") or "0.0.0.0"
+        port = get_port_for_service("x-ui")
+        info["ip"] = ip
+        info["port"] = port
+        info["url"] = f"http://{ip}:{port}/"
+        info["cert_path"] = "/etc/x-ui/server.crt"
+        info["key_path"] = "/etc/x-ui/server.key"
+        info["installed"] = is_installed("x-ui")
+        info["active"] = is_service_active("x-ui")
+
+    elif service_id == "stunnel4":
+        conf = run_command("cat /etc/stunnel/stunnel.conf 2>/dev/null") or ""
+        info["config_preview"] = conf[:500]
+        info["installed"] = is_installed("stunnel4")
+        info["active"] = is_service_active("stunnel4")
+
+    else:
+        # Generic: return last 10 lines of install log
+        log = run_command(f"tail -n 10 /tmp/mx_install_{service_id}.log 2>/dev/null") or ""
+        info["log"] = log
+        info["installed"] = is_installed(service_id)
+        info["active"] = is_service_active(service_id)
+
+    return jsonify(info)
+
 @app.route('/api/connections')
 def active_connections():
     if 'logged_in' not in session:

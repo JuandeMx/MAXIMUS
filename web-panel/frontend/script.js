@@ -388,7 +388,6 @@ function openSvcConfig(svc) {
     content += `<div class="svc-actions-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">`;
 
     if (!svc.installed) {
-        // Opción: INSTALAR
         content += `
             <div class="action-tile install" onclick="showSvcActionMenu('${svc.id}', 'install')" style="grid-column: span 2">
                 <i class="fa-solid fa-download"></i>
@@ -396,35 +395,54 @@ function openSvcConfig(svc) {
             </div>
         `;
     } else {
-        // Opción: REINICIAR
+        // Fila 1: Reiniciar + Puerto
         content += `
             <div class="action-tile restart" onclick="svcConfigAction('${svc.id}','restart')">
                 <i class="fa-solid fa-arrows-rotate"></i>
                 <div class="action-label">REINICIAR</div>
             </div>
-        `;
-        // Opción: PUERTO
-        content += `
             <div class="action-tile port" onclick="showSvcActionMenu('${svc.id}', 'port')">
                 <i class="fa-solid fa-plug-circle-bolt"></i>
                 <div class="action-label">PUERTO</div>
             </div>
         `;
-        // Opción: REINSTALAR
+        // Fila 2: Reinstalar + Desinstalar
         content += `
             <div class="action-tile reinstall" onclick="showSvcActionMenu('${svc.id}', 'install')">
                 <i class="fa-solid fa-sync"></i>
                 <div class="action-label">REINSTALAR</div>
             </div>
-        `;
-        // Opción: DESINSTALAR
-        content += `
             <div class="action-tile uninstall" onclick="if(confirm('¿Desinstalar ${svc.name}?')) svcConfigAction('${svc.id}','uninstall')">
                 <i class="fa-solid fa-trash-can"></i>
                 <div class="action-label">DESINSTALAR</div>
             </div>
         `;
-        // Opción: START/STOP (Botón grande abajo si ya está instalado)
+
+        // Fila 3: Info específica por servicio
+        if (svc.id === 'mx-slowdns') {
+            content += `
+                <div class="action-tile info" onclick="showServiceInfo('${svc.id}')" style="grid-column: span 2; border-color: rgba(139,92,246,0.3)">
+                    <i class="fa-solid fa-key" style="color:#8b5cf6"></i>
+                    <div class="action-label" style="color:#8b5cf6">VER LLAVE PÚBLICA</div>
+                </div>
+            `;
+        } else if (svc.id === 'x-ui') {
+            content += `
+                <div class="action-tile info" onclick="showServiceInfo('${svc.id}')" style="grid-column: span 2; border-color: rgba(139,92,246,0.3)">
+                    <i class="fa-solid fa-arrow-up-right-from-square" style="color:#8b5cf6"></i>
+                    <div class="action-label" style="color:#8b5cf6">ABRIR PANEL WEB</div>
+                </div>
+            `;
+        } else if (svc.id === 'stunnel4') {
+            content += `
+                <div class="action-tile info" onclick="showServiceInfo('${svc.id}')" style="grid-column: span 2; border-color: rgba(6,182,212,0.2)">
+                    <i class="fa-solid fa-file-lines"></i>
+                    <div class="action-label">VER CONFIGURACIÓN</div>
+                </div>
+            `;
+        }
+
+        // Fila Final: START/STOP
         content += `
             <div class="action-tile ${svc.active ? 'stop' : 'start'}" onclick="svcConfigAction('${svc.id}','${svc.active ? 'stop' : 'start'}')" style="grid-column: span 2; margin-top: 4px; border-color: ${svc.active ? 'var(--danger)' : 'var(--success)'}">
                 <i class="fa-solid ${svc.active ? 'fa-stop' : 'fa-play'}"></i>
@@ -435,12 +453,78 @@ function openSvcConfig(svc) {
 
     content += `</div>`;
 
-    // Contenedor para Sub-Menús (oculto por defecto)
+    // Contenedor para Sub-Menús + Info (oculto por defecto)
     content += `<div id="svcSubMenu" class="svc-submenu-container" style="display:none; margin-top: 20px; border-top: 1px solid var(--border); padding-top: 20px;"></div>`;
 
     body.innerHTML = content;
     modal.classList.add('show');
 }
+
+// ========== SERVICE INFO PANEL ==========
+async function showServiceInfo(id) {
+    const sub = document.getElementById('svcSubMenu');
+    sub.innerHTML = '<div style="text-align:center;padding:20px"><i class="fa-solid fa-spinner fa-spin" style="color:var(--primary);font-size:1.5rem"></i></div>';
+    sub.style.display = 'block';
+
+    try {
+        const res = await fetch(`/api/service/info/${id}`);
+        const info = await res.json();
+
+        if (id === 'mx-slowdns') {
+            sub.innerHTML = `
+                <div style="padding:20px; background:#1a1f2e; border-radius:18px; border:1px solid #33415555">
+                    <h3 style="color:white; font-size:1rem; font-weight:700; margin-bottom:16px"><i class="fa-solid fa-tower-broadcast" style="color:#8b5cf6; margin-right:8px"></i>Información SlowDNS</h3>
+                    <div style="margin-bottom:14px">
+                        <label style="display:block; color:#94a3b8; font-size:0.7rem; font-weight:600; margin-bottom:6px; letter-spacing:1px">DOMINIO NS</label>
+                        <div style="padding:12px; background:var(--bg-elevated); border:1px solid var(--border); border-radius:10px; color:var(--primary); font-weight:600; font-family:monospace; font-size:0.9rem">${info.ns_domain || 'No configurado'}</div>
+                    </div>
+                    <div style="margin-bottom:14px">
+                        <label style="display:block; color:#94a3b8; font-size:0.7rem; font-weight:600; margin-bottom:6px; letter-spacing:1px">LLAVE PÚBLICA (CLIENTE)</label>
+                        <div id="slowdnsKey" style="padding:12px; background:var(--bg-elevated); border:1px solid var(--border); border-radius:10px; color:#10b981; font-family:monospace; font-size:0.75rem; word-break:break-all; max-height:80px; overflow-y:auto">${info.public_key || 'No generada'}</div>
+                    </div>
+                    <button class="btn-primary" onclick="navigator.clipboard.writeText(document.getElementById('slowdnsKey').innerText);showToast('📋 Llave copiada')" style="margin:0; width:100%; background:linear-gradient(135deg,#8b5cf6,#7c3aed)">
+                        <i class="fa-solid fa-copy"></i> COPIAR LLAVE
+                    </button>
+                </div>
+            `;
+        } else if (id === 'x-ui') {
+            sub.innerHTML = `
+                <div style="padding:20px; background:#1a1f2e; border-radius:18px; border:1px solid #33415555">
+                    <h3 style="color:white; font-size:1rem; font-weight:700; margin-bottom:16px"><i class="fa-solid fa-table-columns" style="color:#8b5cf6; margin-right:8px"></i>Acceso X-UI</h3>
+                    <div style="margin-bottom:14px">
+                        <label style="display:block; color:#94a3b8; font-size:0.7rem; font-weight:600; margin-bottom:6px; letter-spacing:1px">URL DE ACCESO</label>
+                        <a href="${info.url}" target="_blank" style="display:block; padding:12px; background:var(--bg-elevated); border:1px solid var(--border); border-radius:10px; color:var(--primary); font-weight:600; font-family:monospace; text-decoration:none">${info.url || '--'}</a>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px">
+                        <div>
+                            <label style="display:block; color:#94a3b8; font-size:0.65rem; margin-bottom:4px">CERT PATH</label>
+                            <div style="padding:8px; background:var(--bg-elevated); border-radius:8px; font-size:0.7rem; color:#64748b; font-family:monospace">${info.cert_path}</div>
+                        </div>
+                        <div>
+                            <label style="display:block; color:#94a3b8; font-size:0.65rem; margin-bottom:4px">KEY PATH</label>
+                            <div style="padding:8px; background:var(--bg-elevated); border-radius:8px; font-size:0.7rem; color:#64748b; font-family:monospace">${info.key_path}</div>
+                        </div>
+                    </div>
+                    <button class="btn-primary" onclick="window.open('${info.url}','_blank')" style="margin:0; width:100%; background:linear-gradient(135deg,#8b5cf6,#7c3aed)">
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i> ABRIR PANEL
+                    </button>
+                </div>
+            `;
+        } else if (id === 'stunnel4') {
+            sub.innerHTML = `
+                <div style="padding:20px; background:#1a1f2e; border-radius:18px; border:1px solid #33415555">
+                    <h3 style="color:white; font-size:1rem; font-weight:700; margin-bottom:16px"><i class="fa-solid fa-lock" style="color:var(--primary); margin-right:8px"></i>Configuración Stunnel</h3>
+                    <pre style="padding:12px; background:var(--bg-elevated); border:1px solid var(--border); border-radius:10px; color:#94a3b8; font-size:0.75rem; max-height:200px; overflow-y:auto; white-space:pre-wrap">${info.config_preview || 'Sin configuración'}</pre>
+                </div>
+            `;
+        }
+
+        sub.scrollIntoView({ behavior: 'smooth' });
+    } catch (e) {
+        sub.innerHTML = '<div style="color:var(--danger);text-align:center;padding:20px">Error al cargar información</div>';
+    }
+}
+
 
 function showSvcActionMenu(id, action) {
     const sub = document.getElementById('svcSubMenu');
