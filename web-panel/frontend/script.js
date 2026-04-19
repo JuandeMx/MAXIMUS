@@ -192,7 +192,7 @@ async function fetchUsers() {
 
 function renderUsers(users) {
     const tbody = document.getElementById('userListBody');
-    if(!users.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center">No hay usuarios</td></tr>'; return; }
+    if(!users.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center">No hay usuarios</td></tr>'; return; }
     tbody.innerHTML = users.map(u => {
         let statusColor = u.status === 'Active' ? '#10b981' : '#ef4444';
         return `
@@ -202,7 +202,6 @@ function renderUsers(users) {
             <td>${u.limit}</td>
             <td>${u.expiry}</td>
             <td style="color:${u.days_left > 3 ? '#10b981' : '#f59e0b'}">${u.days_left} d</td>
-            <td>0 MB ⬇️⬆️</td>
             <td style="color:${statusColor}">${u.status}</td>
             <td>
                 <button class="btn-mini" onclick="renewUser('${u.username}')" title="Agregar días"><i class="fa-solid fa-calendar-plus"></i></button>
