@@ -192,21 +192,22 @@ async function fetchUsers() {
 
 function renderUsers(users) {
     const tbody = document.getElementById('userListBody');
-    if(!users.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center">No hay usuarios</td></tr>'; return; }
+    if(!users.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center">No hay usuarios</td></tr>'; return; }
     tbody.innerHTML = users.map(u => {
         let statusColor = u.status === 'Active' ? '#10b981' : '#ef4444';
         return `
         <tr>
             <td><strong>${u.username}</strong></td>
+            <td><code>${u.password || '******'}</code></td>
             <td>${u.limit}</td>
             <td>${u.expiry}</td>
-            <td style="color:${u.days_left > 3 ? '#10b981' : '#f59e0b'}">${u.days_left}d</td>
+            <td style="color:${u.days_left > 3 ? '#10b981' : '#f59e0b'}">${u.days_left} d</td>
+            <td>0 MB ⬇️⬆️</td>
             <td style="color:${statusColor}">${u.status}</td>
             <td>
-                <button class="btn-mini" onclick="renewUser('${u.username}')" title="Renovar"><i class="fa-solid fa-calendar-plus"></i></button>
-                <button class="btn-mini" onclick="editUser('${u.username}')" title="Editar"><i class="fa-solid fa-pen"></i></button>
+                <button class="btn-mini" onclick="renewUser('${u.username}')" title="Agregar días"><i class="fa-solid fa-calendar-plus"></i></button>
+                <button class="btn-mini" onclick="editUser('${u.username}')" title="Modificar"><i class="fa-solid fa-pen"></i></button>
                 <button class="btn-mini" onclick="deleteUser('${u.username}')" title="Eliminar"><i class="fa-solid fa-trash-can"></i></button>
-                <button class="btn-mini" onclick="toggleLock('${u.username}')" title="Bloquear"><i class="fa-solid fa-lock"></i></button>
             </td>
         </tr>
     `}).join('');
@@ -264,7 +265,7 @@ window.deleteUser = async function(username) {
     if(confirm(`¿Eliminar al usuario ${username}?`)) await executeUserAction('/api/users/delete', {username}, "Usuario eliminado");
 }
 window.renewUser = async function(username) {
-    const days = prompt("Días a renovar:", "30");
+    const days = prompt("Días a agregar:", "30");
     if(days) await executeUserAction('/api/users/renew', {username, days}, `Usuario renovado por ${days} días`);
 }
 window.toggleLock = async function(username) {
