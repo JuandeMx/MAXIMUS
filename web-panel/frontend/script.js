@@ -10,10 +10,16 @@ let allUsers = [];
 
 // ========== INIT ==========
 document.addEventListener('DOMContentLoaded', () => {
+    console.log("Maximus Engine v2.5 Starting...");
     initNavigation();
-    initChart();
+    try {
+        initChart();
+    } catch (e) {
+        console.warn("Chart.js failed to load. Resource graph will be disabled.", e);
+    }
     connectSSE();
     loadTab('dashboard');
+    console.log("Maximus Engine v2.5 Ready.");
 });
 
 // ========== NAVIGATION ==========

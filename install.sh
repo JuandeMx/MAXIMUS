@@ -80,6 +80,9 @@ mkdir -p /etc/MaximusVpsMx/core
 mkdir -p /etc/MaximusVpsMx/modules
 mkdir -p /var/log/MaximusVpsMx
 
+# Limpieza Nuclear del Panel Web para asegurar v2.5
+rm -rf /etc/MaximusVpsMx/web-panel
+
 cp -r "$SCRIPT_DIR/"* /etc/MaximusVpsMx/
 chmod +x /etc/MaximusVpsMx/MX
 chmod +x /etc/MaximusVpsMx/core/*.sh 2>/dev/null
