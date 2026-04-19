@@ -57,14 +57,14 @@ case $mode_opt in
         CONNECT_TARGET="127.0.0.1:$PROXY_PORT"
         ;;
     3)
-        # --- MODO HÍBRIDO (Proxy universal) ---
-        echo -e "\n${CYAN}▶ MODO HÍBRIDO SELECCIONADO${NC}"
+        # --- MODO HÍBRIDO (Universal) ---
+        echo -e "\n${CYAN}▶ MODO HÍBRIDO UNIVERSAL SELECCIONADO${NC}"
         read -p " Puerto SSL (Default 443): " SSL_PORT
         [ -z "$SSL_PORT" ] && SSL_PORT=443
 
-        # En híbrido, levantamos el proxy en 8080 para evitar conflictos con 80 si ya lo usan
-        PROXY_PORT=8080
-        echo -e "${YELLOW}[+] Levantando Proxy Universal en puerto $PROXY_PORT...${NC}"
+        # Para compatibilidad universal con CDNs y Payloads sin SSL, usamos el puerto 80
+        PROXY_PORT=80
+        echo -e "${YELLOW}[+] Levantando Proxy Universal (Agnóstico) en puerto $PROXY_PORT...${NC}"
         bash /etc/MaximusVpsMx/modules/install_mx-proxy.sh $PROXY_PORT > /dev/null 2>&1
 
         CONNECT_TARGET="127.0.0.1:$PROXY_PORT"
