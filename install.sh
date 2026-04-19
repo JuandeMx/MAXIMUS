@@ -69,7 +69,7 @@ ufw allow 80/tcp 2>/dev/null
 ufw allow 443/tcp 2>/dev/null
 ufw allow 7300/udp 2>/dev/null
 ufw allow 54321/tcp 2>/dev/null
-ufw allow 8081/tcp 2>/dev/null
+ufw allow 8082/tcp 2>/dev/null
 ufw --force enable
 
 # 2. Archivos y Rutas
@@ -137,7 +137,14 @@ chown -R root:root /etc/MaximusVpsMx
 
 
 
+# 8. Sincronización final de Panel Web
+if systemctl list-unit-files | grep -q "mx-webpanel.service"; then
+    echo -e "\e[1;32m[+] Sincronizando y reiniciando Maximus Web Panel...\e[0m"
+    systemctl restart mx-webpanel 2>/dev/null
+fi
+
 echo -e "\n\e[1;36m=========================================================\e[0m"
 echo -e "\e[1;32m[+] Instalación Base Completada.\e[0m"
+echo -e "\e[1;33m[!] Acceso Panel Web: http://$(curl -s ipv4.icanhazip.com):8082\e[0m"
 echo -e "\e[1;36m=========================================================\e[0m\n"
 

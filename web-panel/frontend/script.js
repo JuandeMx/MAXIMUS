@@ -68,6 +68,11 @@ function connectSSE() {
     eventSource.onmessage = (event) => {
         try {
             const data = JSON.parse(event.data);
+            console.log("SSE [Incoming Data]:", data); // LOG PARA DEPURACIÓN F12
+            if (!data || Object.keys(data).length < 2) {
+                console.warn("SSE envió un objeto incompleto. Verificando integridad...");
+                return;
+            }
             updateDashboard(data);
         } catch (e) {
             console.error('SSE parse error:', e);

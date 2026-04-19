@@ -129,21 +129,23 @@ def get_system_stats():
         d_total, d_used, d_perc = df_out[0], df_out[1], df_out[2].replace('%','')
     except: d_total, d_used, d_perc = "0", "0", "0"
 
+    # Final Dictionary with absolute defaults for every field
     return {
-        "ram": {"total": total, "used": used, "percent": round((used/total*100),1) if total > 0 else 0},
-        "cpu": {"load": get_real_cpu_usage(), "cores": os.cpu_count() or 1, "model": run_command("lscpu | grep 'Model name' | sed 's/.*: *//'")},
-        "disk": {"total": d_total, "used": d_used, "percent": d_perc},
-        "network": {"rx": rx, "tx": tx, "interface": iface},
-        "uptime": run_command("uptime -p"),
-        "load_avg": run_command("cat /proc/loadavg | awk '{print $1, $2, $3}'"),
+        "ram": {"total": total or 1, "used": used or 0, "percent": round((used/total*100),1) if total > 0 else 0},
+        "cpu": {"load": get_real_cpu_usage() or 0.0, "cores": os.cpu_count() or 1, "model": run_command("lscpu | grep 'Model name' | sed 's/.*: *//'") or "CPU Genérica"},
+        "disk": {"total": d_total or "--", "used": d_used or "--", "percent": d_perc or "0"},
+        "network": {"rx": rx or "0", "tx": tx or "0", "interface": iface or "eth0"},
+        "uptime": run_command("uptime -p") or "calculando...",
+        "load_avg": run_command("cat /proc/loadavg | awk '{print $1, $2, $3}'") or "--",
         "online": run_command("netstat -antp | grep ESTABLISHED | grep -v '127.0.0.1' | wc -l") or "0",
         "system": {
-            "os": run_command("grep PRETTY_NAME /etc/os-release | cut -d= -f2 | tr -d '\"'"),
-            "kernel": run_command("uname -r"),
-            "hostname": run_command("hostname"),
+            "os": run_command("grep PRETTY_NAME /etc/os-release | cut -d= -f2 | tr -d '\"'") or "Linux",
+            "kernel": run_command("uname -r") or "--",
+            "hostname": run_command("hostname") or "vps-server",
             "ip": run_command("curl -s ipv4.icanhazip.com") or "127.0.0.1"
         },
-        "total_users": total_users
+        "total_users": total_users,
+        "ts": int(time.time())
     }
 
 SERVICE_MAP = [
@@ -184,10 +186,26 @@ def stream():
     if 'logged_in' not in session: return jsonify({"error": "No autorizado"}), 401
     def generate():
         while True:
-            data = get_system_stats()
-            yield f"data: {json.dumps(data)}\n\n"
+            try:
+                data = get_system_stats()
+                yield f"data: {json.dumps(data)}\n\n"
+            except Exception as e:
+                # Si falla una lectura, enviamos un keep-alive para no cerrar la conexión
+                yield f"data: {json.dumps({'error': str(e), 'ts': int(time.time())})}\n\n"
             time.sleep(2)
     return Response(generate(), mimetype='text/event-stream', headers={'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no'})
+
+@app.route('/api/debug')
+def debug_sys():
+    if 'logged_in' not in session: return jsonify({"error": "No autorizado"}), 401
+    return jsonify({
+        "proc_meminfo": run_command("cat /proc/meminfo | head -5"),
+        "proc_stat": run_command("cat /proc/stat | head -1"),
+        "df": run_command("df -h /"),
+        "ip": run_command("ip addr"),
+        "python": run_command("python3 --version"),
+        "time": datetime.datetime.now().isoformat()
+    })
 
 @app.route('/api/stats')
 def stats():
