@@ -123,10 +123,16 @@ def get_system_stats():
     if os.path.exists(USERS_DB):
         with open(USERS_DB, "r") as f: total_users = sum(1 for line in f if line.strip())
 
+    # Disk Info Completa
+    try:
+        df_out = run_command("df -h / | awk 'NR==2 {print $2, $3, $5}'").split()
+        d_total, d_used, d_perc = df_out[0], df_out[1], df_out[2].replace('%','')
+    except: d_total, d_used, d_perc = "0", "0", "0"
+
     return {
         "ram": {"total": total, "used": used, "percent": round((used/total*100),1) if total > 0 else 0},
         "cpu": {"load": get_real_cpu_usage(), "cores": os.cpu_count() or 1, "model": run_command("lscpu | grep 'Model name' | sed 's/.*: *//'")},
-        "disk": {"percent": run_command("df -h / | awk 'NR==2 {print $5}' | tr -d '%'") or "0"},
+        "disk": {"total": d_total, "used": d_used, "percent": d_perc},
         "network": {"rx": rx, "tx": tx, "interface": iface},
         "uptime": run_command("uptime -p"),
         "load_avg": run_command("cat /proc/loadavg | awk '{print $1, $2, $3}'"),

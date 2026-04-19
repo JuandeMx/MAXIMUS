@@ -115,10 +115,11 @@ function updateDashboard(data) {
     document.getElementById('ram-detail').innerText = `${ramUsed} / ${ramTotal} MB`;
 
     // Disk
-    const diskPerc = parseInt(data.disk?.percent) || 0;
+    const dObj = data.disk || {};
+    const diskPerc = parseInt(dObj.percent) || 0;
     document.getElementById('disk-val').innerText = `${diskPerc}%`;
     setRing('disk-ring', diskPerc);
-    document.getElementById('disk-detail').innerText = `${data.disk?.used || '--'} / ${data.disk?.total || '--'}`;
+    document.getElementById('disk-detail').innerText = `${dObj.used || '0'} / ${dObj.total || '0'}`;
 
     // Online
     document.getElementById('online-val').innerText = data.online || '0';
@@ -128,15 +129,17 @@ function updateDashboard(data) {
     document.getElementById('uptime-val').innerText = data.uptime || '--';
 
     // Network
-    document.getElementById('net-rx').innerText = `${data.network?.rx || '0'} GB`;
-    document.getElementById('net-tx').innerText = `${data.network?.tx || '0'} GB`;
+    const nObj = data.network || {};
+    document.getElementById('net-rx').innerText = `${nObj.rx || '0'} GB`;
+    document.getElementById('net-tx').innerText = `${nObj.tx || '0'} GB`;
 
     // System info
-    document.getElementById('sys-hostname').innerText = data.system?.hostname || '--';
-    document.getElementById('sys-kernel').innerText = data.system?.kernel || '--';
+    const sObj = data.system || {};
+    document.getElementById('sys-hostname').innerText = sObj.hostname || '--';
+    document.getElementById('sys-kernel').innerText = sObj.kernel || '--';
     document.getElementById('sys-loadavg').innerText = data.load_avg || '--';
-    document.getElementById('server-ip').innerText = data.system?.ip || '--';
-    document.getElementById('server-os').innerText = data.system?.os || '--';
+    document.getElementById('server-ip').innerText = sObj.ip || '--';
+    document.getElementById('server-os').innerText = sObj.os || '--';
 
     // Settings tab info (if elements exist)
     const sIP = document.getElementById('settings-ip');

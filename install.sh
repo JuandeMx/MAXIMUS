@@ -8,17 +8,22 @@ if [ "$EUID" -ne 0 ]; then
   exit 1
 fi
 
-# Auto-clonado si se corre desde Wget sin estructura de carpetas
-if [ ! -d "core" ] || [ ! -d "modules" ] || [ ! -f "MX" ]; then
-    echo -e "\e[1;36m[+] Descargando repositorio MaximusVpsMx (v2.1)...\e[0m"
+# Auto-clonado o Actualización Forzada
+if [ ! -d "core" ] || [ ! -d "modules" ] || [ ! -f "MX" ] || [ -d ".git" ]; then
+    echo -e "\e[1;36m[+] Sincronizando repositorio MaximusVpsMx (Hotfix v2.2)...\e[0m"
     apt-get install -y git >/dev/null 2>&1
-    rm -rf /tmp/MaximusVpsMx
-    echo -e "\e[1;32m[+] Clonando desde GitHub...\e[0m"
-    git clone https://github.com/JuandeMx/MAXIMUS.git /tmp/MaximusVpsMx
-    cd /tmp/MaximusVpsMx || exit
+    if [ -d ".git" ]; then
+        git fetch --all >/dev/null 2>&1
+        git reset --hard origin/main >/dev/null 2>&1
+    else
+        rm -rf /tmp/MaximusVpsMx
+        echo -e "\e[1;32m[+] Clonando repositorio limpio...\e[0m"
+        git clone https://github.com/JuandeMx/MAXIMUS.git /tmp/MaximusVpsMx
+        cd /tmp/MaximusVpsMx || exit
+    fi
     chmod +x install.sh
     echo -e "\e[1;32m[+] Iniciando ejecución del instalador maestro...\e[0m"
-    exec ./install.sh
+    [ -d "/tmp/MaximusVpsMx" ] && exec /tmp/MaximusVpsMx/install.sh || exec ./install.sh
 fi
 
 echo -e "\n\e[1;36m=========================================================\e[0m"
