@@ -88,99 +88,95 @@ class ConnectionHandler(threading.Thread):
                 client_buffer = self.client.recv(BUFLEN)
             
             # Decidimos el modo basado en lo que recibimos o en el silencio
+            if not client_buffer:
+                self.client.close()
+                return
+
+            # Clasificación de la conexión
             is_ssh = client_buffer.startswith(b'SSH-')
-            is_payload = (not is_ssh) and (len(client_buffer) > 0)
-            is_silent = len(client_buffer) == 0
-
-            if is_payload:
-                # MODO PROXY (HTTP / CLOUDFRONT / WEBSOCKET)
-                client_buffer = collect_headers(self.client, client_buffer, 5)
-                is_ws = b'upgrade: websocket' in client_buffer.lower()
-                is_split = b'100-continue' in client_buffer.lower()
-
-                if is_split:
-                    self.client.sendall(RESPONSE_CONTINUE)
-                    second_buffer = b''
-                    second_buffer = collect_headers(self.client, second_buffer, 3)
-                    if b'websocket' in second_buffer.lower():
-                        self.client.sendall(RESPONSE_WS)
-                    else:
-                        self.client.sendall(RESPONSE_STD)
-                elif is_ws:
+            is_http = any(client_buffer.startswith(v) for v in [b'GET ', b'POST ', b'HEAD ', b'CONNECT ', b'PUT ', b'DELETE ', b'OPTIONS ', b'TRACE ', b'PATCH ', b'PROPFIND '])
+            
+            # --- GESTIÓN DE PROTOCOLOS (PAYLOAD / WEBSOCKET) ---
+            if is_http:
+                # Anti-Fragmentación: Esperar cabeceras HTTP completas
+                deadline = time.time() + 3
+                while b'\r\n\r\n' not in client_buffer and b'\n\n' not in client_buffer:
+                    if time.time() > deadline: break
+                    r, _, _ = select.select([self.client], [], [], 0.5)
+                    if r:
+                        chunk = self.client.recv(BUFLEN)
+                        if not chunk: break
+                        client_buffer += chunk
+                    else: break
+                
+                # Enviar de vuelta la respuesta HTTP esperada por el cliente Injector
+                if b'upgrade: websocket' in client_buffer.lower():
                     self.client.sendall(RESPONSE_WS)
                 else:
                     self.client.sendall(RESPONSE_STD)
                 
-                # Sincronización pequeña para separar cabeceras del flujo SSH
-                time.sleep(0.1)
+                # Pequeña pausa para sincronización TCP
+                time.sleep(0.05)
 
-            # Conexión al Backend local (OpenSSH 22 o Dropbear paramétrico)
+            # --- CONEXIÓN AL BACKEND ---
+            # Buscamos puerto dropbear para no codificar '44' a fuego crudo
             drop_port = 44
             try:
-                import os
                 if os.path.exists('/etc/default/dropbear'):
                     with open('/etc/default/dropbear', 'r') as f:
                         for line in f:
-                            if line.startswith('DROPBEAR_PORT='):
-                                drop_port = int(line.split('=')[1].strip())
+                            if 'DROPBEAR_PORT=' in line:
+                                drop_port = int(line.split('=')[1].strip().strip('"'))
             except: pass
 
-            for port in [22, drop_port]:
+            ports = [drop_port, 22, 2222]
+            for p in ports:
                 try:
-                    target = socket.create_connection(('127.0.0.1', port), timeout=5)
+                    target = socket.create_connection(('127.0.0.1', p), timeout=2)
                     target.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-                    target.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+                    target.settimeout(TIMEOUT)
                     break
-                except:
-                    target = None
-
+                except: continue
+            
             if not target:
+                self.client.close()
                 return
 
-            # Manejo del flujo inicial
+            # --- RELAY BIDIRECCIONAL ---
             if is_ssh:
+                # Bypass transparente
                 target.sendall(client_buffer)
-            elif is_payload:
-                header_end = -1
-                if b'\r\n\r\n' in client_buffer:
-                    header_end = client_buffer.find(b'\r\n\r\n') + 4
-                elif b'\n\n' in client_buffer:
-                    header_end = client_buffer.find(b'\n\n') + 2
-                
-                if header_end != -1:
-                    leftover = client_buffer[header_end:]
+            elif is_http:
+                # Evitar mandar la cabecera HTTP al demonio SSH, solo el payload útil remanente
+                idx = client_buffer.find(b'\r\n\r\n')
+                if idx != -1:
+                    leftover = client_buffer[idx+4:]
                     if leftover: target.sendall(leftover)
+            else:
+                # Stunnel sin headers HTTP
+                target.sendall(client_buffer)
 
-            # --- RELAY BIDIRECCIONAL SELECT ENGINE ---
+            # Bucle de paso
             sockets = [self.client, target]
             while True:
                 r, _, e = select.select(sockets, [], sockets, 60)
                 if e: break
-                for sock in r:
-                    data = sock.recv(BUFLEN)
+                for s in r:
+                    data = s.recv(BUFLEN)
                     if not data: return
-                    out = target if sock is self.client else self.client
+                    out = target if s is self.client else self.client
                     out.sendall(data)
 
-        except Exception as e:
-            log_error(f"Handler error ({self.addr}): {e}")
+        except: pass
         finally:
             try: self.client.close()
             except: pass
-            try: 
-                if target: target.close()
+            try: target.close()
             except: pass
 
-def main():
-    print(f"MaximusVpsMx Proxy v4.0 - AXOLOT SUPREMACY Edition\nListening on {LISTENING_PORT}")
-    server = Server('0.0.0.0', LISTENING_PORT)
-    server.start()
-    while True:
-        try:
-            time.sleep(2)
-        except KeyboardInterrupt:
-            server.close()
-            break
-
 if __name__ == '__main__':
-    main()
+    print(f"Maximus Universal Agnostic iniciado en puerto: {LISTENING_PORT}")
+    try:
+        Server('0.0.0.0', LISTENING_PORT).run()
+    except KeyboardInterrupt:
+        pass
