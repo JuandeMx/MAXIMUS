@@ -107,7 +107,8 @@ def index():
 @app.route('/api/login', methods=['POST'])
 def login():
     d = request.json
-    if d.get('user') == ADMIN_USER and d.get('pass') == ADMIN_PASS:
+    # Ajuste para coincidir con login.html (username/password)
+    if d.get('username') == ADMIN_USER and d.get('password') == ADMIN_PASS:
         session['auth'] = True
         return jsonify({"success": True})
     return jsonify({"success": False}), 401
