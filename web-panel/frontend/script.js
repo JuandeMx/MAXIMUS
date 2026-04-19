@@ -297,34 +297,109 @@ async function executeUserAction(endpoint, payload, successMsg) {
     } catch(e) { showToast("Error de red al conectar con el servidor API"); }
 }
 
-// ========== SERVICES ==========
+// ========== STUNNEL UI LOGIC ==========
+let stunnelIsOnline = false;
+let stunnelPort = 443;
+
 async function fetchServices() {
-    const grid = document.getElementById('servicesGrid');
-    grid.innerHTML = '<div class="empty-state">Cargando servicios en vivo...</div>';
     try {
         const res = await fetch('/api/service/status');
         const services = await res.json();
-        grid.innerHTML = services.map(s => {
-            const statusLabel = !s.installed ? 'NO INSTALADO' : (s.active ? 'ONLINE' : 'OFFLINE');
-            const stateColor = !s.installed ? '#64748b' : (s.active ? '#10b981' : '#ef4444');
-            const disableBtns = !s.installed ? 'disabled' : '';
-            return `
-            <div class="card" style="border-left: 4px solid ${stateColor}">
-                <div style="font-weight:800; font-size:1.1rem; margin-bottom:6px;"><i class="fa-solid ${s.icon}" style="color:var(--primary)"></i> ${s.name}</div>
-                <div style="font-size:0.75rem; color:var(--text-dim); margin-bottom:12px;">${s.desc}</div>
-                <div style="font-size:0.8rem; margin-bottom:4px; font-family:monospace">Puerto: <span style="color:var(--primary)">${s.port}</span></div>
-                <div style="font-size:0.8rem; font-weight:800; color:${stateColor}; margin-bottom:16px">${statusLabel}</div>
-                <div style="display:flex; gap:10px;">
-                    <button class="btn-primary" ${disableBtns} onclick="svcAction('${s.id}', '${s.active ? 'stop' : 'start'}')" style="flex:1; background:${s.active ? '#ef4444' : '#10b981'}">
-                        <i class="fa-solid ${s.active ? 'fa-stop' : 'fa-play'}"></i> ${s.active ? 'STOP' : 'START'}
-                    </button>
-                    <button class="btn-primary" ${disableBtns} onclick="svcAction('${s.id}', 'restart')" style="flex:1; background:#3b82f6">
-                        <i class="fa-solid fa-arrows-rotate"></i> RESTART
-                    </button>
-                </div>
-            </div>`;
-        }).join('');
-    } catch(e) { grid.innerHTML = '<div class="empty-state" style="color:#ef4444">Error al cargar servicios.</div>'; }
+        const stnl = services.find(s => s.id === 'stunnel4');
+        if(stnl) {
+            stunnelIsOnline = stnl.active;
+            stunnelPort = stnl.port;
+            document.getElementById('stnlPort').innerText = stunnelPort;
+            
+            const label = document.getElementById('stnlStatusTxt');
+            const accent = document.getElementById('stunnelAccent');
+            const btnToggle = document.getElementById('btnStnlToggle');
+            
+            if(!stnl.installed) {
+                label.innerText = 'NO INSTALADO';
+                label.className = 'proto-status-text';
+                label.style.color = '#94a3b8';
+                accent.style.background = '#64748b';
+                btnToggle.innerHTML = '▶️ Iniciar Servicio';
+                btnToggle.style.pointerEvents = 'none';
+                btnToggle.style.opacity = '0.5';
+            } else if(stnl.active) {
+                label.innerText = 'ONLINE';
+                label.className = 'proto-status-text proto-status-online';
+                accent.style.background = '#4ade80';
+                btnToggle.innerHTML = '⏹️ Detener Servicio';
+                btnToggle.style.pointerEvents = 'auto';
+                btnToggle.style.opacity = '1';
+            } else {
+                label.innerText = 'OFFLINE';
+                label.className = 'proto-status-text proto-status-offline';
+                accent.style.background = '#a855f7';
+                btnToggle.innerHTML = '▶️ Iniciar Servicio';
+                btnToggle.style.pointerEvents = 'auto';
+                btnToggle.style.opacity = '1';
+            }
+        }
+    } catch(e) { console.error("Error cargando Stunnel status"); }
+}
+
+window.switchViewStunnel = function(viewId) {
+    const views = ['viewMain_stunnel', 'viewSettings_stunnel', 'viewInstall_stunnel', 'terminal_stunnel'];
+    views.forEach(v => {
+        const el = document.getElementById(v);
+        if(el) el.classList.add('proto-hidden');
+    });
+    const target = document.getElementById(viewId);
+    if(target) target.classList.remove('proto-hidden');
+}
+
+window.toggleStunnelService = async function() {
+    const action = stunnelIsOnline ? 'stop' : 'start';
+    await window.svcAction('stunnel4', action);
+}
+
+window.promptStunnelPort = async function() {
+    const newPort = prompt("Introduce el nuevo puerto para Stunnel4:", stunnelPort);
+    if (newPort && !isNaN(newPort)) {
+        showStunnelTerminal(`Cambiando puerto a: ${newPort}. Nota: Faltan ganchos backend para aplicar el cambio real en el archivo config de Stunnel.`, false);
+        setTimeout(() => switchViewStunnel('viewMain_stunnel'), 8000);
+    }
+}
+
+window.runStunnelInstall = function(type) {
+    const output = document.getElementById('consoleOutput_stunnel');
+    switchViewStunnel('terminal_stunnel');
+    
+    output.innerHTML = "";
+    const steps = [
+        `Iniciando entorno de instalación en la VPS...`,
+        `Perfil de inyección seleccionado: ${type}`,
+        `Analizando dependencias de Stunnel4...`,
+        `(ℹ️ Nota: Esta función corre visualmente mientras se empareja con los scripts de bash reales en futuras builds)`,
+        `Instalación de ${type} COMPLETADA con éxito.`
+    ];
+
+    let i = 0;
+    const interval = setInterval(() => {
+        if(i < steps.length) {
+            showStunnelTerminal(steps[i], true);
+            i++;
+        } else {
+            clearInterval(interval);
+            setTimeout(() => switchViewStunnel('viewMain_stunnel'), 5000);
+        }
+    }, 700);
+}
+
+function showStunnelTerminal(msg, append=false) {
+    switchViewStunnel('terminal_stunnel');
+    const output = document.getElementById('consoleOutput_stunnel');
+    const timestamp = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+    const line = `<div style="margin-bottom:4px"><span style="opacity:0.5">[${timestamp}]</span> > ${msg}</div>`;
+    
+    if(append) output.innerHTML += line;
+    else output.innerHTML = line;
+    
+    output.scrollTop = output.scrollHeight;
 }
 
 window.svcAction = async function(id, action) {

@@ -130,8 +130,81 @@
 
         <!-- PANEL SERVICIOS -->
         <div id="tab-services" class="tab-panel">
-            <div class="services-grid" id="servicesGrid">
-                <div class="empty-state">Cargando servicios...</div>
+            
+            <div class="proto-card" id="stunnelCard">
+                <div class="proto-accent" id="stunnelAccent"></div>
+                
+                <!-- MAIN VIEW -->
+                <div id="viewMain_stunnel">
+                    <div class="proto-header">
+                        <i class="fa-solid fa-shield-halved" style="color: #a855f7; font-size: 1.5rem;"></i>
+                        <h1>Stunnel4</h1>
+                    </div>
+                    <div class="proto-subtitle">Túnel SSL/TLS Seguro</div>
+                    
+                    <div class="proto-detail">
+                        <span>Puerto en escucha:</span>
+                        <span id="stnlPort">443</span>
+                    </div>
+                    
+                    <div id="stnlStatusTxt" class="proto-status-text proto-status-offline">OFFLINE</div>
+                    
+                    <button class="proto-btn proto-btn-purple" onclick="switchViewStunnel('viewSettings_stunnel')">
+                        <i class="fa-solid fa-gear"></i> CONFIGURACIÓN
+                    </button>
+                </div>
+                
+                <!-- SETTINGS VIEW -->
+                <div id="viewSettings_stunnel" class="proto-hidden">
+                    <div class="proto-back" onclick="switchViewStunnel('viewMain_stunnel')">
+                        <i class="fa-solid fa-arrow-left"></i> Volver al panel principal
+                    </div>
+                    <div class="proto-title-section">Opciones de Stunnel</div>
+                    
+                    <div class="proto-grid">
+                        <button class="proto-btn proto-btn-menu" onclick="switchViewStunnel('viewInstall_stunnel')">
+                            <span>🛠️ Asistente de Instalación</span><span>→</span>
+                        </button>
+                        <button class="proto-btn proto-btn-menu" onclick="runStunnelInstall('uninstall')">
+                            <span>🗑️ Desinstalar Protocolo</span>
+                        </button>
+                        <button class="proto-btn proto-btn-menu" onclick="promptStunnelPort()">
+                            <span>🔌 Cambiar Puerto Maestro</span>
+                        </button>
+                        <button class="proto-btn proto-btn-outline" onclick="toggleStunnelService()" id="btnStnlToggle">
+                            ▶️ Iniciar Servicio
+                        </button>
+                    </div>
+                </div>
+
+                <!-- INSTALL VIEW -->
+                <div id="viewInstall_stunnel" class="proto-hidden">
+                    <div class="proto-back" onclick="switchViewStunnel('viewSettings_stunnel')">
+                        <i class="fa-solid fa-arrow-left"></i> Atrás
+                    </div>
+                    <div class="proto-title-section">Selecciona el Perfil</div>
+                    
+                    <div class="proto-grid">
+                        <button class="proto-btn proto-btn-menu" style="flex-direction: column; align-items: flex-start; gap: 4px;" onclick="runStunnelInstall('SSL Directo')">
+                            <span class="proto-opt-title">Opción 1</span>
+                            <span class="proto-opt-desc">SSL Directo</span>
+                        </button>
+                        <button class="proto-btn proto-btn-menu" style="flex-direction: column; align-items: flex-start; gap: 4px;" onclick="runStunnelInstall('SSL + Proxy')">
+                            <span class="proto-opt-title">Opción 2</span>
+                            <span class="proto-opt-desc">SSL + Proxy 80</span>
+                        </button>
+                        <button class="proto-btn proto-btn-menu" style="flex-direction: column; align-items: flex-start; gap: 4px;" onclick="runStunnelInstall('Combinado')">
+                            <span class="proto-opt-title">Opción 3</span>
+                            <span class="proto-opt-desc">Combinado SSL + Proxy + Directo</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- CONSOLE VIEW -->
+                <div id="terminal_stunnel" class="proto-hidden">
+                    <div class="proto-console" id="consoleOutput_stunnel"></div>
+                </div>
+
             </div>
         </div>
 
