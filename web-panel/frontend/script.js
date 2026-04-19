@@ -90,10 +90,20 @@ function connectSSE() {
 }
 
 function updateDashboard(data) {
+    // Helper para actualizar anillos SVG
+    const setRing = (id, percent) => {
+        const ring = document.getElementById(id);
+        if (!ring) return;
+        const radius = 20;
+        const circum = 2 * Math.PI * radius;
+        const offset = circum - (percent / 100) * circum;
+        ring.style.strokeDashoffset = offset;
+    };
+
     // CPU
     const cpuVal = parseFloat(data.cpu?.load) || 0;
     document.getElementById('cpu-val').innerText = `${cpuVal.toFixed(1)}%`;
-    document.getElementById('cpu-bar').style.width = `${Math.min(cpuVal, 100)}%`;
+    setRing('cpu-ring', Math.min(cpuVal, 100));
     document.getElementById('cpu-detail').innerText = `${data.cpu?.cores || '--'} cores · ${data.cpu?.model || '--'}`;
 
     // RAM
@@ -101,13 +111,13 @@ function updateDashboard(data) {
     const ramTotal = parseInt(data.ram?.total) || 1;
     const ramPerc = ((ramUsed / ramTotal) * 100).toFixed(1);
     document.getElementById('ram-val').innerText = `${ramPerc}%`;
-    document.getElementById('ram-bar').style.width = `${ramPerc}%`;
+    setRing('ram-ring', ramPerc);
     document.getElementById('ram-detail').innerText = `${ramUsed} / ${ramTotal} MB`;
 
     // Disk
-    document.getElementById('disk-val').innerText = data.disk?.percent || '0%';
     const diskPerc = parseInt(data.disk?.percent) || 0;
-    document.getElementById('disk-bar').style.width = `${diskPerc}%`;
+    document.getElementById('disk-val').innerText = `${diskPerc}%`;
+    setRing('disk-ring', diskPerc);
     document.getElementById('disk-detail').innerText = `${data.disk?.used || '--'} / ${data.disk?.total || '--'}`;
 
     // Online

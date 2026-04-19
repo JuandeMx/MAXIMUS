@@ -65,6 +65,9 @@ def get_port_for_service(name):
     return ports.get(name, "--")
 
 def get_system_stats():
+    # Autodetección de interfaz de red principal
+    iface = run_command("ip route show | grep default | awk '{print $5}'") or "eth0"
+    
     ram_total = run_command("free -m | awk 'NR==2 {print $2}'")
     ram_used = run_command("free -m | awk 'NR==2 {print $3}'")
     ram_free = run_command("free -m | awk 'NR==2 {print $4}'")
@@ -76,11 +79,18 @@ def get_system_stats():
     disk_used = run_command("df -h / | awk 'NR==2 {print $3}'")
     disk_free = run_command("df -h / | awk 'NR==2 {print $4}'")
     disk_perc = run_command("df -h / | awk 'NR==2 {print $5}'")
-    net_rx = run_command("cat /proc/net/dev | grep eth0 | awk '{printf \"%.2f\", $2/1073741824}'")
-    net_tx = run_command("cat /proc/net/dev | grep eth0 | awk '{printf \"%.2f\", $10/1073741824}'")
+    
+    # Tráfico usando la interfaz detectada
+    net_rx = run_command(f"cat /proc/net/dev | grep {iface} | awk '{{printf \"%.2f\", $2/1073741824}}'")
+    net_tx = run_command(f"cat /proc/net/dev | grep {iface} | awk '{{printf \"%.10f\", $10/1073741824}}'")
+    
     uptime = run_command("uptime -p")
     load_avg = run_command("cat /proc/loadavg | awk '{print $1, $2, $3}'")
-    online = run_command("netstat -antp 2>/dev/null | grep -E 'sshd|dropbear' | grep ESTABLISHED | wc -l")
+    
+    # Conteo inteligente de usuarios (IPs Remotas Únicas conectadas a puertos de túnel)
+    # Excluimos localhost (127.0.0.1) que son las conexiones internas del proxy
+    online = run_command("netstat -antp 2>/dev/null | grep ESTABLISHED | grep -E ':22|:44|:80|:443|:8080|:8082' | awk '{print $5}' | cut -d: -f1 | sort -u | grep -v -E '127.0.0.1|0.0.0.0' | wc -l")
+    
     os_name = run_command("grep PRETTY_NAME /etc/os-release | cut -d= -f2 | tr -d '\"'")
     kernel = run_command("uname -r")
     hostname = run_command("hostname")
@@ -94,7 +104,7 @@ def get_system_stats():
         "ram": {"total": ram_total, "used": ram_used, "free": ram_free, "cache": ram_cache},
         "cpu": {"load": cpu_load, "cores": cpu_cores, "model": cpu_model},
         "disk": {"total": disk_total, "used": disk_used, "free": disk_free, "percent": disk_perc},
-        "network": {"rx": net_rx, "tx": net_tx},
+        "network": {"rx": net_rx, "tx": net_tx, "interface": iface},
         "uptime": uptime, "load_avg": load_avg, "online": online,
         "system": {"os": os_name, "kernel": kernel, "hostname": hostname, "ip": ip},
         "total_users": total_users
