@@ -385,7 +385,6 @@ function openSvcConfig(svc) {
         </div>
     `;
 
-    // Grilla de Acciones (Estilo Terminal MX)
     content += `<div class="svc-actions-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">`;
 
     if (!svc.installed) {
@@ -449,25 +448,36 @@ function showSvcActionMenu(id, action) {
     sub.style.display = 'block';
 
     if (action === 'install') {
-        if (id === 'stunnel4') {
-            sub.innerHTML = `
-                <h4 style="margin-bottom:14px; font-size:0.9rem; color:var(--text-muted)">SELECCIONE MODO DE STUNNEL:</h4>
-                <div style="display:flex; flex-direction:column; gap:8px">
-                    <button class="btn-sub" onclick="executeAdvancedInstall('stunnel4','1','443')"><b>[1]></b> SSL DIRECTO (Puerto 443)</button>
-                    <button class="btn-sub" onclick="executeAdvancedInstall('stunnel4','2','443')"><b>[2]></b> SSL + PROY (Puerto 443)</button>
-                    <button class="btn-sub" onclick="executeAdvancedInstall('stunnel4','3','443')"><b>[3]></b> HÍBRIDO UNIVERSAL (443/80)</button>
+        const methods = [
+            { id: '1', name: 'Instalar Directo', desc: 'Conexión estándar sin intermediarios', icon: 'fa-terminal' },
+            { id: '2', name: 'Instalar con Proxy', desc: 'Enrutamiento a través de un servidor Proxy', icon: 'fa-network-wired' },
+            { id: '3', name: 'Modo Compatibilidad', desc: 'Funciones experimentales y ajustes (Híbrido)', icon: 'fa-flask' }
+        ];
+
+        let html = `
+            <div class="bg-[#1a1f2e]" style="padding:16px; background:#1a1f2e; border-radius:18px; border:1px solid #33415555; display:flex; justify-content:space-between; align-items:center; margin-bottom:20px">
+                <div>
+                    <h3 style="color:white; font-size:1rem; font-weight:700">Seleccionar Método</h3>
+                    <p style="color:#94a3b8; font-size:0.75rem">Elige el tipo de conexión deseada</p>
                 </div>
-            `;
-        } else {
-            // Puerto automático para otros
-            const ports = {dropbear:'44', badvpn:'7300', 'mx-proxy':'80', 'ws-epro':'80'};
-            const p = ports[id] || '80';
-            sub.innerHTML = `
-                <h4 style="margin-bottom:14px; font-size:0.9rem; color:var(--text-muted)">PUERTO DE INSTALACIÓN:</h4>
-                <input type="number" id="subPort" value="${p}" style="width:100%; padding:12px; background:var(--bg-elevated); border:1px solid var(--border); border-radius:10px; color:white; margin-bottom:12px">
-                <button class="btn-primary" onclick="executeAdvancedInstall('${id}','',document.getElementById('subPort').value)">INICIAR INSTALACIÓN</button>
-            `;
-        }
+                <span style="background:rgba(6,182,212,0.1); color:var(--primary); font-size:0.65rem; font-weight:700; padding:4px 10px; border-radius:6px">ESPERANDO</span>
+            </div>
+            <div id="methodList">
+                ${methods.map(m => `
+                    <div class="method-card" data-mode="${m.id}" onclick="selectInstallMethod(this)">
+                        <div class="method-icon"><i class="fa-solid ${m.icon}"></i></div>
+                        <div class="method-info">
+                            <span class="method-name">${m.name}</span>
+                            <span class="method-desc">${m.desc}</span>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+            <button id="btnStartInstall" class="btn-start-install" disabled onclick="handleAdvancedInstallExec('${id}')">
+                COMENZAR INSTALACIÓN
+            </button>
+        `;
+        sub.innerHTML = html;
     } else if (action === 'port') {
         sub.innerHTML = `
             <h4 style="margin-bottom:14px; font-size:0.9rem; color:var(--text-muted)">NUEVO PUERTO:</h4>
@@ -476,8 +486,24 @@ function showSvcActionMenu(id, action) {
         `;
     }
 
-    // Scroll suave al submenú
     sub.scrollIntoView({ behavior: 'smooth' });
+}
+
+let selectedInstallMode = null;
+
+function selectInstallMethod(el) {
+    document.querySelectorAll('.method-card').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+    selectedInstallMode = el.dataset.mode;
+    
+    const btn = document.getElementById('btnStartInstall');
+    btn.disabled = false;
+    btn.classList.add('ready');
+}
+
+async function handleAdvancedInstallExec(id) {
+    if (!selectedInstallMode) return;
+    executeAdvancedInstall(id, selectedInstallMode, '443');
 }
 
 async function executeAdvancedInstall(id, mode, port) {
