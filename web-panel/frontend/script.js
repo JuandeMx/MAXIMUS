@@ -448,36 +448,54 @@ function showSvcActionMenu(id, action) {
     sub.style.display = 'block';
 
     if (action === 'install') {
-        const methods = [
-            { id: '1', name: 'Instalar Directo', desc: 'Conexión estándar sin intermediarios', icon: 'fa-terminal' },
-            { id: '2', name: 'Instalar con Proxy', desc: 'Enrutamiento a través de un servidor Proxy', icon: 'fa-network-wired' },
-            { id: '3', name: 'Modo Compatibilidad', desc: 'Funciones experimentales y ajustes (Híbrido)', icon: 'fa-flask' }
-        ];
+        if (id === 'stunnel4') {
+            const methods = [
+                { id: '1', name: 'Instalar Directo', desc: 'Conexión estándar sin intermediarios', icon: 'fa-terminal' },
+                { id: '2', name: 'Instalar con Proxy', desc: 'Enrutamiento a través de un servidor Proxy', icon: 'fa-network-wired' },
+                { id: '3', name: 'Modo Compatibilidad', desc: 'Funciones experimentales y ajustes (Híbrido)', icon: 'fa-flask' }
+            ];
 
-        let html = `
-            <div class="bg-[#1a1f2e]" style="padding:16px; background:#1a1f2e; border-radius:18px; border:1px solid #33415555; display:flex; justify-content:space-between; align-items:center; margin-bottom:20px">
-                <div>
-                    <h3 style="color:white; font-size:1rem; font-weight:700">Seleccionar Método</h3>
-                    <p style="color:#94a3b8; font-size:0.75rem">Elige el tipo de conexión deseada</p>
-                </div>
-                <span style="background:rgba(6,182,212,0.1); color:var(--primary); font-size:0.65rem; font-weight:700; padding:4px 10px; border-radius:6px">ESPERANDO</span>
-            </div>
-            <div id="methodList">
-                ${methods.map(m => `
-                    <div class="method-card" data-mode="${m.id}" onclick="selectInstallMethod(this)">
-                        <div class="method-icon"><i class="fa-solid ${m.icon}"></i></div>
-                        <div class="method-info">
-                            <span class="method-name">${m.name}</span>
-                            <span class="method-desc">${m.desc}</span>
-                        </div>
+            let html = `
+                <div style="padding:16px; background:#1a1f2e; border-radius:18px; border:1px solid #33415555; display:flex; justify-content:space-between; align-items:center; margin-bottom:20px">
+                    <div>
+                        <h3 style="color:white; font-size:1rem; font-weight:700">Seleccionar Método</h3>
+                        <p style="color:#94a3b8; font-size:0.75rem">Elige el tipo de conexión deseada</p>
                     </div>
-                `).join('')}
-            </div>
-            <button id="btnStartInstall" class="btn-start-install" disabled onclick="handleAdvancedInstallExec('${id}')">
-                COMENZAR INSTALACIÓN
-            </button>
-        `;
-        sub.innerHTML = html;
+                    <span style="background:rgba(6,182,212,0.1); color:var(--primary); font-size:0.65rem; font-weight:700; padding:4px 10px; border-radius:6px">ESPERANDO</span>
+                </div>
+                <div id="methodList">
+                    ${methods.map(m => `
+                        <div class="method-card" data-mode="${m.id}" onclick="selectInstallMethod(this)">
+                            <div class="method-icon"><i class="fa-solid ${m.icon}"></i></div>
+                            <div class="method-info">
+                                <span class="method-name">${m.name}</span>
+                                <span class="method-desc">${m.desc}</span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+                <button id="btnStartInstall" class="btn-start-install" disabled onclick="handleAdvancedInstallExec('${id}')">
+                    COMENZAR INSTALACIÓN
+                </button>
+            `;
+            sub.innerHTML = html;
+        } else {
+            // Puerto automático para otros servicios (Dropbear, Proxy, etc)
+            const defaultPorts = {dropbear:'44', badvpn:'7300', 'mx-proxy':'80', 'ws-epro':'80', 'hysteria':'443', 'x-ui':'8080'};
+            const p = defaultPorts[id] || '80';
+            sub.innerHTML = `
+                <div style="padding:16px; background:#1a1f2e; border-radius:18px; border:1px solid #33415555; margin-bottom:20px">
+                    <h3 style="color:white; font-size:1rem; font-weight:700; margin-bottom:14px">Configurar Instalación</h3>
+                    <div class="field" style="margin-bottom:16px">
+                        <label style="display:block; color:#94a3b8; font-size:0.75rem; margin-bottom:8px">PUERTO DE ESCUCHA:</label>
+                        <input type="number" id="subPort" value="${p}" style="width:100%; padding:12px; background:var(--bg-elevated); border:1px solid var(--border); border-radius:10px; color:white; font-size:0.9rem; outline:none">
+                    </div>
+                    <button class="btn-primary" onclick="executeAdvancedInstall('${id}','',document.getElementById('subPort').value)" style="margin:0; width:100%">
+                        <i class="fa-solid fa-download"></i> INICIAR INSTALACIÓN
+                    </button>
+                </div>
+            `;
+        }
     } else if (action === 'port') {
         sub.innerHTML = `
             <h4 style="margin-bottom:14px; font-size:0.9rem; color:var(--text-muted)">NUEVO PUERTO:</h4>
