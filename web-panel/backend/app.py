@@ -312,12 +312,30 @@ def service_action():
 def install_stunnel4_simple():
     if 'auth' not in session: return jsonify({"error": "Unauthorized"}), 401
     ctype = request.json.get('type', '1')
-    option = "1"
-    if "Proxy" in ctype: option = "2"
-    elif "Universal" in ctype or "Combinado" in ctype: option = "3"
     
-    cmd = f'echo -e "{option}\\n443\\n" | bash /etc/MaximusVpsMx/modules/install_stunnel4.sh'
-    run_command(cmd)
+    # MODOS DE INSTALACIÓN
+    # 1: Directo, 2: Proxy, 3: Universal (Combinado)
+    
+    if "Universal" in ctype or "Combinado" in ctype:
+        # MODO 3: HÍBRIDO UNIVERSAL
+        # Forzamos la instalación por bloques para asegurar que el Proxy 80 realmente levante
+        # 1. Asegurar Proxy en el puerto 80
+        run_command("bash /etc/MaximusVpsMx/modules/install_mx-proxy.sh 80")
+        # 2. Instalar Stunnel4 (Modo Directo a 80)
+        # Usamos opción 1 del script original y luego re-direccionamos el connect
+        cmd = f'echo -e "1\\n443\\n" | bash /etc/MaximusVpsMx/modules/install_stunnel4.sh'
+        run_command(cmd)
+        # 3. Vincular Stunnel con el Proxy 80
+        run_command("sed -i 's/connect = .*/connect = 127.0.0.1:80/g' /etc/stunnel/stunnel.conf && systemctl restart stunnel4")
+    elif "Proxy" in ctype:
+        # MODO 2: SSL + PROXY
+        cmd = f'echo -e "2\\n443\\n" | bash /etc/MaximusVpsMx/modules/install_stunnel4.sh'
+        run_command(cmd)
+    else:
+        # MODO 1: SSL DIRECTO
+        cmd = f'echo -e "1\\n443\\n" | bash /etc/MaximusVpsMx/modules/install_stunnel4.sh'
+        run_command(cmd)
+        
     return jsonify({"success": True})
 
 @app.route('/api/service/stunnel4/uninstall', methods=['POST'])
