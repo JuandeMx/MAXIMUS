@@ -174,28 +174,161 @@ def list_users():
     if 'logged_in' not in session:
         return jsonify({"error": "No autorizado"}), 401
     users = []
-    today = datetime.datetime.now().strftime("%Y-%m-%d")
+    today = datetime.datetime.now()
+    today_str = today.strftime("%Y-%m-%d")
     if os.path.exists(USERS_DB):
         with open(USERS_DB, "r") as f:
             for line in f:
                 parts = line.strip().split(':')
                 if len(parts) >= 3:
-                    expired = parts[2] < today
+                    expired = parts[2] < today_str
+                    try:
+                        exp_dt = datetime.datetime.strptime(parts[2], "%Y-%m-%d")
+                        days_left = max(0, (exp_dt - today).days)
+                    except:
+                        days_left = 0
+                    limit = parts[3] if len(parts) >= 4 else "1"
+                    hwid = parts[4] if len(parts) >= 5 else "OFF"
+                    # Check if locked in system
+                    lock_check = run_command(f"passwd -S {parts[0]} 2>/dev/null | awk '{{print $2}}'")
+                    locked = lock_check in ("L", "LK")
                     users.append({
                         "username": parts[0], "password": parts[1], "expiry": parts[2],
-                        "type": "SSH/SSL", "status": "Expired" if expired else "Active",
+                        "type": "SSH/SSL", "status": "Locked" if locked else ("Expired" if expired else "Active"),
+                        "days_left": days_left, "limit": limit, "hwid": hwid,
                     })
     if os.path.exists(HYSTERIA_DB):
         with open(HYSTERIA_DB, "r") as f:
             for line in f:
                 parts = line.strip().split(':')
                 if len(parts) >= 3:
-                    expired = parts[2] < today
+                    expired = parts[2] < today_str
+                    try:
+                        exp_dt = datetime.datetime.strptime(parts[2], "%Y-%m-%d")
+                        days_left = max(0, (exp_dt - today).days)
+                    except:
+                        days_left = 0
                     users.append({
                         "username": parts[0], "password": parts[1], "expiry": parts[2],
                         "type": "Hysteria", "status": "Expired" if expired else "Active",
+                        "days_left": days_left, "limit": "--", "hwid": "N/A",
                     })
     return jsonify(users)
+
+@app.route('/api/users/renew', methods=['POST'])
+def renew_user():
+    if 'logged_in' not in session:
+        return jsonify({"error": "No autorizado"}), 401
+    data = request.json
+    username = data.get('username', '').strip()
+    days = int(data.get('days', 3))
+    if not username or days < 1:
+        return jsonify({"error": "Datos inválidos"}), 400
+
+    if os.path.exists(USERS_DB):
+        with open(USERS_DB, "r") as f:
+            lines = f.readlines()
+        updated = False
+        new_lines = []
+        for line in lines:
+            parts = line.strip().split(':')
+            if parts[0] == username:
+                old_exp = parts[2]
+                today = datetime.datetime.now()
+                try:
+                    old_dt = datetime.datetime.strptime(old_exp, "%Y-%m-%d")
+                    base = old_dt if old_dt > today else today
+                except:
+                    base = today
+                new_exp = (base + datetime.timedelta(days=days)).strftime("%Y-%m-%d")
+                parts[2] = new_exp
+                new_lines.append(':'.join(parts) + '\n')
+                run_command(f"chage -E {new_exp} {username} 2>/dev/null")
+                updated = True
+            else:
+                new_lines.append(line)
+        if updated:
+            with open(USERS_DB, "w") as f:
+                f.writelines(new_lines)
+            return jsonify({"success": True, "new_expiry": new_exp})
+    return jsonify({"error": "Usuario no encontrado"}), 404
+
+@app.route('/api/users/change-password', methods=['POST'])
+def change_password():
+    if 'logged_in' not in session:
+        return jsonify({"error": "No autorizado"}), 401
+    data = request.json
+    username = data.get('username', '').strip()
+    new_pass = data.get('password', '').strip()
+    if not username or not new_pass:
+        return jsonify({"error": "Datos incompletos"}), 400
+
+    run_command(f"echo '{username}:{new_pass}' | chpasswd")
+    if os.path.exists(USERS_DB):
+        with open(USERS_DB, "r") as f:
+            lines = f.readlines()
+        with open(USERS_DB, "w") as f:
+            for line in lines:
+                parts = line.strip().split(':')
+                if parts[0] == username and len(parts) >= 2:
+                    parts[1] = new_pass
+                    f.write(':'.join(parts) + '\n')
+                else:
+                    f.write(line)
+    return jsonify({"success": True})
+
+@app.route('/api/users/toggle-lock', methods=['POST'])
+def toggle_lock():
+    if 'logged_in' not in session:
+        return jsonify({"error": "No autorizado"}), 401
+    data = request.json
+    username = data.get('username', '').strip()
+    if not username:
+        return jsonify({"error": "Falta username"}), 400
+
+    status = run_command(f"passwd -S {username} 2>/dev/null | awk '{{print $2}}'")
+    if status in ("L", "LK"):
+        run_command(f"usermod -U {username} 2>/dev/null")
+        return jsonify({"success": True, "locked": False, "message": f"{username} desbloqueado"})
+    else:
+        run_command(f"usermod -L {username} 2>/dev/null")
+        return jsonify({"success": True, "locked": True, "message": f"{username} bloqueado"})
+
+@app.route('/api/users/purge-expired', methods=['POST'])
+def purge_expired():
+    if 'logged_in' not in session:
+        return jsonify({"error": "No autorizado"}), 401
+    today_str = datetime.datetime.now().strftime("%Y-%m-%d")
+    removed = []
+    if os.path.exists(USERS_DB):
+        with open(USERS_DB, "r") as f:
+            lines = f.readlines()
+        keep = []
+        for line in lines:
+            parts = line.strip().split(':')
+            if len(parts) >= 3 and parts[2] < today_str:
+                run_command(f"userdel -f {parts[0]} 2>/dev/null")
+                removed.append(parts[0])
+            else:
+                keep.append(line)
+        with open(USERS_DB, "w") as f:
+            f.writelines(keep)
+    return jsonify({"success": True, "removed": removed, "count": len(removed)})
+
+@app.route('/api/settings/credentials', methods=['POST'])
+def change_credentials():
+    if 'logged_in' not in session:
+        return jsonify({"error": "No autorizado"}), 401
+    global ADMIN_USER, ADMIN_PASS
+    data = request.json
+    new_user = data.get('username', '').strip()
+    new_pass = data.get('password', '').strip()
+    if not new_user or not new_pass:
+        return jsonify({"error": "Campos vacíos"}), 400
+    ADMIN_USER = new_user
+    ADMIN_PASS = new_pass
+    return jsonify({"success": True, "message": "Credenciales actualizadas (se aplicarán hasta reiniciar el panel)"})
+
 
 @app.route('/api/users/delete', methods=['POST'])
 def delete_user():

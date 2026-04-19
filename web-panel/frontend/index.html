@@ -44,6 +44,10 @@
                 <i class="fa-solid fa-network-wired"></i>
                 <span>Conexiones</span>
             </a>
+            <a href="#" class="nav-link" data-tab="settings">
+                <i class="fa-solid fa-gear"></i>
+                <span>Configuración</span>
+            </a>
         </nav>
 
         <div class="sidebar-bottom">
@@ -182,6 +186,7 @@
                             <i class="fa-solid fa-magnifying-glass"></i>
                             <input type="text" id="userSearch" placeholder="Buscar usuario..." oninput="filterUsers()">
                         </div>
+                        <button class="btn-action" onclick="purgeExpired()" title="Limpiar vencidos" style="color:var(--danger)"><i class="fa-solid fa-broom"></i></button>
                         <button class="btn-action" onclick="fetchUsers()"><i class="fa-solid fa-rotate"></i></button>
                     </div>
                 </div>
@@ -193,12 +198,14 @@
                                 <th>Tipo</th>
                                 <th>Contraseña</th>
                                 <th>Vencimiento</th>
+                                <th>Restante</th>
+                                <th>Límite</th>
                                 <th>Estado</th>
                                 <th>Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="userListBody">
-                            <tr><td colspan="6" class="empty-state"><i class="fa-solid fa-spinner fa-spin"></i> Cargando...</td></tr>
+                            <tr><td colspan="8" class="empty-state"><i class="fa-solid fa-spinner fa-spin"></i> Cargando...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -312,6 +319,50 @@
                             <tr><td colspan="5" class="empty-state">Cargando conexiones...</td></tr>
                         </tbody>
                     </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB: SETTINGS -->
+        <section id="tab-settings" class="tab-panel">
+            <div class="settings-grid">
+                <!-- Credenciales -->
+                <div class="panel-card">
+                    <div class="card-toolbar">
+                        <h3><i class="fa-solid fa-user-shield"></i> Credenciales del Panel</h3>
+                    </div>
+                    <div style="padding:20px">
+                        <div class="field" style="margin-bottom:16px">
+                            <label>Usuario Admin</label>
+                            <div class="field-input">
+                                <i class="fa-solid fa-user"></i>
+                                <input type="text" id="settingsUser" placeholder="admin">
+                            </div>
+                        </div>
+                        <div class="field" style="margin-bottom:16px">
+                            <label>Contraseña Admin</label>
+                            <div class="field-input">
+                                <i class="fa-solid fa-lock"></i>
+                                <input type="password" id="settingsPass" placeholder="••••••">
+                            </div>
+                        </div>
+                        <button class="btn-primary" onclick="saveCredentials()" style="width:100%">
+                            <i class="fa-solid fa-floppy-disk"></i> GUARDAR CREDENCIALES
+                        </button>
+                    </div>
+                </div>
+                <!-- Info del Sistema -->
+                <div class="panel-card">
+                    <div class="card-toolbar">
+                        <h3><i class="fa-solid fa-circle-info"></i> Información del Sistema</h3>
+                    </div>
+                    <div class="system-info-grid" style="padding:20px">
+                        <div class="sys-item"><span>Panel Puerto</span><span>8082</span></div>
+                        <div class="sys-item"><span>IP Servidor</span><span id="settings-ip">--</span></div>
+                        <div class="sys-item"><span>Sistema</span><span id="settings-os">--</span></div>
+                        <div class="sys-item"><span>Kernel</span><span id="settings-kernel">--</span></div>
+                        <div class="sys-item"><span>Uptime</span><span id="settings-uptime">--</span></div>
+                    </div>
                 </div>
             </div>
         </section>

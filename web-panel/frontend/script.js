@@ -138,6 +138,16 @@ function updateDashboard(data) {
     document.getElementById('server-ip').innerText = data.system?.ip || '--';
     document.getElementById('server-os').innerText = data.system?.os || '--';
 
+    // Settings tab info (if elements exist)
+    const sIP = document.getElementById('settings-ip');
+    if (sIP) sIP.innerText = data.system?.ip || '--';
+    const sOS = document.getElementById('settings-os');
+    if (sOS) sOS.innerText = data.system?.os || '--';
+    const sKer = document.getElementById('settings-kernel');
+    if (sKer) sKer.innerText = data.system?.kernel || '--';
+    const sUp = document.getElementById('settings-uptime');
+    if (sUp) sUp.innerText = data.uptime || '--';
+
     // Chart
     chartHistory.cpu.push(cpuVal);
     chartHistory.cpu.shift();
@@ -231,17 +241,30 @@ async function fetchUsers() {
 function renderUsers(users) {
     const tbody = document.getElementById('userListBody');
     if (!users.length) {
-        tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No hay usuarios registrados</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No hay usuarios registrados</td></tr>';
         return;
     }
-    tbody.innerHTML = users.map(u => `<tr>
+    tbody.innerHTML = users.map(u => {
+        const statusClass = u.status === 'Active' ? 'status-active' : (u.status === 'Locked' ? 'status-locked' : 'status-expired');
+        const daysColor = u.days_left <= 1 ? 'var(--danger)' : (u.days_left <= 3 ? '#f59e0b' : 'var(--success)');
+        const lockIcon = u.status === 'Locked' ? 'fa-lock-open' : 'fa-lock';
+        const lockTitle = u.status === 'Locked' ? 'Desbloquear' : 'Bloquear';
+        return `<tr>
         <td><strong>${u.username}</strong></td>
         <td><span class="badge ${u.type === 'SSH/SSL' ? 'badge-ssh' : 'badge-hy'}">${u.type}</span></td>
         <td><code>${u.password}</code></td>
         <td>${u.expiry}</td>
-        <td><span class="${u.status === 'Active' ? 'status-active' : 'status-expired'}">${u.status}</span></td>
-        <td><button class="btn-delete" onclick="deleteUser('${u.username}')"><i class="fa-solid fa-trash-can"></i></button></td>
-    </tr>`).join('');
+        <td style="color:${daysColor};font-weight:700">${u.days_left}d</td>
+        <td>${u.limit}</td>
+        <td><span class="${statusClass}">${u.status}</span></td>
+        <td class="user-actions">
+            <button class="btn-mini btn-renew" onclick="renewUser('${u.username}')" title="Renovar"><i class="fa-solid fa-calendar-plus"></i></button>
+            <button class="btn-mini btn-pass" onclick="changeUserPass('${u.username}')" title="Cambiar contraseña"><i class="fa-solid fa-key"></i></button>
+            <button class="btn-mini btn-lock" onclick="toggleLockUser('${u.username}')" title="${lockTitle}"><i class="fa-solid ${lockIcon}"></i></button>
+            <button class="btn-mini btn-del" onclick="deleteUser('${u.username}')" title="Eliminar"><i class="fa-solid fa-trash-can"></i></button>
+        </td>
+    </tr>`;
+    }).join('');
 }
 
 function filterUsers() {
@@ -269,6 +292,98 @@ async function deleteUser(username) {
         showToast('❌ Error de conexión');
     }
 }
+
+async function renewUser(username) {
+    const days = prompt(`¿Cuántos días renovar para "${username}"?`, '30');
+    if (!days || isNaN(days) || days < 1) return;
+    try {
+        const res = await fetch('/api/users/renew', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ username, days: parseInt(days) })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast(`✅ ${username} renovado hasta ${data.new_expiry}`);
+            fetchUsers();
+        } else {
+            showToast(`❌ ${data.error}`);
+        }
+    } catch (e) { showToast('❌ Error de conexión'); }
+}
+
+async function changeUserPass(username) {
+    const newPass = prompt(`Nueva contraseña para "${username}":`);
+    if (!newPass || newPass.trim().length < 1) return;
+    try {
+        const res = await fetch('/api/users/change-password', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ username, password: newPass.trim() })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast(`✅ Contraseña de ${username} actualizada`);
+            fetchUsers();
+        } else {
+            showToast(`❌ ${data.error}`);
+        }
+    } catch (e) { showToast('❌ Error de conexión'); }
+}
+
+async function toggleLockUser(username) {
+    try {
+        const res = await fetch('/api/users/toggle-lock', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ username })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast(data.locked ? `🔒 ${username} bloqueado` : `🔓 ${username} desbloqueado`);
+            fetchUsers();
+        } else {
+            showToast(`❌ ${data.error}`);
+        }
+    } catch (e) { showToast('❌ Error de conexión'); }
+}
+
+async function purgeExpired() {
+    if (!confirm('¿Eliminar TODOS los usuarios vencidos del sistema?')) return;
+    try {
+        const res = await fetch('/api/users/purge-expired', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'}
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast(`🧹 ${data.count} usuarios vencidos eliminados`);
+            fetchUsers();
+        }
+    } catch (e) { showToast('❌ Error de conexión'); }
+}
+
+async function saveCredentials() {
+    const user = document.getElementById('settingsUser').value.trim();
+    const pass = document.getElementById('settingsPass').value.trim();
+    if (!user || !pass) { showToast('⚠️ Completa ambos campos'); return; }
+    try {
+        const res = await fetch('/api/settings/credentials', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ username: user, password: pass })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast(`✅ ${data.message}`);
+            document.getElementById('settingsUser').value = '';
+            document.getElementById('settingsPass').value = '';
+        } else {
+            showToast(`❌ ${data.error}`);
+        }
+    } catch (e) { showToast('❌ Error de conexión'); }
+}
+
 
 // ========== SERVICES ==========
 async function fetchServices() {
