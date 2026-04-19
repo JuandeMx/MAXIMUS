@@ -109,7 +109,23 @@ class ConnectionHandler(threading.Thread):
                         client_buffer += chunk
                     else: break
                 
-                # Enviar de vuelta la respuesta HTTP esperada por el cliente Injector
+                # Procesar Payload Split (100-continue)
+                is_split = b'100-continue' in client_buffer.lower()
+                if is_split:
+                    self.client.sendall(b'HTTP/1.1 100 Continue\r\n\r\n')
+                    second_buffer = b''
+                    deadline = time.time() + 3
+                    while b'\r\n\r\n' not in second_buffer and b'\n\n' not in second_buffer:
+                        if time.time() > deadline: break
+                        r, _, _ = select.select([self.client], [], [], 0.5)
+                        if r:
+                            chunk = self.client.recv(BUFLEN)
+                            if not chunk: break
+                            second_buffer += chunk
+                        else: break
+                    client_buffer += second_buffer
+
+                # Enviar de vuelta la respuesta HTTP final esperada
                 if b'upgrade: websocket' in client_buffer.lower():
                     self.client.sendall(RESPONSE_WS)
                 else:
