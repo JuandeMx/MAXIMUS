@@ -29,17 +29,17 @@ def is_service_active(name):
     return subprocess.run(f"systemctl is-active --quiet {name}", shell=True).returncode == 0
 
 def is_installed(name):
-    """Chequea si un servicio/binario está realmente instalado y registrado"""
+    """Chequea si un servicio/binario está realmente instalado y configurado"""
     checks = {
         "ssh": "dpkg -l openssh-server 2>/dev/null | grep -q '^ii'",
-        "dropbear": "dpkg -l dropbear 2>/dev/null | grep -q '^ii'",
-        "ws-epro": "systemctl list-unit-files | grep -q 'ws-epro.service'",
-        "mx-proxy": "systemctl list-unit-files | grep -q 'mx-proxy.service'",
-        "stunnel4": "dpkg -l stunnel4 2>/dev/null | grep -q '^ii'",
+        "dropbear": "test -f /etc/default/dropbear",
+        "ws-epro": "test -f /etc/systemd/system/ws-epro.service",
+        "mx-proxy": "test -f /etc/systemd/system/mx-proxy.service",
+        "stunnel4": "test -f /etc/stunnel/stunnel.conf",
         "badvpn": "test -f /usr/local/bin/badvpn-udpgw",
         "openvpn-server@server": "test -f /etc/openvpn/server/server.conf",
-        "mx-slowdns": "systemctl list-unit-files | grep -q 'mx-slowdns.service'",
-        "udp-custom": "systemctl list-unit-files | grep -q 'udp-custom.service'",
+        "mx-slowdns": "test -f /etc/systemd/system/mx-slowdns.service",
+        "udp-custom": "test -f /etc/systemd/system/udp-custom.service",
         "hysteria": "test -x /etc/hysteria/hysteria 2>/dev/null || test -x /usr/local/bin/hysteria 2>/dev/null",
         "x-ui": "test -f /usr/local/x-ui/x-ui",
         "mx-webpanel": "systemctl list-unit-files | grep -q 'mx-webpanel.service'",
