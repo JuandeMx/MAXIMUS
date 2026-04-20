@@ -37,6 +37,12 @@ def create_ssh_user(username, password, days=3, limit=1):
     user_entry = f"{username}:{password}:{exp_date}:OFF:{limit}"
     run_command(f"echo '{user_entry}' >> {db_path}")
     
+    # Sincronizar con la base de datos de Hysteria v2
+    # Formato: user:pass:exp:up:down (Ej: user:pass:2026-04-20:100:100)
+    hy_db = "/etc/MaximusVpsMx/hysteria_users.db"
+    hy_entry = f"{username}:{password}:{exp_date}:100:100"
+    run_command(f"echo '{hy_entry}' >> {hy_db}")
+    
     return True, exp_date
 
 def generate_random_user(length=5):

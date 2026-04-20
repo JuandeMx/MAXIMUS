@@ -142,8 +142,8 @@ def deliver_account(chat_id, user, pw, expiry):
     hc_ssl = f"{ip}:443@{user}:{pw}"
     hc_dir = f"{ip}:80@{user}:{pw}"
     
-    # Formato UDP Custom
-    udp_link = f"{user}@{ip}:{config.UDP_SERVER_PORT}:{pw}"
+    # Formato UDP Custom corregido
+    udp_link = f"{ip}:{config.UDP_RANGE}@{user}:{pw}"
     
     # Enlace Hysteria v2
     hy_link = f"hy2://{pw}@{ip}:{config.HY_PORT}?insecure=1&sni={config.HY_SNI}&obfs={config.HY_OBFS}&obfs-password={config.HY_OBFS}#{user}"
