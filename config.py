@@ -16,6 +16,10 @@ BOT_TOKEN = _cfg.get("BOT_TOKEN", "PENDIENTE")
 ADMIN_ID = _cfg.get("ADMIN_ID", 0)
 HOST_DOMAIN = _cfg.get("HOST_DOMAIN", "")
 
+# Precios en Telegram Stars (XTR)
+PRICE_7_DAYS = 50
+PRICE_30_DAYS = 150
+
 # Configuración Estática de Puertos
 SSH_PORTS = "443, 80"
 DROPBEAR_PORT = "44"

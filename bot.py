@@ -23,12 +23,12 @@ except Exception as e:
 @bot.message_handler(commands=['start', 'menu'])
 def send_welcome(message):
     markup = types.InlineKeyboardMarkup(row_width=2)
-    item_free = types.InlineKeyboardButton("🎁 Cuenta Gratis (3d)", callback_data="get_free")
-    item_premium = types.InlineKeyboardButton("💎 Cuenta Premium", callback_data="get_premium")
-    item_stats = types.InlineKeyboardButton("📈 Estado Servidor", callback_data="get_stats")
+    item_free = types.InlineKeyboardButton("🆓 Prueba Gratis (3d)", callback_data="get_free")
+    item_buy = types.InlineKeyboardButton("💎 Comprar Premium", callback_data="buy_premium")
+    item_stats = types.InlineKeyboardButton("📊 Estadísticas", callback_data="show_stats")
     item_support = types.InlineKeyboardButton("🆘 Soporte", url="https://t.me/TuSoporte")
     
-    markup.add(item_free, item_premium)
+    markup.add(item_free, item_buy)
     markup.add(item_stats, item_support)
     
     bot.send_message(
@@ -42,15 +42,21 @@ def send_welcome(message):
 def callback_handler(call):
     if call.data == "get_free":
         handle_free_trial(call.message)
-    elif call.data == "get_premium":
-        bot.send_message(call.message.chat.id, "✨ Iniciando solicitud Premium...")
-        ask_premium_username(call.message)
+    elif call.data == "buy_premium":
+        show_buy_menu(call)
     elif call.data == "get_stats":
-        show_server_stats(call.message)
+        show_server_stats(call.message.chat.id, call.from_user.id)
+    elif call.data == "show_stats":
+        show_server_stats(call.message.chat.id, call.from_user.id)
+    elif call.data == "start":
+        send_welcome(call.message)
     elif call.data.startswith("approve_"):
-        # Formato: approve_user_id_username_password
         _, client_id, username, password = call.data.split("_")
         process_admin_approval(call, client_id, username, password)
+    elif call.data.startswith("pay_"):
+        send_stars_invoice(call)
+    elif call.data.startswith("renew_ads_"):
+        process_renew_ads(call)
 
 def process_admin_approval(call, client_id, username, password):
     bot.edit_message_text("⏳ Procesando creación...", call.message.chat.id, call.message.message_id)
@@ -91,44 +97,77 @@ def handle_free_trial(message):
     else:
         bot.reply_to(message, "❌ Hubo un problema al crear tu cuenta. Intenta más tarde.")
 
-# --- FLUJO CUENTA PREMIUM ---
+# --- SISTEMA DE PAGOS (TELEGRAM STARS) ---
 
-def ask_premium_username(message):
-    msg = bot.send_message(message.chat.id, "👤 *Escribe el Nombre de Usuario que deseas:*", parse_mode="Markdown")
-    bot.register_next_step_handler(msg, validate_premium_username)
-
-def validate_premium_username(message):
-    username = message.text.strip().lower()
+def show_buy_menu(call):
+    kb = types.InlineKeyboardMarkup()
+    kb.add(types.InlineKeyboardButton(f"⚡ Standard (7 días) - {config.PRICE_7_DAYS} ⭐", callback_data="pay_7_days"))
+    kb.add(types.InlineKeyboardButton(f"💎 Premium (30 días) - {config.PRICE_30_DAYS} ⭐", callback_data="pay_30_days"))
+    kb.add(types.InlineKeyboardButton("⬅️ Volver", callback_data="start"))
     
-    if len(username) < 4:
-        msg = bot.send_message(message.chat.id, "⚠️ El usuario debe tener al menos 4 caracteres. Intenta de nuevo:")
-        bot.register_next_step_handler(msg, validate_premium_username)
-        return
+    msg = """
+*💎 SELECCIONA TU PLAN PREMIUM* 🚀
+━━━━━━━━━━━━━━━━━━━━
+Obtén acceso ilimitado a nuestros servidores de alta velocidad.
 
-    if manager.check_user_exists(username):
-        msg = bot.send_message(message.chat.id, "🚫 *Este usuario ya está en uso.* Por favor, elige otro:")
-        bot.register_next_step_handler(msg, validate_premium_username)
-        return
+🔹 *Beneficios:*
+• Sin anuncios.
+• Soporte prioritario.
+• Conexión ultra estable.
+• Acceso a todos los protocolos.
+━━━━━━━━━━━━━━━━━━━━
+_Precios expresados en Telegram Stars (XTR)._
+"""
+    bot.edit_message_text(msg, call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=kb)
 
-    ask_premium_password(message, username)
-
-def ask_premium_password(message, username):
-    msg = bot.send_message(message.chat.id, f"🔑 Perfecto, ahora elige una contraseña para el usuario *{username}*:", parse_mode="Markdown")
-    bot.register_next_step_handler(msg, process_premium_creation, username)
-
-def process_premium_creation(message, username):
-    password = message.text.strip()
-    user_id = message.chat.id
+def send_stars_invoice(call):
+    plan = call.data.replace("pay_", "")
     
-    # Lógica de Validación de Pago (Simulación de Envío al Admin)
-    bot.send_message(user_id, "📡 *Enviando solicitud de aprobación al Administrador...*", parse_mode="Markdown")
+    if plan == "7_days":
+        title = "Maximus Standard (7 días)"
+        desc = "Acceso Standard por una semana a nuestros servidores SSH/VPN."
+        price = config.PRICE_7_DAYS
+        payload = "plan_7_days"
+    else:
+        title = "Maximus Premium (30 días)"
+        desc = "Acceso Premium completo por un mes a nuestra red Maximus Elite."
+        price = config.PRICE_30_DAYS
+        payload = "plan_30_days"
+        
+    bot.send_invoice(
+        call.message.chat.id,
+        title=title,
+        description=desc,
+        invoice_payload=payload,
+        provider_token="", # Vacío para Telegram Stars
+        currency="XTR",
+        prices=[types.LabeledPrice(label="Stars", amount=price)],
+        start_parameter="maximus-premium"
+    )
+
+@bot.pre_checkout_query_handler(func=lambda query: True)
+def process_pre_checkout(pre_checkout_query):
+    bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
+
+@bot.message_handler(content_types=['successful_payment'])
+def handle_payment_success(message):
+    payload = message.successful_payment.invoice_payload
+    user_id = message.from_user.id
+    username_tg = message.from_user.username
     
-    # Notificar al Admin
-    if config.ADMIN_ID != 0:
-        markup = types.InlineKeyboardMarkup()
-        btn = types.InlineKeyboardButton("✅ APROBAR Y CREAR", callback_data=f"approve_{user_id}_{username}_{password}")
-        markup.add(btn)
-        bot.send_message(config.ADMIN_ID, f"🔔 *NUEVA SOLICITUD PREMIUM*\nUsuario: `{username}`\nRemitente: @{message.from_user.username}", reply_markup=markup, parse_mode="Markdown")
+    days = 7 if "7_days" in payload else 30
+    
+    bot.send_message(user_id, "✅ *PAGO PROCESADO CON ÉXITO* 🌟\n\nGenerando tus credenciales...", parse_mode="Markdown")
+    
+    username = manager.generate_random_user()
+    password = manager.generate_random_pass()
+    
+    success, expiry = manager.create_ssh_user(username, password, days=days)
+    if success:
+        db.update_trial(user_id, username_tg, username)
+        deliver_account(user_id, username, password, expiry)
+    else:
+        bot.send_message(user_id, "❌ Error al crear la cuenta tras el pago. Por favor contacta a soporte.")
 
 # --- ENTREGA DE DATOS ---
 
