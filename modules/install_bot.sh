@@ -15,7 +15,7 @@ echo -e "${GREEN}🛡️ Iniciando Instalación de Maximus Bot Premium...${NC}"
 echo -e "${YELLOW}[1/5] Instalando dependencias de Python...${NC}"
 apt-get update -y
 apt-get install -y python3-pip sqlite3
-pip3 install pyTelegramBotAPI psutil
+pip3 install pyTelegramBotAPI psutil --break-system-packages
 
 # 2. Configuración Interactiva
 echo -e "${GREEN}⚙️ CONFIGURACIÓN DEL BOT${NC}"
