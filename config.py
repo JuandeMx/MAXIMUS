@@ -23,7 +23,7 @@ PRICE_30_DAYS = 150
 # Configuración Estática de Puertos
 SSH_PORTS = "443, 80"
 DROPBEAR_PORT = "44"
-UDP_RANGE = "7100-7300"
+UDP_RANGE = "7100-7200"
 UDP_SERVER_PORT = "7100" # Puerto principal UDP Custom
 HYSTERIA_RANGE = "2000-5000"
 HY_PORT = "2000" # Puerto principal Hysteria v2
