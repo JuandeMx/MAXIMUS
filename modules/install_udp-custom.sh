@@ -14,7 +14,7 @@ echo -e "${CYAN}=========================================================${NC}"
 echo -e "${YELLOW}         INSTALADOR UDP-CUSTOM (TUNNELING UDP)${NC}"
 echo -e "${CYAN}=========================================================${NC}"
 echo -e "${WHITE} Los clientes usan sus credenciales SSH locales.${NC}"
-echo -e "${CYAN} Formato: IP:7100-7300@usuarioSSH:contraseñaSSH${NC}"
+echo -e "${CYAN} Formato: IP:7100-7200@usuarioSSH:contraseñaSSH${NC}"
 echo -e "${CYAN}=========================================================${NC}"
 
 echo -e "\n${GREEN}[+] Preparando entorno...${NC}"
@@ -119,8 +119,8 @@ echo "net.ipv4.ip_forward=1" >> /etc/sysctl.conf
 echo -e "${GREEN} [OK]${NC}"
 
 # Puerto configurable y Rango (Dinámico)
-udp_range="${1:-7100:7300}"
-# Normalizar formato (ej: 7100-7300 -> 7100:7300)
+udp_range="${1:-7100:7200}"
+# Normalizar formato (ej: 7100-7200 -> 7100:7200)
 udp_range=$(echo $udp_range | tr '-' ':')
 
 # Abrir puertos en firewall y configurar REDIRECCIÓN ESTRATÉGICA (NAT)
@@ -157,11 +157,11 @@ if systemctl is-active --quiet udp-custom; then
     echo -e "\n${GREEN}=========================================================${NC}"
     echo -e "${GREEN} ✅ UDP-CUSTOM INSTALADO CORRECTAMENTE${NC}"
     echo -e "${GREEN}=========================================================${NC}"
-    echo -e "${CYAN} Rango de puertos: 7100-7300${NC}"
+    echo -e "${CYAN} Rango de puertos: 7100-7200${NC}"
     echo -e "${CYAN} Autenticación:    Segura (Usuarios SSH)${NC}"
     echo -e "${GREEN}---------------------------------------------------------${NC}"
     echo -e "${YELLOW} 📋 CONFIGURACIÓN PARA EL CLIENTE:${NC}"
-    echo -e "${WHITE} ${SERVER_IP}:7100-7300@USUARIO:CONTRASEÑA${NC}"
+    echo -e "${WHITE} ${SERVER_IP}:7100-7200@USUARIO:CONTRASEÑA${NC}"
     echo -e "${GREEN}=========================================================${NC}"
 else
     echo -e "\n${RED}=========================================================${NC}"
