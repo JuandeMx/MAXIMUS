@@ -383,13 +383,22 @@ function updateServiceUI(id, data, labelId, accentId, btnId) {
 }
 
 window.switchViewSvc = function(svcId, viewId) {
-    const views = [`viewMain_${svcId}`, `viewSettings_${svcId}`, `viewInstall_${svcId}`, `terminal_${svcId}`];
-    views.forEach(v => {
-        const el = document.getElementById(v);
-        if(el) el.classList.add('proto-hidden');
-    });
+    // Buscar el contenedor de la tarjeta específica
+    const card = document.getElementById(`${svcId}Card`);
+    if(!card) return;
+    
+    // Ocultar todas las sub-vistas dentro de ESTA tarjeta
+    const subViews = card.querySelectorAll('div[id^="view"], div[id^="terminal"]');
+    subViews.forEach(v => v.classList.add('proto-hidden'));
+    
+    // Mostrar la vista objetivo
     const target = document.getElementById(viewId);
-    if(target) target.classList.remove('proto-hidden');
+    if(target) {
+        target.classList.remove('proto-hidden');
+        // Pequeña animación de entrada
+        target.style.opacity = '0';
+        setTimeout(() => { target.style.transition = 'opacity 0.3s ease'; target.style.opacity = '1'; }, 10);
+    }
 }
 
 window.promptServicePort = async function(svcId) {

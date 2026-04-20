@@ -130,255 +130,239 @@
 
         <!-- PANEL SERVICIOS -->
         <div id="tab-services" class="tab-panel">
-            
-            <!-- SSH CARD -->
-            <div class="proto-card" id="sshCard">
-                <div class="proto-accent" id="sshAccent"></div>
-                <div id="viewMain_ssh">
-                    <div class="proto-header">
-                        <i class="fa-solid fa-terminal" style="color: #6366f1; font-size: 1.5rem;"></i>
-                        <h1>SSH Directo</h1>
-                    </div>
-                    <div class="proto-subtitle">Acceso Principal del Servidor</div>
-                    <div class="proto-detail">
-                        <span>Puerto en escucha:</span>
-                        <span id="sshPortTxt">22</span>
-                    </div>
-                    <div id="sshStatusTxt" class="proto-status-text proto-status-online">ONLINE</div>
-                    <button class="proto-btn proto-btn-purple" onclick="switchViewSvc('ssh', 'viewSettings_ssh')">
-                        <i class="fa-solid fa-gear"></i> CONFIGURACIÓN
-                    </button>
-                </div>
-                <div id="viewSettings_ssh" class="proto-hidden">
-                    <div class="proto-back" onclick="switchViewSvc('ssh', 'viewMain_ssh')">
-                        <i class="fa-solid fa-arrow-left"></i> Volver
-                    </div>
-                    <div class="proto-title-section">Opciones de SSH</div>
-                    <div class="proto-grid">
-                        <button class="proto-btn proto-btn-menu" onclick="promptServicePort('ssh')">
-                            <span>🔌 Cambiar Puerto SSH</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- DROPBEAR CARD -->
-            <div class="proto-card" id="dropbearCard">
-                <div class="proto-accent" id="dropbearAccent"></div>
-                <div id="viewMain_dropbear">
-                    <div class="proto-header">
-                        <i class="fa-solid fa-shield-halved" style="color: #0ea5e9; font-size: 1.5rem;"></i>
-                        <h1>Dropbear SSH</h1>
-                    </div>
-                    <div class="proto-subtitle">SSH Ligero de Bajo Consumo</div>
-                    <div class="proto-detail">
-                        <span>Puerto en escucha:</span>
-                        <span id="dropPortTxt">44</span>
-                    </div>
-                    <div id="dropStatusTxt" class="proto-status-text proto-status-offline">OFFLINE</div>
-                    <button class="proto-btn proto-btn-purple" onclick="switchViewSvc('dropbear', 'viewSettings_dropbear')">
-                        <i class="fa-solid fa-gear"></i> CONFIGURACIÓN
-                    </button>
-                </div>
-                <div id="viewSettings_dropbear" class="proto-hidden">
-                    <div class="proto-back" onclick="switchViewSvc('dropbear', 'viewMain_dropbear')">
-                        <i class="fa-solid fa-arrow-left"></i> Volver
-                    </div>
-                    <div class="proto-title-section">Opciones de Dropbear</div>
-                    <div class="proto-grid">
-                        <button class="proto-btn proto-btn-menu" onclick="promptServicePort('dropbear')">
-                            <span>🔌 Cambiar Puerto Dropbear</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="proto-card" id="stunnelCard">
-                <div class="proto-accent" id="stunnelAccent"></div>
+            <div class="services-grid">
                 
-                <!-- MAIN VIEW -->
-                <div id="viewMain_stunnel">
-                    <div class="proto-header">
-                        <i class="fa-solid fa-shield-halved" style="color: #a855f7; font-size: 1.5rem;"></i>
-                        <h1>Stunnel4</h1>
+                <!-- SSH CARD -->
+                <div class="proto-card" id="sshCard">
+                    <div class="proto-accent" id="sshAccent"></div>
+                    <div id="viewMain_ssh">
+                        <div class="proto-header">
+                            <i class="fa-solid fa-terminal" style="color: #6366f1; font-size: 1.5rem;"></i>
+                            <h1>SSH Directo</h1>
+                        </div>
+                        <div class="proto-subtitle">Acceso Principal del Servidor</div>
+                        <div class="proto-detail">
+                            <span>Puerto:</span>
+                            <span id="sshPortTxt">22</span>
+                        </div>
+                        <div id="sshStatusTxt" class="proto-status-text proto-status-online">ONLINE</div>
+                        <button class="proto-btn proto-btn-purple" onclick="switchViewSvc('ssh', 'viewSettings_ssh')">
+                            <i class="fa-solid fa-gear"></i> CONFIGURACIÓN
+                        </button>
                     </div>
-                    <div class="proto-subtitle">Túnel SSL/TLS Seguro</div>
-                    
-                    <div class="proto-detail">
-                        <span>Puerto en escucha:</span>
-                        <span id="stnlPort">443</span>
-                    </div>
-                    
-                    <div id="stnlStatusTxt" class="proto-status-text proto-status-offline">OFFLINE</div>
-                    
-                    <button class="proto-btn proto-btn-purple" onclick="switchViewStunnel('viewSettings_stunnel')">
-                        <i class="fa-solid fa-gear"></i> CONFIGURACIÓN
-                    </button>
-                </div>
-                
-                <!-- SETTINGS VIEW -->
-                <div id="viewSettings_stunnel" class="proto-hidden">
-                    <div class="proto-back" onclick="switchViewStunnel('viewMain_stunnel')">
-                        <i class="fa-solid fa-arrow-left"></i> Volver al panel principal
-                    </div>
-                    <div class="proto-title-section">Opciones de Stunnel</div>
-                    
-                    <div class="proto-grid">
-                        <button class="proto-btn proto-btn-menu" onclick="switchViewStunnel('viewInstall_stunnel')">
-                            <span>🛠️ Asistente de Instalación</span><span>→</span>
-                        </button>
-                        <button class="proto-btn proto-btn-menu" onclick="runStunnelInstall('uninstall')">
-                            <span>🗑️ Desinstalar Protocolo</span>
-                        </button>
-                        <button class="proto-btn proto-btn-menu" onclick="promptStunnelPort()">
-                            <span>🔌 Cambiar Puerto</span>
-                        </button>
-                        <button class="proto-btn proto-btn-outline" onclick="toggleStunnelService()" id="btnStnlToggle">
-                            ▶️ Reiniciar
-                        </button>
+                    <div id="viewSettings_ssh" class="proto-hidden">
+                        <div class="proto-back" onclick="switchViewSvc('ssh', 'viewMain_ssh')">
+                            <i class="fa-solid fa-arrow-left"></i> Volver
+                        </div>
+                        <div class="proto-title-section">Opciones de SSH</div>
+                        <div class="proto-grid">
+                            <button class="proto-btn proto-btn-menu" onclick="promptServicePort('ssh')">
+                                <span>🔌 Cambiar Puerto</span><span>→</span>
+                            </button>
+                            <button class="proto-btn proto-btn-outline" onclick="window.svcAction('ssh', 'restart')">
+                                ▶️ Reiniciar Servicio
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                <!-- INSTALL VIEW -->
-                <div id="viewInstall_stunnel" class="proto-hidden">
-                    <div class="proto-back" onclick="switchViewStunnel('viewSettings_stunnel')">
-                        <i class="fa-solid fa-arrow-left"></i> Atrás
+                <!-- DROPBEAR CARD -->
+                <div class="proto-card" id="dropbearCard">
+                    <div class="proto-accent" id="dropbearAccent"></div>
+                    <div id="viewMain_dropbear">
+                        <div class="proto-header">
+                            <i class="fa-solid fa-shield-halved" style="color: #0ea5e9; font-size: 1.5rem;"></i>
+                            <h1>Dropbear SSH</h1>
+                        </div>
+                        <div class="proto-subtitle">SSH Ligero de Bajo Consumo</div>
+                        <div class="proto-detail">
+                            <span>Puerto:</span>
+                            <span id="dropPortTxt">44</span>
+                        </div>
+                        <div id="dropStatusTxt" class="proto-status-text proto-status-offline">OFFLINE</div>
+                        <button class="proto-btn proto-btn-purple" onclick="switchViewSvc('dropbear', 'viewSettings_dropbear')">
+                            <i class="fa-solid fa-gear"></i> CONFIGURACIÓN
+                        </button>
                     </div>
-                    <div class="proto-title-section">Selecciona el Perfil</div>
-                    
-                    <div class="proto-grid">
-                        <button class="proto-btn proto-btn-menu" style="flex-direction: column; align-items: flex-start; gap: 4px;" onclick="runStunnelInstall('SSL Directo')">
-                            <span class="proto-opt-title">Opción 1</span>
-                            <span class="proto-opt-desc">SSL Directo</span>
-                        </button>
-                        <button class="proto-btn proto-btn-menu" style="flex-direction: column; align-items: flex-start; gap: 4px;" onclick="runStunnelInstall('SSL + Proxy')">
-                            <span class="proto-opt-title">Opción 2</span>
-                            <span class="proto-opt-desc">SSL + PROXY</span>
-                        </button>
-                        <button class="proto-btn proto-btn-menu" style="flex-direction: column; align-items: flex-start; gap: 4px;" onclick="runStunnelInstall('Universal')">
-                            <span class="proto-opt-title">Opción 3</span>
-                            <span class="proto-opt-desc">HÍBRIDO UNIVERSAL</span>
-                        </button>
+                    <div id="viewSettings_dropbear" class="proto-hidden">
+                        <div class="proto-back" onclick="switchViewSvc('dropbear', 'viewMain_dropbear')">
+                            <i class="fa-solid fa-arrow-left"></i> Volver
+                        </div>
+                        <div class="proto-title-section">Opciones de Dropbear</div>
+                        <div class="proto-grid">
+                            <button class="proto-btn proto-btn-menu" onclick="promptServicePort('dropbear')">
+                                <span>🔌 Cambiar Puerto</span><span>→</span>
+                            </button>
+                            <button class="proto-btn proto-btn-outline" onclick="window.svcAction('dropbear', 'restart')" id="btnDropToggle">
+                                ▶️ Reiniciar Servicio
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                <!-- CONSOLE VIEW -->
-                <div id="terminal_stunnel" class="proto-hidden">
-                    <div class="proto-console" id="consoleOutput_stunnel"></div>
+                <!-- STUNNEL4 CARD -->
+                <div class="proto-card" id="stunnelCard">
+                    <div class="proto-accent" id="stunnelAccent"></div>
+                    <div id="viewMain_stunnel">
+                        <div class="proto-header">
+                            <i class="fa-solid fa-lock" style="color: #a855f7; font-size: 1.5rem;"></i>
+                            <h1>Stunnel4</h1>
+                        </div>
+                        <div class="proto-subtitle">Túnel SSL/TLS Seguro</div>
+                        <div class="proto-detail">
+                            <span>Puerto:</span>
+                            <span id="stnlPort">443</span>
+                        </div>
+                        <div id="stnlStatusTxt" class="proto-status-text proto-status-offline">OFFLINE</div>
+                        <button class="proto-btn proto-btn-purple" onclick="switchViewSvc('stunnel', 'viewSettings_stunnel')">
+                            <i class="fa-solid fa-gear"></i> CONFIGURACIÓN
+                        </button>
+                    </div>
+                    <div id="viewSettings_stunnel" class="proto-hidden">
+                        <div class="proto-back" onclick="switchViewSvc('stunnel', 'viewMain_stunnel')">
+                            <i class="fa-solid fa-arrow-left"></i> Volver
+                        </div>
+                        <div class="proto-title-section">Opciones de Stunnel</div>
+                        <div class="proto-grid">
+                            <button class="proto-btn proto-btn-menu" onclick="switchViewSvc('stunnel', 'viewInstall_stunnel')">
+                                <span>🛠️ Asistente Instalación</span><span>→</span>
+                            </button>
+                            <button class="proto-btn proto-btn-menu" onclick="promptServicePort('stunnel4')">
+                                <span>🔌 Cambiar Puerto</span><span>→</span>
+                            </button>
+                            <button class="proto-btn proto-btn-menu" onclick="runStunnelInstall('uninstall')">
+                                <span>🗑️ Desinstalar</span><span>→</span>
+                            </button>
+                            <button class="proto-btn proto-btn-outline" onclick="window.svcAction('stunnel4', 'restart')" id="btnStnlToggle">
+                                ▶️ Reiniciar
+                            </button>
+                        </div>
+                    </div>
+                    <div id="viewInstall_stunnel" class="proto-hidden">
+                        <div class="proto-back" onclick="switchViewSvc('stunnel', 'viewSettings_stunnel')">
+                            <i class="fa-solid fa-arrow-left"></i> Atrás
+                        </div>
+                        <div class="proto-title-section">Perfiles SSL</div>
+                        <div class="proto-grid">
+                            <button class="proto-btn proto-btn-menu" onclick="runStunnelInstall('SSL Directo')">
+                                <span>SSL Directo</span><span>→</span>
+                            </button>
+                            <button class="proto-btn proto-btn-menu" onclick="runStunnelInstall('SSL + Proxy')">
+                                <span>SSL + PROXY</span><span>→</span>
+                            </button>
+                            <button class="proto-btn proto-btn-menu" onclick="runStunnelInstall('Universal')">
+                                <span>HÍBRIDO UNIVERSAL</span><span>→</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="terminal_stunnel" class="proto-hidden">
+                        <div class="proto-console" id="consoleOutput_stunnel"></div>
+                    </div>
+                </div>
+
+                <!-- PROXY 80 CARD -->
+                <div class="proto-card" id="proxyCard">
+                    <div class="proto-accent" id="proxyAccent"></div>
+                    <div id="viewMain_proxy">
+                        <div class="proto-header">
+                            <i class="fa-solid fa-code" style="color: #3b82f6; font-size: 1.5rem;"></i>
+                            <h1>Python Proxy</h1>
+                        </div>
+                        <div class="proto-subtitle">Motor Universal Payloads</div>
+                        <div class="proto-detail">
+                            <span>Puerto:</span>
+                            <span id="proxyPortTxt">80</span>
+                        </div>
+                        <div id="proxyStatusTxt" class="proto-status-text proto-status-offline">OFFLINE</div>
+                        <button class="proto-btn proto-btn-purple" onclick="switchViewSvc('proxy', 'viewSettings_proxy')">
+                            <i class="fa-solid fa-gear"></i> CONFIGURACIÓN
+                        </button>
+                    </div>
+                    <div id="viewSettings_proxy" class="proto-hidden">
+                        <div class="proto-back" onclick="switchViewSvc('proxy', 'viewMain_proxy')">
+                            <i class="fa-solid fa-arrow-left"></i> Volver
+                        </div>
+                        <div class="proto-title-section">Opciones del Proxy</div>
+                        <div class="proto-grid">
+                            <button class="proto-btn proto-btn-menu" onclick="promptServicePort('mx-proxy')">
+                                <span>🔌 Cambiar Puerto</span><span>→</span>
+                            </button>
+                            <button class="proto-btn proto-btn-outline" onclick="window.svcAction('mx-proxy', 'restart')" id="btnProxyToggle">
+                                ▶️ Reiniciar Motor
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- HYSTERIA V2 CARD -->
+                <div class="proto-card" id="hysteriaCard">
+                    <div class="proto-accent" id="hysteriaAccent"></div>
+                    <div id="viewMain_hysteria">
+                        <div class="proto-header">
+                            <i class="fa-solid fa-bolt" style="color: #22d3ee; font-size: 1.5rem;"></i>
+                            <h1>Hysteria v2</h1>
+                        </div>
+                        <div class="proto-subtitle">Túnel QUIC / Port-Hopping</div>
+                        <div class="proto-detail">
+                            <span>Rango:</span>
+                            <span id="hysteriaPortTxt">2000-5000</span>
+                        </div>
+                        <div id="hysteriaStatusTxt" class="proto-status-text proto-status-offline">OFFLINE</div>
+                        <button class="proto-btn proto-btn-purple" onclick="switchViewSvc('hysteria', 'viewSettings_hysteria')">
+                            <i class="fa-solid fa-gear"></i> CONFIGURACIÓN
+                        </button>
+                    </div>
+                    <div id="viewSettings_hysteria" class="proto-hidden">
+                        <div class="proto-back" onclick="switchViewSvc('hysteria', 'viewMain_hysteria')">
+                            <i class="fa-solid fa-arrow-left"></i> Volver
+                        </div>
+                        <div class="proto-title-section">Opciones Hysteria</div>
+                        <div class="proto-grid">
+                            <button class="proto-btn proto-btn-menu" onclick="promptServicePort('hysteria')">
+                                <span>🔌 Cambiar Rango</span><span>→</span>
+                            </button>
+                            <button class="proto-btn proto-btn-outline" onclick="window.svcAction('hysteria', 'restart')" id="btnHysteriaToggle">
+                                ▶️ Reiniciar Servicio
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- UDP CUSTOM CARD -->
+                <div class="proto-card" id="udp-customCard">
+                    <div class="proto-accent" id="udp-customAccent"></div>
+                    <div id="viewMain_udp-custom">
+                        <div class="proto-header">
+                            <i class="fa-solid fa-microchip" style="color: #84cc16; font-size: 1.5rem;"></i>
+                            <h1>UDP Custom</h1>
+                        </div>
+                        <div class="proto-subtitle">Gaming & Streaming</div>
+                        <div class="proto-detail">
+                            <span>Rango:</span>
+                            <span id="udp-customPortTxt">7100-7300</span>
+                        </div>
+                        <div id="udp-customStatusTxt" class="proto-status-text proto-status-offline">OFFLINE</div>
+                        <button class="proto-btn proto-btn-purple" onclick="switchViewSvc('udp-custom', 'viewSettings_udp-custom')">
+                            <i class="fa-solid fa-gear"></i> CONFIGURACIÓN
+                        </button>
+                    </div>
+                    <div id="viewSettings_udp-custom" class="proto-hidden">
+                        <div class="proto-back" onclick="switchViewSvc('udp-custom', 'viewMain_udp-custom')">
+                            <i class="fa-solid fa-arrow-left"></i> Volver
+                        </div>
+                        <div class="proto-title-section">Opciones UDP Custom</div>
+                        <div class="proto-grid">
+                            <button class="proto-btn proto-btn-menu" onclick="promptServicePort('udp-custom')">
+                                <span>🔌 Cambiar Rango</span><span>→</span>
+                            </button>
+                            <button class="proto-btn proto-btn-outline" onclick="window.svcAction('udp-custom', 'restart')" id="btnUdpToggle">
+                                ▶️ Reiniciar Motor
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
             </div>
-
-            <!-- PROXY 80 CARD -->
-            <div class="proto-card" id="proxyCard">
-                <div class="proto-accent" id="proxyAccent"></div>
-                
-                <!-- MAIN VIEW -->
-                <div id="viewMain_proxy">
-                    <div class="proto-header">
-                        <i class="fa-solid fa-code" style="color: #3b82f6; font-size: 1.5rem;"></i>
-                        <h1>Python Proxy</h1>
-                    </div>
-                    <div class="proto-subtitle">Motor Universal de Payloads</div>
-                    
-                    <div class="proto-detail">
-                        <span>Puerto en escucha:</span>
-                        <span id="proxyPortTxt">80</span>
-                    </div>
-                    
-                    <div id="proxyStatusTxt" class="proto-status-text proto-status-offline">OFFLINE</div>
-                    
-                    <button class="proto-btn proto-btn-purple" onclick="switchViewProxy('viewSettings_proxy')">
-                        <i class="fa-solid fa-gear"></i> CONFIGURACIÓN
-                    </button>
-                </div>
-                
-                <!-- SETTINGS VIEW -->
-                <div id="viewSettings_proxy" class="proto-hidden">
-                    <div class="proto-back" onclick="switchViewProxy('viewMain_proxy')">
-                        <i class="fa-solid fa-arrow-left"></i> Volver
-                    </div>
-                    <div class="proto-title-section">Opciones del Proxy</div>
-                    
-                    <div class="proto-grid">
-                        <button class="proto-btn proto-btn-menu" onclick="promptProxyPort()">
-                            <span>🔌 Cambiar Puerto del Proxy</span>
-                        </button>
-                        <button class="proto-btn proto-btn-outline" onclick="toggleProxyService()" id="btnProxyToggle">
-                            ▶️ Reiniciar Motor
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- HYSTERIA V2 CARD -->
-            <div class="proto-card" id="hysteriaCard">
-                <div class="proto-accent" id="hysteriaAccent"></div>
-                <div id="viewMain_hysteria">
-                    <div class="proto-header">
-                        <i class="fa-solid fa-bolt" style="color: #22d3ee; font-size: 1.5rem;"></i>
-                        <h1>Hysteria v2</h1>
-                    </div>
-                    <div class="proto-subtitle">Túnel QUIC / Port-Hopping</div>
-                    <div class="proto-detail">
-                        <span>Rango de puertos:</span>
-                        <span id="hysteriaPortTxt">2000-5000</span>
-                    </div>
-                    <div id="hysteriaStatusTxt" class="proto-status-text proto-status-offline">OFFLINE</div>
-                    <button class="proto-btn proto-btn-purple" onclick="switchViewSvc('hysteria', 'viewSettings_hysteria')">
-                        <i class="fa-solid fa-gear"></i> CONFIGURACIÓN
-                    </button>
-                </div>
-                <div id="viewSettings_hysteria" class="proto-hidden">
-                    <div class="proto-back" onclick="switchViewSvc('hysteria', 'viewMain_hysteria')">
-                        <i class="fa-solid fa-arrow-left"></i> Volver
-                    </div>
-                    <div class="proto-title-section">Opciones de Hysteria</div>
-                    <div class="proto-grid">
-                        <button class="proto-btn proto-btn-menu" onclick="promptServicePort('hysteria')">
-                            <span>🔌 Cambiar Rango UDP</span>
-                        </button>
-                        <button class="proto-btn proto-btn-outline" onclick="window.svcAction('hysteria', 'restart')">
-                            ▶️ Reiniciar Servicio
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- UDP CUSTOM CARD -->
-            <div class="proto-card" id="udp-customCard">
-                <div class="proto-accent" id="udp-customAccent"></div>
-                <div id="viewMain_udp-custom">
-                    <div class="proto-header">
-                        <i class="fa-solid fa-microchip" style="color: #84cc16; font-size: 1.5rem;"></i>
-                        <h1>UDP Custom</h1>
-                    </div>
-                    <div class="proto-subtitle">Optimizado para Gaming & Streaming</div>
-                    <div class="proto-detail">
-                        <span>Rango de puertos:</span>
-                        <span id="udp-customPortTxt">7100-7300</span>
-                    </div>
-                    <div id="udp-customStatusTxt" class="proto-status-text proto-status-offline">OFFLINE</div>
-                    <button class="proto-btn proto-btn-purple" onclick="switchViewSvc('udp-custom', 'viewSettings_udp-custom')">
-                        <i class="fa-solid fa-gear"></i> CONFIGURACIÓN
-                    </button>
-                </div>
-                <div id="viewSettings_udp-custom" class="proto-hidden">
-                    <div class="proto-back" onclick="switchViewSvc('udp-custom', 'viewMain_udp-custom')">
-                        <i class="fa-solid fa-arrow-left"></i> Volver
-                    </div>
-                    <div class="proto-title-section">Opciones de UDP Custom</div>
-                    <div class="proto-grid">
-                        <button class="proto-btn proto-btn-menu" onclick="promptServicePort('udp-custom')">
-                            <span>🔌 Cambiar Rango UDP</span>
-                        </button>
-                        <button class="proto-btn proto-btn-outline" onclick="window.svcAction('udp-custom', 'restart')">
-                            ▶️ Reiniciar Motor
-                        </button>
-                    </div>
-                </div>
-            </div>
-
         </div>
 
     </main>
