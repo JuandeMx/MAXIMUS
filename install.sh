@@ -40,7 +40,7 @@ echo -e "\e[1;36m=========================================================\e[0m\
 
 # 0. Limpieza y Preparación de Terreno (v6.2 Residual Fix)
 echo -e "\e[1;32m[+] Detectando y deteniendo servicios para una instalación limpia...\e[0m"
-SERVICES=("stunnel4" "ws-epro" "mx-proxy" "badvpn" "hysteria" "udp-custom" "mx-slowdns" "dropbear")
+SERVICES=("stunnel4" "ws-epro" "mx-proxy" "badvpn" "hysteria" "udp-custom" "mx-slowdns" "dropbear" "mx-webpanel" "maximus-bot")
 for srv in "${SERVICES[@]}"; do
     if systemctl is-active --quiet "$srv" || systemctl is-enabled --quiet "$srv" 2>/dev/null; then
         echo -e "\e[1;33m    - Deteniendo $srv...\e[0m"
@@ -69,7 +69,7 @@ ufw allow 80/tcp 2>/dev/null
 ufw allow 443/tcp 2>/dev/null
 ufw allow 7300/udp 2>/dev/null
 ufw allow 54321/tcp 2>/dev/null
-ufw allow 8082/tcp 2>/dev/null
+# ufw allow 8082/tcp (Web Panel Desactivado)
 ufw --force enable
 
 # 2. Archivos y Rutas
@@ -140,34 +140,10 @@ chown -R root:root /etc/MaximusVpsMx
 
 
 
-# 8. Sincronización final de Panel Web (CORE v3.1)
-echo -e "\e[1;32m[+] Realizando limpieza nuclear del panel previo...\e[0m"
-systemctl stop mx-webpanel >/dev/null 2>&1
-rm -rf /etc/MaximusVpsMx/web-panel
-
-echo -e "\e[1;32m[+] Instalando Motor Maximus CORE v3.1...\e[0m"
-mkdir -p /etc/MaximusVpsMx/web-panel/backend
-mkdir -p /etc/MaximusVpsMx/web-panel/frontend
-cp -r "$SCRIPT_DIR/web-panel/"* /etc/MaximusVpsMx/web-panel/
-
-# Corregir permisos
-chmod +x /etc/MaximusVpsMx/web-panel/backend/app.py
-
-# Asegurar Firewall 8082
-ufw allow 8082/tcp >/dev/null 2>&1
-
-# Reiniciar Servicio
-if systemctl list-unit-files | grep -q "mx-webpanel.service"; then
-    echo -e "\e[1;32m[+] Reiniciando Servicio de Telemetría...\e[0m"
-    systemctl daemon-reload
-    systemctl restart mx-webpanel 2>/dev/null
-else
-    echo -e "\e[1;33m[!] Servicio mx-webpanel no detectado. Instalando ahora...\e[0m"
-    bash /etc/MaximusVpsMx/modules/install_web-panel.sh
-fi
-
+# Fin de Instalación
 echo -e "\n\e[1;36m=========================================================\e[0m"
-echo -e "\e[1;32m[+] Instalación Base + CORE v3.1 Completada.\e[0m"
-echo -e "\e[1;33m[!] Acceso Panel Web: http://$(curl -s ipv4.icanhazip.com):8082\e[0m"
+echo -e "\e[1;32m   [+] INSTALACIÓN DE MAXIMUS ELITE v5.0 COMPLETADA.    \e[0m"
+echo -e "\e[1;33m   [!] CONFIGURACIÓN BOT: MX -> Sistema -> Telegram Bot\e[0m"
+echo -e "\e[1;34m   [!] REPOSITORIO: https://github.com/JuandeMx/MAXIMUS \e[0m"
 echo -e "\e[1;36m=========================================================\e[0m\n"
 
