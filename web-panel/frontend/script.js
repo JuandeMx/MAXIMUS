@@ -297,34 +297,45 @@ async function executeUserAction(endpoint, payload, successMsg) {
     } catch(e) { showToast("Error de red al conectar con el servidor API"); }
 }
 
-// ========== STUNNEL UI LOGIC ==========
-let stunnelIsOnline = false;
-let stunnelPort = 443;
-
-// ========== PROXY 80 UI LOGIC ==========
-let proxyIsOnline = false;
-let proxyPort = 80;
+// ========== GLOBAL SERVICES LOGIC ==========
+const SERVICE_STATES = {};
 
 async function fetchServices() {
     try {
         const res = await fetch('/api/service/status');
-        const services = await res.json();
-        const stnl = services.find(s => s.id === 'stunnel4');
-        if(stnl) {
-            stunnelIsOnline = stnl.active;
-            stunnelPort = stnl.port;
-            document.getElementById('stnlPort').innerText = stunnelPort;
-            updateServiceUI('stunnel4', stnl, 'stnlStatusTxt', 'stunnelAccent', 'btnStnlToggle');
-        }
+        const data = await res.json();
+        
+        data.forEach(svc => {
+            SERVICE_STATES[svc.id] = svc;
+            
+            // Actualizar Puertos en la UI si existen los elementos
+            const portEl = document.getElementById(`${svc.id}PortTxt`) || document.getElementById(getPortId(svc.id));
+            if(portEl) portEl.innerText = svc.port;
+            
+            // Actualizar UI del Card
+            updateServiceCardUI(svc);
+        });
+    } catch(e) { console.error("Error detectando servicios", e); }
+}
 
-        const prxy = services.find(s => s.id === 'mx-proxy');
-        if(prxy) {
-            proxyIsOnline = prxy.active;
-            proxyPort = prxy.port;
-            document.getElementById('proxyPortTxt').innerText = proxyPort;
-            updateServiceUI('mx-proxy', prxy, 'proxyStatusTxt', 'proxyAccent', 'btnProxyToggle');
-        }
-    } catch(e) { console.error("Error cargando status de servicios", e); }
+function getPortId(id) {
+    if(id === 'stunnel4') return 'stnlPort';
+    if(id === 'mx-proxy') return 'proxyPortTxt';
+    return `${id}PortTxt`;
+}
+
+function updateServiceCardUI(svc) {
+    const map = {
+        'ssh': ['sshStatusTxt', 'sshAccent', 'btnSshToggle'],
+        'dropbear': ['dropStatusTxt', 'dropbearAccent', 'btnDropToggle'],
+        'stunnel4': ['stnlStatusTxt', 'stunnelAccent', 'btnStnlToggle'],
+        'mx-proxy': ['proxyStatusTxt', 'proxyAccent', 'btnProxyToggle']
+    };
+    
+    const ui = map[svc.id];
+    if(!ui) return;
+    
+    updateServiceUI(svc.id, svc, ui[0], ui[1], ui[2]);
 }
 
 function updateServiceUI(id, data, labelId, accentId, btnId) {
@@ -355,8 +366,8 @@ function updateServiceUI(id, data, labelId, accentId, btnId) {
     }
 }
 
-window.switchViewStunnel = function(viewId) {
-    const views = ['viewMain_stunnel', 'viewSettings_stunnel', 'viewInstall_stunnel', 'terminal_stunnel'];
+window.switchViewSvc = function(svcId, viewId) {
+    const views = [`viewMain_${svcId}`, `viewSettings_${svcId}`, `viewInstall_${svcId}`, `terminal_${svcId}`];
     views.forEach(v => {
         const el = document.getElementById(v);
         if(el) el.classList.add('proto-hidden');
@@ -365,69 +376,38 @@ window.switchViewStunnel = function(viewId) {
     if(target) target.classList.remove('proto-hidden');
 }
 
-window.toggleStunnelService = async function() {
-    const action = (!stunnelIsOnline) ? 'start' : 'restart';
-    await window.svcAction('stunnel4', action);
-    setTimeout(fetchServices, 1000);
-}
-
-window.promptStunnelPort = async function() {
-    const newPort = prompt("Introduce el nuevo puerto para Stunnel4:", stunnelPort);
+window.promptServicePort = async function(svcId) {
+    const svc = SERVICE_STATES[svcId];
+    const currentPort = svc ? svc.port : '--';
+    const newPort = prompt(`Introduce el nuevo puerto para ${svcId.toUpperCase()}:`, currentPort);
+    
     if (newPort && !isNaN(newPort)) {
-        showToast(`Cambiando puerto de Stunnel a: ${newPort}...`);
+        showToast(`Cambiando puerto de ${svcId} a ${newPort}...`);
         try {
-            const res = await fetch('/api/service/stunnel4/port', {
+            const res = await fetch('/api/service/port/update', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({port: newPort})
+                body: JSON.stringify({ id: svcId, port: newPort })
             });
             const data = await res.json();
             if(data.success) {
-                showToast("Puerto de Stunnel cambiado exitosamente.");
+                showToast("Puerto actualizado. Reiniciando servicio...");
                 setTimeout(fetchServices, 2000);
             } else {
-                showToast("Error cambiando el puerto.");
+                showToast(`Error: ${data.error}`);
             }
         } catch(e) { showToast("Error de conexión"); }
     }
 }
 
-window.switchViewProxy = function(viewId) {
-    const views = ['viewMain_proxy', 'viewSettings_proxy'];
-    views.forEach(v => {
-        const el = document.getElementById(v);
-        if(el) el.classList.add('proto-hidden');
-    });
-    const target = document.getElementById(viewId);
-    if(target) target.classList.remove('proto-hidden');
-}
+// Mantener compatibilidad con scripts antiguos por si acaso
+window.switchViewStunnel = (id) => window.switchViewSvc('stunnel4', id);
+window.switchViewProxy = (id) => window.switchViewSvc('mx-proxy', id);
+window.toggleStunnelService = () => window.svcAction('stunnel4', (SERVICE_STATES['stunnel4']?.active ? 'restart' : 'start'));
+window.toggleProxyService = () => window.svcAction('mx-proxy', (SERVICE_STATES['mx-proxy']?.active ? 'restart' : 'start'));
+window.promptStunnelPort = () => window.promptServicePort('stunnel4');
+window.promptProxyPort = () => window.promptServicePort('mx-proxy');
 
-window.toggleProxyService = async function() {
-    const action = (!proxyIsOnline) ? 'start' : 'restart';
-    await window.svcAction('mx-proxy', action);
-    setTimeout(fetchServices, 1500);
-}
-
-window.promptProxyPort = async function() {
-    const newPort = prompt("Introduce el nuevo puerto para el Proxy Python:", proxyPort);
-    if (newPort && !isNaN(newPort)) {
-        showToast(`Cambiando puerto del proxy a: ${newPort}...`);
-        try {
-            const res = await fetch('/api/service/proxy/port', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({port: newPort})
-            });
-            const data = await res.json();
-            if(data.success) {
-                showToast("Puerto del Proxy cambiado. Reiniciando...");
-                setTimeout(fetchServices, 2000);
-            } else {
-                showToast("Error cambiando puerto del Proxy");
-            }
-        } catch(e) { showToast("Error de conexión"); }
-    }
-}
 
 window.runStunnelInstall = async function(type) {
     if(type === 'uninstall') {

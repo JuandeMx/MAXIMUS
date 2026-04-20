@@ -131,6 +131,68 @@
         <!-- PANEL SERVICIOS -->
         <div id="tab-services" class="tab-panel">
             
+            <!-- SSH CARD -->
+            <div class="proto-card" id="sshCard">
+                <div class="proto-accent" id="sshAccent"></div>
+                <div id="viewMain_ssh">
+                    <div class="proto-header">
+                        <i class="fa-solid fa-terminal" style="color: #6366f1; font-size: 1.5rem;"></i>
+                        <h1>SSH Directo</h1>
+                    </div>
+                    <div class="proto-subtitle">Acceso Principal del Servidor</div>
+                    <div class="proto-detail">
+                        <span>Puerto en escucha:</span>
+                        <span id="sshPortTxt">22</span>
+                    </div>
+                    <div id="sshStatusTxt" class="proto-status-text proto-status-online">ONLINE</div>
+                    <button class="proto-btn proto-btn-purple" onclick="switchViewSvc('ssh', 'viewSettings_ssh')">
+                        <i class="fa-solid fa-gear"></i> CONFIGURACIÓN
+                    </button>
+                </div>
+                <div id="viewSettings_ssh" class="proto-hidden">
+                    <div class="proto-back" onclick="switchViewSvc('ssh', 'viewMain_ssh')">
+                        <i class="fa-solid fa-arrow-left"></i> Volver
+                    </div>
+                    <div class="proto-title-section">Opciones de SSH</div>
+                    <div class="proto-grid">
+                        <button class="proto-btn proto-btn-menu" onclick="promptServicePort('ssh')">
+                            <span>🔌 Cambiar Puerto SSH</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DROPBEAR CARD -->
+            <div class="proto-card" id="dropbearCard">
+                <div class="proto-accent" id="dropbearAccent"></div>
+                <div id="viewMain_dropbear">
+                    <div class="proto-header">
+                        <i class="fa-solid fa-shield-halved" style="color: #0ea5e9; font-size: 1.5rem;"></i>
+                        <h1>Dropbear SSH</h1>
+                    </div>
+                    <div class="proto-subtitle">SSH Ligero de Bajo Consumo</div>
+                    <div class="proto-detail">
+                        <span>Puerto en escucha:</span>
+                        <span id="dropPortTxt">44</span>
+                    </div>
+                    <div id="dropStatusTxt" class="proto-status-text proto-status-offline">OFFLINE</div>
+                    <button class="proto-btn proto-btn-purple" onclick="switchViewSvc('dropbear', 'viewSettings_dropbear')">
+                        <i class="fa-solid fa-gear"></i> CONFIGURACIÓN
+                    </button>
+                </div>
+                <div id="viewSettings_dropbear" class="proto-hidden">
+                    <div class="proto-back" onclick="switchViewSvc('dropbear', 'viewMain_dropbear')">
+                        <i class="fa-solid fa-arrow-left"></i> Volver
+                    </div>
+                    <div class="proto-title-section">Opciones de Dropbear</div>
+                    <div class="proto-grid">
+                        <button class="proto-btn proto-btn-menu" onclick="promptServicePort('dropbear')">
+                            <span>🔌 Cambiar Puerto Dropbear</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
             <div class="proto-card" id="stunnelCard">
                 <div class="proto-accent" id="stunnelAccent"></div>
                 

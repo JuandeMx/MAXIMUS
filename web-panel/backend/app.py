@@ -59,9 +59,9 @@ def is_service_active(name):
 
 def get_port_for_service(name):
     ports = {
-        "ssh": run_command("grep '^Port' /etc/ssh/sshd_config | awk '{print $2}' | head -1") or "22",
-        "dropbear": run_command("grep 'DROPBEAR_PORT=' /etc/default/dropbear | cut -d= -f2 | tr -d '\"'") or "44",
-        "stunnel4": run_command("grep 'accept =' /etc/stunnel/stunnel.conf | awk '{print $3}' | head -1") or "443",
+        "ssh": run_command("grep -E '^#?Port [0-9]+' /etc/ssh/sshd_config | awk '{print $2}' | head -1") or "22",
+        "dropbear": run_command("grep 'DROPBEAR_PORT=' /etc/default/dropbear 2>/dev/null | cut -d= -f2 | tr -d '\"'") or "44",
+        "stunnel4": run_command("grep 'accept =' /etc/stunnel/stunnel.conf 2>/dev/null | awk '{print $3}' | head -1") or "443",
         "mx-proxy": run_command("grep 'ExecStart=' /etc/systemd/system/mx-proxy.service 2>/dev/null | awk '{print $NF}' | sed 's/-//g'") or "80",
         "badvpn": "7300",
         "ws-epro": "80",
@@ -349,14 +349,27 @@ def uninstall_stunnel4():
     run_command("systemctl stop stunnel4; apt-get purge stunnel4 -y; rm -rf /etc/stunnel")
     return jsonify({"success": True})
 
-@app.route('/api/service/stunnel4/port', methods=['POST'])
-def port_stunnel4():
+@app.route('/api/service/port/update', methods=['POST'])
+def update_service_port():
     if 'auth' not in session: return jsonify({"error": "Unauthorized"}), 401
+    sid = request.json.get('id')
     port = request.json.get('port')
-    if port and port.isdigit():
+    
+    if not sid or not port or not port.isdigit():
+        return jsonify({"success": False, "error": "Datos inválidos"})
+        
+    if sid == "ssh":
+        run_command(f"sed -i 's/^#?Port .*/Port {port}/' /etc/ssh/sshd_config && systemctl restart ssh")
+    elif sid == "dropbear":
+        run_command(f"sed -i 's/DROPBEAR_PORT=.*/DROPBEAR_PORT={port}/' /etc/default/dropbear && systemctl restart dropbear")
+    elif sid == "stunnel4":
         run_command(f"sed -i 's/accept = .*/accept = {port}/g' /etc/stunnel/stunnel.conf && systemctl restart stunnel4")
-        return jsonify({"success": True})
-    return jsonify({"success": False, "error": "Invalid port"})
+    elif sid == "mx-proxy":
+        run_command(f"bash /etc/MaximusVpsMx/modules/install_mx-proxy.sh {port}")
+    else:
+        return jsonify({"success": False, "error": "Servicio no soportado"})
+        
+    return jsonify({"success": True})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8082, threaded=True)
