@@ -39,6 +39,22 @@ def callback_handler(call):
         ask_premium_username(call.message)
     elif call.data == "get_stats":
         show_server_stats(call.message)
+    elif call.data.startswith("approve_"):
+        # Formato: approve_user_id_username_password
+        _, client_id, username, password = call.data.split("_")
+        process_admin_approval(call, client_id, username, password)
+
+def process_admin_approval(call, client_id, username, password):
+    bot.edit_message_text("⏳ Procesando creación...", call.message.chat.id, call.message.message_id)
+    
+    success, result = manager.create_ssh_user(username, password, days=30)
+    
+    if success:
+        bot.edit_message_text(f"✅ Usuario `{username}` creado y entregado.", call.message.chat.id, call.message.message_id, parse_mode="Markdown")
+        bot.send_message(client_id, "💎 *¡TU CUENTA PREMIUM HA SIDO APROBADA!*", parse_mode="Markdown")
+        deliver_account(client_id, username, password, result)
+    else:
+        bot.edit_message_text(f"❌ Error al crear: {result}", call.message.chat.id, call.message.message_id)
 
 # --- FLUJO CUENTA GRATIS (TRIAL) ---
 
