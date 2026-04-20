@@ -319,8 +319,6 @@ async function fetchServices() {
 }
 
 function getPortId(id) {
-    if(id === 'stunnel4') return 'stnlPort';
-    if(id === 'mx-proxy') return 'proxyPortTxt';
     return `${id}PortTxt`;
 }
 
@@ -328,8 +326,8 @@ function updateServiceCardUI(svc) {
     const map = {
         'ssh': ['sshStatusTxt', 'sshAccent', 'btnSshToggle'],
         'dropbear': ['dropStatusTxt', 'dropbearAccent', 'btnDropToggle'],
-        'stunnel4': ['stnlStatusTxt', 'stunnelAccent', 'btnStnlToggle'],
-        'mx-proxy': ['proxyStatusTxt', 'proxyAccent', 'btnProxyToggle'],
+        'stunnel4': ['stunnel4StatusTxt', 'stunnel4Accent', 'btnStnlToggle'],
+        'mx-proxy': ['mx-proxyStatusTxt', 'mx-proxyAccent', 'btnProxyToggle'],
         'hysteria': ['hysteriaStatusTxt', 'hysteriaAccent', 'btnHysteriaToggle'],
         'udp-custom': ['udp-customStatusTxt', 'udp-customAccent', 'btnUdpToggle']
     };

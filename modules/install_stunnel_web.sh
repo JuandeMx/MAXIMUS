@@ -62,9 +62,10 @@ EOF
 
 # 4. Iniciar Servicios
 sed -i 's/ENABLED=0/ENABLED=1/g' /etc/default/stunnel4 2>/dev/null
+[ ! -f /etc/default/stunnel4 ] && echo "ENABLED=1" > /etc/default/stunnel4
 ufw allow $SSL_PORT/tcp 2>/dev/null
 systemctl daemon-reload
-systemctl enable stunnel4 > /dev/null 2>&1
+systemctl enable --now stunnel4 > /dev/null 2>&1
 systemctl restart stunnel4 > /dev/null 2>&1
 
 echo "SUCCESS"
