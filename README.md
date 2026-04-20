@@ -1,72 +1,42 @@
-# MaximusVpsMx 🇲🇽
+# MaximusVpsMx 🇲🇽 - Bot Edition v4.0
 
-Panel de gestión VPS profesional para túneles SSH/SSL con soporte UDP para juegos.
+Gestión Premium de VPS para túneles SSH/SSL/UDP controlada 100% desde **Telegram**.
 
-## ⚡ Instalación en Una Línea
+## 🚀 Instalación en Una Línea (Telegram Bot)
 
 ```bash
-apt-get install -y git && git clone https://github.com/JuandeMx/MAXIMUS.git /tmp/MaximusVpsMx && cd /tmp/MaximusVpsMx && chmod +x install.sh && bash install.sh
+apt-get install -y git && git clone https://github.com/JuandeMx/MAXIMUS /etc/MaximusVpsMx && \
+chmod +x /etc/MaximusVpsMx/modules/install_bot.sh && \
+bash /etc/MaximusVpsMx/modules/install_bot.sh
 ```
 
-> **Requisitos:** Ubuntu 20.04 / 22.04 / 24.04 LTS · Acceso root · Puertos 22, 44, 80, 443, 7300 libres
+> **Requisitos:** Ubuntu 20.04+ · Acceso root · Token de Bot (@BotFather).
 
-## 🔧 Características
+## 🤖 Centro de Control (Bot Features)
 
-| Módulo | Descripción | Puerto |
-|--------|------------|--------|
-| **Dropbear SSH** | Servidor SSH ligero optimizado para túneles | 44 |
-| **Proxy Inteligente** | Anti-fragmentación TCP para redes 3G/4G | 80 |
-| **Stunnel SSL** | Túnel SSL con TCP_NODELAY | 443 |
-| **BadVPN UDPGW** | Soporte UDP para juegos y llamadas | 7300 |
-| **Cloudflare DDNS** | Actualización automática de IP dinámica | — |
-| **Firewall UFW** | Protección de puertos automatizada | — |
+| Comando | Función |
+|---------|---------|
+| `/stats` | Telemetría en tiempo real (CPU, RAM, Disco, Online). |
+| `/free` | Generación automática de cuentas Trial (3 días) con cooldown antifraude. |
+| `/premium` | Creación interactiva de cuentas personalizadas con aprobación del Admin. |
+| `/menu` | Menú interactivo con botones para gestión rápida. |
+
+## 🔧 Características Técnicas
+
+- **Dropbear SSH:** Servidor ligero optimizado (Puerto 44).
+- **Stunnel SSL:** Túneles seguros TLS (Puerto 443).
+- **UDP Custom:** Protocolo optimizado para juegos.
+- **Hysteria:** Soporte para rangos dinámicos.
+- **SQLite Core:** Base de datos integrada para gestión de usuarios de Telegram.
 
 ## 📱 Compatible con
+- HTTP Custom / Injector / V2Ray
+- Cualquier cliente SSH/SSL/UDP
 
-- HTTP Custom
-- HTTP Injector
-- HA Tunnel Plus
-- Cualquier cliente SSH/SSL
+## 🛡️ Seguridad
+- Acceso restringido por Telegram ID (Solo el Admin puede ejecutar comandos sensibles).
+- Middleware antifraude para cuentas gratuitas (Bloqueo de 7 días por usuario).
+- Usuarios SSH sin acceso a consola (`/bin/false`).
 
-## 🎮 Uso
-
-```bash
-MX
-```
-
-### Menú Principal
-```
-[1] 👤 Usuarios y Sesiones
-[2] 🔌 Opciones de Protocolo (Proxy, SSL, UDP)
-[3] ⚙️  Sistema, Backups y Seguridad
-[0] Salir
-```
-
-## ☁️ Cloudflare DDNS
-
-Actualiza automáticamente tu IP en Cloudflare cada 5 minutos:
-
-```
-MX → [3] Sistema → [6] Cloudflare DDNS → [1] Configurar
-```
-
-Solo necesitas: **API Token**, **Zone ID** y **Dominio**.
-
-## 🔒 Seguridad
-
-- Solo `root` puede ejecutar el panel
-- Usuarios de túnel creados con `/bin/false` (sin acceso a terminal)
-- Permisos `700/600` en todos los archivos del sistema
-- Firewall UFW preconfigurado
-
-## 🗑️ Desinstalación
-
-Desde el panel:
-
-```
-MX → [3] Sistema → [99] Desinstalador Maestro
-```
-
-## 📄 Licencia
-
-Uso privado. MaximusVpsMx © 2024-2026
+---
+Uso privado. MaximusVpsMx © 2026
