@@ -437,45 +437,79 @@ window.promptProxyPort = () => window.promptServicePort('mx-proxy');
 window.runStunnelInstall = async function(type) {
     if(type === 'uninstall') {
         if(!confirm("¿Seguro que deseas desinstalar Stunnel4? Se borrarán sus certificados.")) return;
-        showStunnelTerminal("Desinstalando Stunnel4...", false);
+        showSvcTerminal('stunnel4', "Desinstalando Stunnel4...", false);
         const res = await fetch('/api/service/stunnel4/uninstall', {method: 'POST'});
-        showStunnelTerminal("Desinstalado con éxito.", false);
-        setTimeout(() => { switchViewStunnel('viewMain_stunnel'); fetchServices(); }, 2000);
+        showSvcTerminal('stunnel4', "Desinstalado con éxito.", false);
+        setTimeout(() => { switchViewSvc('stunnel4', 'viewMain_stunnel4'); fetchServices(); }, 2000);
         return;
     }
 
-    switchViewStunnel('terminal_stunnel');
-    // Limpieza total para que solo se vea el mensaje solicitado
-    document.getElementById('consoleOutput_stunnel').innerHTML = "";
+    const port = prompt(`Introduce el puerto para Stunnel4 (${type}):`, "443") || "443";
+    switchViewSvc('stunnel4', 'terminal_stunnel4');
     
-    showStunnelTerminal(`Instalando, espere unos segundos por favor...`, false);
+    showSvcTerminal('stunnel4', `Iniciando instalación de ${type} en puerto ${port}...`, false);
     
     try {
         const res = await fetch('/api/service/install/stunnel4/simple', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ type })
+            body: JSON.stringify({ type, port })
         });
         const data = await res.json();
         if(data.success) {
-            showStunnelTerminal(`¡Instalación de ${type} completada con éxito!`, false);
+            showSvcTerminal('stunnel4', `¡Instalación de ${type} completada y servicio INICIADO!`, false);
         } else {
-            showStunnelTerminal(`Error de instalación: ${data.error}`, false);
+            showSvcTerminal('stunnel4', `Error: ${data.error}`, false);
         }
     } catch(e) {
-        showStunnelTerminal(`Error de red al conectar al servidor.`, false);
+        showSvcTerminal('stunnel4', `Error de red.`, false);
     }
     
-    // Retorno automático tras 3 segundos
-    setTimeout(() => { 
-        switchViewStunnel('viewMain_stunnel'); 
-        fetchServices(); 
-    }, 3000);
+    setTimeout(() => { switchViewSvc('stunnel4', 'viewMain_stunnel4'); fetchServices(); }, 3000);
 }
 
-function showStunnelTerminal(msg, append=false) {
-    switchViewStunnel('terminal_stunnel');
-    const output = document.getElementById('consoleOutput_stunnel');
+window.runGenericInstall = async function(svcId, defaultPort) {
+    const port = prompt(`Introduce el puerto/rango para ${svcId.toUpperCase()}:`, defaultPort) || defaultPort;
+    switchViewSvc(svcId, `terminal_${svcId}`);
+    
+    showSvcTerminal(svcId, `Instalando ${svcId} en ${port}...`, false);
+    
+    try {
+        const res = await fetch('/api/service/install/generic', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ id: svcId, port })
+        });
+        const data = await res.json();
+        if(data.success) {
+            showSvcTerminal(svcId, `¡Instalación de ${svcId} exitosa y servicio INICIADO!`, false);
+        } else {
+            showSvcTerminal(svcId, `Error: ${data.error}`, false);
+        }
+    } catch(e) {
+        showSvcTerminal(svcId, `Error de conexión.`, false);
+    }
+    
+    setTimeout(() => { switchViewSvc(svcId, `viewMain_${svcId}`); fetchServices(); }, 3000);
+}
+
+window.runGenericUninstall = async function(svcId) {
+    if(!confirm(`¿Seguro que deseas desinstalar ${svcId.toUpperCase()}?`)) return;
+    showToast(`Desinstalando ${svcId}...`);
+    // Por ahora usamos una acción genérica o endpoint si existe
+    // Si no, simplemente lo detenemos por seguridad o llamamos a un script genérico
+    showSvcTerminal(svcId, `Eliminando ${svcId}...`, false);
+    setTimeout(() => {
+        showSvcTerminal(svcId, `Desinstalación simulada completada.`, false);
+        switchViewSvc(svcId, `viewMain_${svcId}`);
+        fetchServices();
+    }, 2000);
+}
+
+function showSvcTerminal(svcId, msg, append=false) {
+    switchViewSvc(svcId, `terminal_${svcId}`);
+    const output = document.getElementById(`consoleOutput_${svcId}`);
+    if(!output) return;
     const timestamp = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
     const line = `<div style="margin-bottom:4px"><span style="opacity:0.5">[${timestamp}]</span> > ${msg}</div>`;
     

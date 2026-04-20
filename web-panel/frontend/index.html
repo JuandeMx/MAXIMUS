@@ -129,6 +129,7 @@
         </div>
 
         <!-- PANEL SERVICIOS -->
+        <!-- PANEL SERVICIOS -->
         <div id="tab-services" class="tab-panel">
             <div class="services-grid">
                 
@@ -190,8 +191,14 @@
                         </div>
                         <div class="proto-title-section">Opciones de Dropbear</div>
                         <div class="proto-grid">
+                            <button class="proto-btn proto-btn-menu" onclick="window.runGenericInstall('dropbear', 44)">
+                                <span>🛠️ Asistente Instalación</span><span>→</span>
+                            </button>
                             <button class="proto-btn proto-btn-menu" onclick="promptServicePort('dropbear')">
                                 <span>🔌 Cambiar Puerto</span><span>→</span>
+                            </button>
+                            <button class="proto-btn proto-btn-menu" onclick="window.runGenericUninstall('dropbear')">
+                                <span>🗑️ Desinstalar</span><span>→</span>
                             </button>
                             <button class="proto-btn proto-btn-outline" onclick="window.svcAction('dropbear', 'restart')" id="btnDropToggle">
                                 ▶️ Reiniciar Servicio
@@ -201,9 +208,9 @@
                 </div>
 
                 <!-- STUNNEL4 CARD -->
-                <div class="proto-card" id="stunnelCard">
-                    <div class="proto-accent" id="stunnelAccent"></div>
-                    <div id="viewMain_stunnel">
+                <div class="proto-card" id="stunnel4Card">
+                    <div class="proto-accent" id="stunnel4Accent"></div>
+                    <div id="viewMain_stunnel4">
                         <div class="proto-header">
                             <i class="fa-solid fa-lock" style="color: #a855f7; font-size: 1.5rem;"></i>
                             <h1>Stunnel4</h1>
@@ -211,20 +218,20 @@
                         <div class="proto-subtitle">Túnel SSL/TLS Seguro</div>
                         <div class="proto-detail">
                             <span>Puerto:</span>
-                            <span id="stnlPort">443</span>
+                            <span id="stunnel4PortTxt">443</span>
                         </div>
-                        <div id="stnlStatusTxt" class="proto-status-text proto-status-offline">OFFLINE</div>
-                        <button class="proto-btn proto-btn-purple" onclick="switchViewSvc('stunnel', 'viewSettings_stunnel')">
+                        <div id="stunnel4StatusTxt" class="proto-status-text proto-status-offline">OFFLINE</div>
+                        <button class="proto-btn proto-btn-purple" onclick="switchViewSvc('stunnel4', 'viewSettings_stunnel4')">
                             <i class="fa-solid fa-gear"></i> CONFIGURACIÓN
                         </button>
                     </div>
-                    <div id="viewSettings_stunnel" class="proto-hidden">
-                        <div class="proto-back" onclick="switchViewSvc('stunnel', 'viewMain_stunnel')">
+                    <div id="viewSettings_stunnel4" class="proto-hidden">
+                        <div class="proto-back" onclick="switchViewSvc('stunnel4', 'viewMain_stunnel4')">
                             <i class="fa-solid fa-arrow-left"></i> Volver
                         </div>
                         <div class="proto-title-section">Opciones de Stunnel</div>
                         <div class="proto-grid">
-                            <button class="proto-btn proto-btn-menu" onclick="switchViewSvc('stunnel', 'viewInstall_stunnel')">
+                            <button class="proto-btn proto-btn-menu" onclick="switchViewSvc('stunnel4', 'viewInstall_stunnel4')">
                                 <span>🛠️ Asistente Instalación</span><span>→</span>
                             </button>
                             <button class="proto-btn proto-btn-menu" onclick="promptServicePort('stunnel4')">
@@ -238,8 +245,8 @@
                             </button>
                         </div>
                     </div>
-                    <div id="viewInstall_stunnel" class="proto-hidden">
-                        <div class="proto-back" onclick="switchViewSvc('stunnel', 'viewSettings_stunnel')">
+                    <div id="viewInstall_stunnel4" class="proto-hidden">
+                        <div class="proto-back" onclick="switchViewSvc('stunnel4', 'viewSettings_stunnel4')">
                             <i class="fa-solid fa-arrow-left"></i> Atrás
                         </div>
                         <div class="proto-title-section">Perfiles SSL</div>
@@ -255,15 +262,15 @@
                             </button>
                         </div>
                     </div>
-                    <div id="terminal_stunnel" class="proto-hidden">
-                        <div class="proto-console" id="consoleOutput_stunnel"></div>
+                    <div id="terminal_stunnel4" class="proto-hidden">
+                        <div class="proto-console" id="consoleOutput_stunnel4"></div>
                     </div>
                 </div>
 
                 <!-- PROXY 80 CARD -->
-                <div class="proto-card" id="proxyCard">
-                    <div class="proto-accent" id="proxyAccent"></div>
-                    <div id="viewMain_proxy">
+                <div class="proto-card" id="mx-proxyCard">
+                    <div class="proto-accent" id="mx-proxyAccent"></div>
+                    <div id="viewMain_mx-proxy">
                         <div class="proto-header">
                             <i class="fa-solid fa-code" style="color: #3b82f6; font-size: 1.5rem;"></i>
                             <h1>Python Proxy</h1>
@@ -271,26 +278,35 @@
                         <div class="proto-subtitle">Motor Universal Payloads</div>
                         <div class="proto-detail">
                             <span>Puerto:</span>
-                            <span id="proxyPortTxt">80</span>
+                            <span id="mx-proxyPortTxt">80</span>
                         </div>
-                        <div id="proxyStatusTxt" class="proto-status-text proto-status-offline">OFFLINE</div>
-                        <button class="proto-btn proto-btn-purple" onclick="switchViewSvc('proxy', 'viewSettings_proxy')">
+                        <div id="mx-proxyStatusTxt" class="proto-status-text proto-status-offline">OFFLINE</div>
+                        <button class="proto-btn proto-btn-purple" onclick="switchViewSvc('mx-proxy', 'viewSettings_mx-proxy')">
                             <i class="fa-solid fa-gear"></i> CONFIGURACIÓN
                         </button>
                     </div>
-                    <div id="viewSettings_proxy" class="proto-hidden">
-                        <div class="proto-back" onclick="switchViewSvc('proxy', 'viewMain_proxy')">
+                    <div id="viewSettings_mx-proxy" class="proto-hidden">
+                        <div class="proto-back" onclick="switchViewSvc('mx-proxy', 'viewMain_mx-proxy')">
                             <i class="fa-solid fa-arrow-left"></i> Volver
                         </div>
                         <div class="proto-title-section">Opciones del Proxy</div>
                         <div class="proto-grid">
+                            <button class="proto-btn proto-btn-menu" onclick="window.runGenericInstall('mx-proxy', 80)">
+                                <span>🛠️ Asistente Instalación</span><span>→</span>
+                            </button>
                             <button class="proto-btn proto-btn-menu" onclick="promptServicePort('mx-proxy')">
                                 <span>🔌 Cambiar Puerto</span><span>→</span>
+                            </button>
+                            <button class="proto-btn proto-btn-menu" onclick="window.runGenericUninstall('mx-proxy')">
+                                <span>🗑️ Desinstalar</span><span>→</span>
                             </button>
                             <button class="proto-btn proto-btn-outline" onclick="window.svcAction('mx-proxy', 'restart')" id="btnProxyToggle">
                                 ▶️ Reiniciar Motor
                             </button>
                         </div>
+                    </div>
+                    <div id="terminal_mx-proxy" class="proto-hidden">
+                        <div class="proto-console" id="consoleOutput_mx-proxy"></div>
                     </div>
                 </div>
 
@@ -318,13 +334,22 @@
                         </div>
                         <div class="proto-title-section">Opciones Hysteria</div>
                         <div class="proto-grid">
+                            <button class="proto-btn proto-btn-menu" onclick="window.runGenericInstall('hysteria', '2000-5000')">
+                                <span>🛠️ Asistente Instalación</span><span>→</span>
+                            </button>
                             <button class="proto-btn proto-btn-menu" onclick="promptServicePort('hysteria')">
                                 <span>🔌 Cambiar Rango</span><span>→</span>
+                            </button>
+                            <button class="proto-btn proto-btn-menu" onclick="window.runGenericUninstall('hysteria')">
+                                <span>🗑️ Desinstalar</span><span>→</span>
                             </button>
                             <button class="proto-btn proto-btn-outline" onclick="window.svcAction('hysteria', 'restart')" id="btnHysteriaToggle">
                                 ▶️ Reiniciar Servicio
                             </button>
                         </div>
+                    </div>
+                    <div id="terminal_hysteria" class="proto-hidden">
+                        <div class="proto-console" id="consoleOutput_hysteria"></div>
                     </div>
                 </div>
 
@@ -352,17 +377,27 @@
                         </div>
                         <div class="proto-title-section">Opciones UDP Custom</div>
                         <div class="proto-grid">
+                            <button class="proto-btn proto-btn-menu" onclick="window.runGenericInstall('udp-custom', '7100-7300')">
+                                <span>🛠️ Asistente Instalación</span><span>→</span>
+                            </button>
                             <button class="proto-btn proto-btn-menu" onclick="promptServicePort('udp-custom')">
                                 <span>🔌 Cambiar Rango</span><span>→</span>
+                            </button>
+                            <button class="proto-btn proto-btn-menu" onclick="window.runGenericUninstall('udp-custom')">
+                                <span>🗑️ Desinstalar</span><span>→</span>
                             </button>
                             <button class="proto-btn proto-btn-outline" onclick="window.svcAction('udp-custom', 'restart')" id="btnUdpToggle">
                                 ▶️ Reiniciar Motor
                             </button>
                         </div>
                     </div>
+                    <div id="terminal_udp-custom" class="proto-hidden">
+                        <div class="proto-console" id="consoleOutput_udp-custom"></div>
+                    </div>
                 </div>
 
             </div>
+        </div>
         </div>
 
     </main>

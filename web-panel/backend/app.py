@@ -320,20 +320,39 @@ def service_action():
 def install_stunnel4_simple():
     if 'auth' not in session: return jsonify({"error": "Unauthorized"}), 401
     ctype = request.json.get('type', '1')
+    port = request.json.get('port', '443')
     
-    # 1: Directo, 2: Proxy, 3: Universal
     option = "1"
     if "Proxy" in ctype: option = "2"
     elif "Universal" in ctype or "Combinado" in ctype: option = "3"
     
-    # Invocamos al instalador dedicado WEB con timeout extendido
-    cmd = f'bash /etc/MaximusVpsMx/modules/install_stunnel_web.sh {option} 443'
+    cmd = f'bash /etc/MaximusVpsMx/modules/install_stunnel_web.sh {option} {port}'
     result = run_install_command(cmd)
     
-    if result == "TIMEOUT":
-        return jsonify({"success": False, "error": "La instalación tomó demasiado tiempo, verifique el estado manualmente."})
+    if result != "TIMEOUT":
+        run_command("systemctl enable --now stunnel4")
+        return jsonify({"success": True})
+    return jsonify({"success": False, "error": "Timeout"})
+
+@app.route('/api/service/install/generic', methods=['POST'])
+def install_generic():
+    if 'auth' not in session: return jsonify({"error": "Unauthorized"}), 401
+    sid = request.json.get('id')
+    port = request.json.get('port')
     
+    scripts = {
+        "mx-proxy": f"bash /etc/MaximusVpsMx/modules/install_mx-proxy.sh {port}",
+        "hysteria": f"bash /etc/MaximusVpsMx/modules/install_hysteria.sh", # Se puede extender
+        "udp-custom": f"bash /etc/MaximusVpsMx/modules/install_udp-custom.sh"
+    }
+    
+    cmd = scripts.get(sid)
+    if not cmd: return jsonify({"success": False, "error": "No instalador"})
+    
+    run_install_command(cmd)
+    run_command(f"systemctl enable --now {sid}")
     return jsonify({"success": True})
+
 
 @app.route('/api/service/proxy/port', methods=['POST'])
 def port_proxy_python():
@@ -359,11 +378,11 @@ def update_service_port():
     if not sid or not port or not port.isdigit():
         return jsonify({"success": False, "error": "Datos inválidos"})
         
-    if sid == "ssh":
+    if sid == "ssh" or sid == "sshd":
         run_command(f"sed -i 's/^#?Port .*/Port {port}/' /etc/ssh/sshd_config && systemctl restart ssh")
     elif sid == "dropbear":
         run_command(f"sed -i 's/DROPBEAR_PORT=.*/DROPBEAR_PORT={port}/' /etc/default/dropbear && systemctl restart dropbear")
-    elif sid == "stunnel4":
+    elif sid == "stunnel4" or sid == "stunnel":
         run_command(f"sed -i 's/accept = .*/accept = {port}/g' /etc/stunnel/stunnel.conf && systemctl restart stunnel4")
     elif sid == "mx-proxy":
         run_command(f"bash /etc/MaximusVpsMx/modules/install_mx-proxy.sh {port}")
