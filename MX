@@ -1040,6 +1040,8 @@ menu_mantenimiento() {
                 TEMP_DIR="/tmp/MaximusVpsMx_temp"
                 echo -e "${CYAN}[+] Descargando última versión de GitHub...${NC}"
                 rm -rf "$TEMP_DIR" 2>/dev/null
+                # Asegurar directorio de trabajo estable
+                cd /root || exit
                 if git clone "$URL_REPO" "$TEMP_DIR"; then
                     echo -e "${GREEN}[OK] Descarga exitosa.${NC}"
                 else
