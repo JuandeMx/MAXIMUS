@@ -206,6 +206,49 @@
                 </div>
 
             </div>
+
+            <!-- PROXY 80 CARD -->
+            <div class="proto-card" id="proxyCard">
+                <div class="proto-accent" id="proxyAccent"></div>
+                
+                <!-- MAIN VIEW -->
+                <div id="viewMain_proxy">
+                    <div class="proto-header">
+                        <i class="fa-solid fa-code" style="color: #3b82f6; font-size: 1.5rem;"></i>
+                        <h1>Python Proxy</h1>
+                    </div>
+                    <div class="proto-subtitle">Motor Universal de Payloads</div>
+                    
+                    <div class="proto-detail">
+                        <span>Puerto en escucha:</span>
+                        <span id="proxyPortTxt">80</span>
+                    </div>
+                    
+                    <div id="proxyStatusTxt" class="proto-status-text proto-status-offline">OFFLINE</div>
+                    
+                    <button class="proto-btn proto-btn-purple" onclick="switchViewProxy('viewSettings_proxy')">
+                        <i class="fa-solid fa-gear"></i> CONFIGURACIÓN
+                    </button>
+                </div>
+                
+                <!-- SETTINGS VIEW -->
+                <div id="viewSettings_proxy" class="proto-hidden">
+                    <div class="proto-back" onclick="switchViewProxy('viewMain_proxy')">
+                        <i class="fa-solid fa-arrow-left"></i> Volver
+                    </div>
+                    <div class="proto-title-section">Opciones del Proxy</div>
+                    
+                    <div class="proto-grid">
+                        <button class="proto-btn proto-btn-menu" onclick="promptProxyPort()">
+                            <span>🔌 Cambiar Puerto del Proxy</span>
+                        </button>
+                        <button class="proto-btn proto-btn-outline" onclick="toggleProxyService()" id="btnProxyToggle">
+                            ▶️ Reiniciar Motor
+                        </button>
+                    </div>
+                </div>
+            </div>
+
         </div>
 
     </main>

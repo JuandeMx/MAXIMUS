@@ -301,6 +301,10 @@ async function executeUserAction(endpoint, payload, successMsg) {
 let stunnelIsOnline = false;
 let stunnelPort = 443;
 
+// ========== PROXY 80 UI LOGIC ==========
+let proxyIsOnline = false;
+let proxyPort = 80;
+
 async function fetchServices() {
     try {
         const res = await fetch('/api/service/status');
@@ -310,36 +314,45 @@ async function fetchServices() {
             stunnelIsOnline = stnl.active;
             stunnelPort = stnl.port;
             document.getElementById('stnlPort').innerText = stunnelPort;
-            
-            const label = document.getElementById('stnlStatusTxt');
-            const accent = document.getElementById('stunnelAccent');
-            const btnToggle = document.getElementById('btnStnlToggle');
-            
-            if(!stnl.installed) {
-                label.innerText = 'NO INSTALADO';
-                label.className = 'proto-status-text';
-                label.style.color = '#94a3b8';
-                accent.style.background = '#64748b';
-                btnToggle.innerHTML = '▶️ Iniciar Servicio';
-                btnToggle.style.pointerEvents = 'none';
-                btnToggle.style.opacity = '0.5';
-            } else if(stnl.active) {
-                label.innerText = 'ONLINE';
-                label.className = 'proto-status-text proto-status-online';
-                accent.style.background = '#4ade80';
-                btnToggle.innerHTML = '🔄 Reiniciar Servicio';
-                btnToggle.style.pointerEvents = 'auto';
-                btnToggle.style.opacity = '1';
-            } else {
-                label.innerText = 'OFFLINE';
-                label.className = 'proto-status-text proto-status-offline';
-                accent.style.background = '#a855f7';
-                btnToggle.innerHTML = '▶️ Iniciar Servicio';
-                btnToggle.style.pointerEvents = 'auto';
-                btnToggle.style.opacity = '1';
-            }
+            updateServiceUI('stunnel4', stnl, 'stnlStatusTxt', 'stunnelAccent', 'btnStnlToggle');
         }
-    } catch(e) { console.error("Error cargando Stunnel status"); }
+
+        const prxy = services.find(s => s.id === 'mx-proxy');
+        if(prxy) {
+            proxyIsOnline = prxy.active;
+            proxyPort = prxy.port;
+            document.getElementById('proxyPortTxt').innerText = proxyPort;
+            updateServiceUI('mx-proxy', prxy, 'proxyStatusTxt', 'proxyAccent', 'btnProxyToggle');
+        }
+    } catch(e) { console.error("Error cargando status de servicios", e); }
+}
+
+function updateServiceUI(id, data, labelId, accentId, btnId) {
+    const label = document.getElementById(labelId);
+    const accent = document.getElementById(accentId);
+    const btnToggle = document.getElementById(btnId);
+    if(!label || !accent || !btnToggle) return;
+
+    if(!data.installed) {
+        label.innerText = 'NO INSTALADO';
+        label.className = 'proto-status-text';
+        label.style.color = '#94a3b8';
+        accent.style.background = '#64748b';
+        btnToggle.style.pointerEvents = 'none';
+        btnToggle.style.opacity = '0.5';
+    } else if(data.active) {
+        label.innerText = 'ONLINE';
+        label.className = 'proto-status-text proto-status-online';
+        accent.style.background = '#4ade80';
+        btnToggle.style.pointerEvents = 'auto';
+        btnToggle.style.opacity = '1';
+    } else {
+        label.innerText = 'OFFLINE';
+        label.className = 'proto-status-text proto-status-offline';
+        accent.style.background = '#a855f7';
+        btnToggle.style.pointerEvents = 'auto';
+        btnToggle.style.opacity = '1';
+    }
 }
 
 window.switchViewStunnel = function(viewId) {
@@ -361,7 +374,7 @@ window.toggleStunnelService = async function() {
 window.promptStunnelPort = async function() {
     const newPort = prompt("Introduce el nuevo puerto para Stunnel4:", stunnelPort);
     if (newPort && !isNaN(newPort)) {
-        showStunnelTerminal(`Cambiando puerto a: ${newPort}...`, false);
+        showToast(`Cambiando puerto de Stunnel a: ${newPort}...`);
         try {
             const res = await fetch('/api/service/stunnel4/port', {
                 method: 'POST',
@@ -370,14 +383,49 @@ window.promptStunnelPort = async function() {
             });
             const data = await res.json();
             if(data.success) {
-                showStunnelTerminal("Puerto cambiado exitosamente. Reiniciando servicio...", true);
-                setTimeout(() => { switchViewStunnel('viewMain_stunnel'); fetchServices(); }, 2000);
+                showToast("Puerto de Stunnel cambiado exitosamente.");
+                setTimeout(fetchServices, 2000);
             } else {
-                showStunnelTerminal("Error cambiando el puerto.", true);
+                showToast("Error cambiando el puerto.");
             }
-        } catch(e) {
-            showStunnelTerminal("Error de red conectando con el backend.", true);
-        }
+        } catch(e) { showToast("Error de conexión"); }
+    }
+}
+
+window.switchViewProxy = function(viewId) {
+    const views = ['viewMain_proxy', 'viewSettings_proxy'];
+    views.forEach(v => {
+        const el = document.getElementById(v);
+        if(el) el.classList.add('proto-hidden');
+    });
+    const target = document.getElementById(viewId);
+    if(target) target.classList.remove('proto-hidden');
+}
+
+window.toggleProxyService = async function() {
+    const action = (!proxyIsOnline) ? 'start' : 'restart';
+    await window.svcAction('mx-proxy', action);
+    setTimeout(fetchServices, 1500);
+}
+
+window.promptProxyPort = async function() {
+    const newPort = prompt("Introduce el nuevo puerto para el Proxy Python:", proxyPort);
+    if (newPort && !isNaN(newPort)) {
+        showToast(`Cambiando puerto del proxy a: ${newPort}...`);
+        try {
+            const res = await fetch('/api/service/proxy/port', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({port: newPort})
+            });
+            const data = await res.json();
+            if(data.success) {
+                showToast("Puerto del Proxy cambiado. Reiniciando...");
+                setTimeout(fetchServices, 2000);
+            } else {
+                showToast("Error cambiando puerto del Proxy");
+            }
+        } catch(e) { showToast("Error de conexión"); }
     }
 }
 
