@@ -167,6 +167,7 @@ IP Servidor: `{ip}`
 
 🌀 *ENLACE HYSTERIA v2*
 `{hy_link}`
+Rango: `{config.HYSTERIA_RANGE}`
 
 _Toca los códigos para copiarlos directamente._
 """
