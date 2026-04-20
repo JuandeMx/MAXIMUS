@@ -145,8 +145,10 @@ def deliver_account(chat_id, user, pw, expiry):
     # Formato UDP Custom corregido
     udp_link = f"{ip}:{config.UDP_RANGE}@{user}:{pw}"
     
-    # Enlace Hysteria v2
-    hy_link = f"hy2://{pw}@{ip}:{config.HY_PORT}?insecure=1&sni={config.HY_SNI}&obfs={config.HY_OBFS}&obfs-password={config.HY_OBFS}#{user}"
+    # Enlace Hysteria v2 dinámico
+    hy_port = manager.get_hysteria_port()
+    hy_obfs = manager.get_hysteria_obfs()
+    hy_link = f"hy2://{pw}@{ip}:{hy_port}?insecure=1&sni={config.HY_SNI}&obfs=salamander&obfs-password={hy_obfs}#{user}"
     
     msg = f"""
 🌐 *TU CUENTA SE GENERÓ CON ÉXITO* 🛡️

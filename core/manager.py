@@ -57,3 +57,13 @@ def get_server_ip():
     # Detectar IP pública
     ip = run_command("curl -s ipv4.icanhazip.com")
     return ip if ip else "TU_IP_AQUI"
+
+def get_hysteria_port():
+    # Lee el puerto configurado en Hysteria
+    port = run_command("grep 'listen:' /etc/hysteria/config.yaml 2>/dev/null | grep -o '[0-9]*' | head -1")
+    return port if port else "443"
+
+def get_hysteria_obfs():
+    # Lee la contraseña obfs maestra
+    obfs = run_command("grep 'password:' /etc/hysteria/config.yaml 2>/dev/null | tail -1 | awk '{print $NF}'")
+    return obfs if obfs else "salamander"
