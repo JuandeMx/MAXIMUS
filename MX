@@ -960,6 +960,7 @@ menu_sistema() {
         ufw status | grep -q "active" && fw_st="${GREEN}[Activo]${NC}" || fw_st="${RED}[Inactivo]${NC}"
         crontab -l 2>/dev/null | grep -q "cloudflare-ddns" && cf_st="${GREEN}[Activo]${NC}" || cf_st="${RED}[Inactivo]${NC}"
         systemctl is-active --quiet mx-webpanel && wp_st="${GREEN}[ON]${NC}" || wp_st="${RED}[OFF]${NC}"
+        systemctl is-active --quiet maximus-bot && tg_st="${GREEN}[ON]${NC}" || tg_st="${RED}[OFF]${NC}"
 
         echo -e "  ${CYAN}[1]>${WHITE} Optimizar VPS (Limpiar RAM y Caché)${NC}"
         echo -e "  ${CYAN}[2]>${WHITE} Editor de Banner Global (SSH/Issue)${NC}"
@@ -969,6 +970,7 @@ menu_sistema() {
         echo -e "  ${CYAN}[5]>${WHITE} Firewall UFW Config          | $fw_st${NC}"
         echo -e "  ${CYAN}[6]>${WHITE} CLOUDFLARE DDNS              | $cf_st${NC}"
         echo -e "  ${CYAN}[7]>${WHITE} PANEL WEB (Premium Edition)  | $wp_st${NC}"
+        echo -e "  ${CYAN}[8]>${GREEN} TELEGRAM BOT (Elite Edition) | $tg_st${NC}"
         ui_hr
         echo -e "  ${WHITE}[0] VOLVER AL MENÚ PRINCIPAL${NC}"
         ui_hr
@@ -1013,6 +1015,7 @@ CFEOF
                     3) crontab -l 2>/dev/null | grep -v "cloudflare-ddns" | crontab -; echo -e "${RED}⚠️ Desactivado.${NC}"; sleep 1 ;;
                 esac ;;
             7) sub_webpanel ;;
+            8) bash /etc/MaximusVpsMx/modules/bot_manager.sh ;;
             0) return ;;
             *) continue ;;
         esac

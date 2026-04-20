@@ -15,9 +15,10 @@ def check_user_exists(username):
     res = run_command(f"grep -q '^{username}:' /etc/passwd")
     return res is not None
 
-def create_ssh_user(username, password, days=3):
+def create_ssh_user(username, password, days=3, limit=1):
     # Generar fecha de expiración para useradd (YYYY-MM-DD)
     exp_date = (datetime.datetime.now() + datetime.timedelta(days=days)).strftime('%Y-%m-%d')
+    db_path = "/etc/MaximusVpsMx/users.db"
     
     # comando useradd: -M (no home), -s /bin/false (no shell), -e (expiry)
     cmd = f"useradd -M -s /bin/false -e {exp_date} {username}"
@@ -27,6 +28,11 @@ def create_ssh_user(username, password, days=3):
     # establecer contraseña
     if run_command(f"echo '{username}:{password}' | chpasswd") is None:
         return False, "Error al establecer contraseña"
+    
+    # Sincronizar con la base de datos de MX
+    # Formato: user:pass:exp:hwid:limit
+    user_entry = f"{username}:{password}:{exp_date}:OFF:{limit}"
+    run_command(f"echo '{user_entry}' >> {db_path}")
     
     return True, exp_date
 
