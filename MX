@@ -967,10 +967,9 @@ menu_sistema() {
         echo -e "  ${CYAN}[3]>${WHITE} Respaldar Cuentas Localmente${NC}"
         echo -e "  ${CYAN}[4]>${WHITE} Monitor de Tráfico (vnstat)${NC}"
         ui_subhr
-        echo -e "  ${CYAN}[5]>${WHITE} Firewall UFW Config          | $fw_st${NC}"
-        echo -e "  ${CYAN}[6]>${WHITE} CLOUDFLARE DDNS              | $cf_st${NC}"
-        echo -e "  ${CYAN}[7]>${WHITE} PANEL WEB (Premium Edition)  | $wp_st${NC}"
-        echo -e "  ${CYAN}[8]>${GREEN} TELEGRAM BOT (Elite Edition) | $tg_st${NC}"
+        echo -e "  ${CYAN} [5]>${WHITE} Firewall UFW Config          | $fw_st${NC}"
+        echo -e "  ${CYAN} [6]>${WHITE} CLOUDFLARE DDNS              | $cf_st${NC}"
+        echo -e "  ${CYAN} [7]>${GREEN} TELEGRAM BOT (Elite Edition) | $tg_st${NC}"
         ui_hr
         echo -e "  ${WHITE}[0] VOLVER AL MENÚ PRINCIPAL${NC}"
         ui_hr
@@ -1014,8 +1013,7 @@ CFEOF
                         echo -e "${GREEN}✅ Activado.${NC}"; sleep 1 ;;
                     3) crontab -l 2>/dev/null | grep -v "cloudflare-ddns" | crontab -; echo -e "${RED}⚠️ Desactivado.${NC}"; sleep 1 ;;
                 esac ;;
-            7) sub_webpanel ;;
-            8) bash /etc/MaximusVpsMx/modules/bot_manager.sh ;;
+            7) bash /etc/MaximusVpsMx/modules/bot_manager.sh ;;
             0) return ;;
             *) continue ;;
         esac

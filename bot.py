@@ -6,9 +6,17 @@ import config
 import os
 import time
 
-# Inicializar Bot y DB
-bot = telebot.TeleBot(config.BOT_TOKEN)
-db.init_db()
+# Inicialización segura de Bot y DB
+if config.BOT_TOKEN == "PENDIENTE" or not config.BOT_TOKEN:
+    print("❌ ERROR: No se ha configurado el TOKEN del Bot. Usa el menú MX para configurarlo.")
+    exit(1)
+
+try:
+    bot = telebot.TeleBot(config.BOT_TOKEN)
+    db.init_db()
+except Exception as e:
+    print(f"❌ ERROR CRÍTICO al inicializar: {e}")
+    exit(1)
 
 # --- HANDLERS PRINCIPALES ---
 
@@ -171,5 +179,9 @@ def show_server_stats(message):
     bot.send_message(message.chat.id, msg, parse_mode="Markdown")
 
 if __name__ == "__main__":
-    print("🚀 Bot Maximus Premium en ejecución...")
-    bot.infinity_polling()
+    try:
+        print("🚀 Bot Maximus Premium en ejecución...")
+        bot.infinity_polling()
+    except Exception as e:
+        print(f"❌ El Bot ha colapsado: {e}")
+        time.sleep(10) # Evitar bucle infinito de reinicio rápido si hay error de red
