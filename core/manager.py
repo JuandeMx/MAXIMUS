@@ -11,9 +11,12 @@ def run_command(cmd):
         return None
 
 def check_user_exists(username):
-    # Verifica en /etc/passwd si el usuario ya existe
-    res = run_command(f"grep -q '^{username}:' /etc/passwd")
-    return res is not None
+    # Verifica en /etc/passwd si el usuario ya existe (usando el código de salida)
+    try:
+        result = subprocess.run(f"grep -q '^{username}:' /etc/passwd", shell=True)
+        return result.returncode == 0
+    except:
+        return False
 
 def create_ssh_user(username, password, days=3, limit=1):
     # Generar fecha de expiración para useradd (YYYY-MM-DD)
