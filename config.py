@@ -20,7 +20,11 @@ HOST_DOMAIN = _cfg.get("HOST_DOMAIN", "")
 SSH_PORTS = "443, 80"
 DROPBEAR_PORT = "44"
 UDP_RANGE = "7100-7300"
+UDP_SERVER_PORT = "7100" # Puerto principal UDP Custom
 HYSTERIA_RANGE = "2000-5000"
+HY_PORT = "2000" # Puerto principal Hysteria v2
+HY_OBFS = "salamander"
+HY_SNI = "bing.com"
 
 WELCOME_MSG = """
 🤖 *Bienvenido al Bot de Gestión Maximus Elite* 🛡️

@@ -138,18 +138,35 @@ def process_premium_creation(message, username):
 def deliver_account(chat_id, user, pw, expiry):
     ip = config.HOST_DOMAIN if config.HOST_DOMAIN else manager.get_server_ip()
     
+    # Formatos HTTP Custom
+    hc_ssl = f"{ip}:443@{user}:{pw}"
+    hc_dir = f"{ip}:80@{user}:{pw}"
+    
+    # Formato UDP Custom
+    udp_link = f"{user}@{ip}:{config.UDP_SERVER_PORT}:{pw}"
+    
+    # Enlace Hysteria v2
+    hy_link = f"hy2://{pw}@{ip}:{config.HY_PORT}?insecure=1&sni={config.HY_SNI}&obfs={config.HY_OBFS}&obfs-password={config.HY_OBFS}#{user}"
+    
     msg = f"""
-🌐 *Detalles de tu Servidor:*
+🌐 *TU CUENTA SE GENERÓ CON ÉXITO* 🛡️
+
 👤 Usuario: `{user}`
 🔑 Contraseña: `{pw}`
 📅 Expiración: `{expiry}`
+IP Servidor: `{ip}`
 
-📡 *Parámetros de Conexión:*
-• IP/Host: `{ip}`
-• Puertos SSH/SSL: `{config.SSH_PORTS}`
-• Dropbear: `{config.DROPBEAR_PORT}`
-• Rango UDP Custom: `{config.UDP_RANGE}`
-• Rango Hysteria: `{config.HYSTERIA_RANGE}`
+🚀 *CONFIGURACIÓN HTTP CUSTOM*
+• SSL: `{hc_ssl}`
+• DIRECTO: `{hc_dir}`
+
+📡 *UDP CUSTOM*
+`{udp_link}`
+
+🌀 *ENLACE HYSTERIA v2*
+`{hy_link}`
+
+_Toca los códigos para copiarlos directamente._
 """
     bot.send_message(chat_id, msg, parse_mode="Markdown")
 
