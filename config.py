@@ -1,0 +1,31 @@
+import json
+import os
+
+CONFIG_FILE = "/etc/MaximusVpsMx/bot_config.json"
+
+def load_config():
+    if os.path.exists(CONFIG_FILE):
+        with open(CONFIG_FILE, 'r') as f:
+            return json.load(f)
+    return {}
+
+# Cargar datos dinámicos
+_cfg = load_config()
+
+BOT_TOKEN = _cfg.get("BOT_TOKEN", "PENDIENTE")
+ADMIN_ID = _cfg.get("ADMIN_ID", 0)
+HOST_DOMAIN = _cfg.get("HOST_DOMAIN", "")
+
+# Configuración Estática de Puertos
+SSH_PORTS = "443, 80"
+DROPBEAR_PORT = "44"
+UDP_RANGE = "7100-7300"
+HYSTERIA_RANGE = "2000-5000"
+
+WELCOME_MSG = """
+🤖 *Bienvenido al Bot de Gestión Maximus Elite* 🛡️
+
+Soy tu asistente para la creación de cuentas SSH/VPN Premium y Trial.
+
+*Selecciona una opción:*
+"""

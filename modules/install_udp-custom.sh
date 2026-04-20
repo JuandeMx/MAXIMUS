@@ -118,17 +118,22 @@ sed -i '/net.ipv4.ip_forward/d' /etc/sysctl.conf
 echo "net.ipv4.ip_forward=1" >> /etc/sysctl.conf
 echo -e "${GREEN} [OK]${NC}"
 
+# Puerto configurable y Rango (Dinámico)
+udp_range="${1:-7100:7300}"
+# Normalizar formato (ej: 7100-7300 -> 7100:7300)
+udp_range=$(echo $udp_range | tr '-' ':')
+
 # Abrir puertos en firewall y configurar REDIRECCIÓN ESTRATÉGICA (NAT)
-echo -e "${GREEN}[+] Configurando Rango Estratégico UDP (7100-7300 -> 36712)...${NC}"
-ufw allow 7100:7300/udp 2>/dev/null
+echo -e "${GREEN}[+] Configurando Rango Estratégico UDP ($udp_range -> 36712)...${NC}"
+ufw allow $udp_range/udp 2>/dev/null
 
 # Limpiar reglas previas específicas de este rango para evitar duplicados
-iptables -t nat -D PREROUTING -p udp --dport 7100:7300 -j REDIRECT --to-port 36712 2>/dev/null
-ip6tables -t nat -D PREROUTING -p udp --dport 7100:7300 -j REDIRECT --to-port 36712 2>/dev/null
+iptables -t nat -D PREROUTING -p udp --dport $udp_range -j REDIRECT --to-port 36712 2>/dev/null
+ip6tables -t nat -D PREROUTING -p udp --dport $udp_range -j REDIRECT --to-port 36712 2>/dev/null
 
 # Aplicar Redirección (IPv4 e IPv6)
-iptables -t nat -A PREROUTING -p udp --dport 7100:7300 -j REDIRECT --to-port 36712
-ip6tables -t nat -A PREROUTING -p udp --dport 7100:7300 -j REDIRECT --to-port 36712
+iptables -t nat -A PREROUTING -p udp --dport $udp_range -j REDIRECT --to-port 36712
+ip6tables -t nat -A PREROUTING -p udp --dport $udp_range -j REDIRECT --to-port 36712
 
 # Guardar reglas para que sean permanentes
 if command -v iptables-save > /dev/null; then

@@ -13,8 +13,10 @@ echo -e "${CYAN}=========================================================${NC}"
 echo -e "${YELLOW}          INSTALADOR HYSTERIA v2 (QUIC/UDP)${NC}"
 echo -e "${CYAN}=========================================================${NC}"
 
-# Puerto configurable y Rango de Port-Hopping (Instalación automática)
-hy_range="2000:5000"
+# Puerto configurable y Rango de Port-Hopping (Dinámico)
+hy_range="${1:-2000:5000}"
+# Normalizar formato (ej: 2000-5000 -> 2000:5000)
+hy_range=$(echo $hy_range | tr '-' ':')
 hy_port=36713
 
 # Contraseña de autenticación por defecto (Automática)
