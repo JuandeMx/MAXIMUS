@@ -311,6 +311,74 @@
                 </div>
             </div>
 
+            <!-- HYSTERIA V2 CARD -->
+            <div class="proto-card" id="hysteriaCard">
+                <div class="proto-accent" id="hysteriaAccent"></div>
+                <div id="viewMain_hysteria">
+                    <div class="proto-header">
+                        <i class="fa-solid fa-bolt" style="color: #22d3ee; font-size: 1.5rem;"></i>
+                        <h1>Hysteria v2</h1>
+                    </div>
+                    <div class="proto-subtitle">Túnel QUIC / Port-Hopping</div>
+                    <div class="proto-detail">
+                        <span>Rango de puertos:</span>
+                        <span id="hysteriaPortTxt">2000-5000</span>
+                    </div>
+                    <div id="hysteriaStatusTxt" class="proto-status-text proto-status-offline">OFFLINE</div>
+                    <button class="proto-btn proto-btn-purple" onclick="switchViewSvc('hysteria', 'viewSettings_hysteria')">
+                        <i class="fa-solid fa-gear"></i> CONFIGURACIÓN
+                    </button>
+                </div>
+                <div id="viewSettings_hysteria" class="proto-hidden">
+                    <div class="proto-back" onclick="switchViewSvc('hysteria', 'viewMain_hysteria')">
+                        <i class="fa-solid fa-arrow-left"></i> Volver
+                    </div>
+                    <div class="proto-title-section">Opciones de Hysteria</div>
+                    <div class="proto-grid">
+                        <button class="proto-btn proto-btn-menu" onclick="promptServicePort('hysteria')">
+                            <span>🔌 Cambiar Rango UDP</span>
+                        </button>
+                        <button class="proto-btn proto-btn-outline" onclick="window.svcAction('hysteria', 'restart')">
+                            ▶️ Reiniciar Servicio
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- UDP CUSTOM CARD -->
+            <div class="proto-card" id="udp-customCard">
+                <div class="proto-accent" id="udp-customAccent"></div>
+                <div id="viewMain_udp-custom">
+                    <div class="proto-header">
+                        <i class="fa-solid fa-microchip" style="color: #84cc16; font-size: 1.5rem;"></i>
+                        <h1>UDP Custom</h1>
+                    </div>
+                    <div class="proto-subtitle">Optimizado para Gaming & Streaming</div>
+                    <div class="proto-detail">
+                        <span>Rango de puertos:</span>
+                        <span id="udp-customPortTxt">7100-7300</span>
+                    </div>
+                    <div id="udp-customStatusTxt" class="proto-status-text proto-status-offline">OFFLINE</div>
+                    <button class="proto-btn proto-btn-purple" onclick="switchViewSvc('udp-custom', 'viewSettings_udp-custom')">
+                        <i class="fa-solid fa-gear"></i> CONFIGURACIÓN
+                    </button>
+                </div>
+                <div id="viewSettings_udp-custom" class="proto-hidden">
+                    <div class="proto-back" onclick="switchViewSvc('udp-custom', 'viewMain_udp-custom')">
+                        <i class="fa-solid fa-arrow-left"></i> Volver
+                    </div>
+                    <div class="proto-title-section">Opciones de UDP Custom</div>
+                    <div class="proto-grid">
+                        <button class="proto-btn proto-btn-menu" onclick="promptServicePort('udp-custom')">
+                            <span>🔌 Cambiar Rango UDP</span>
+                        </button>
+                        <button class="proto-btn proto-btn-outline" onclick="window.svcAction('udp-custom', 'restart')">
+                            ▶️ Reiniciar Motor
+                        </button>
+                    </div>
+                </div>
+            </div>
+
         </div>
 
     </main>

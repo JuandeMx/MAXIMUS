@@ -329,7 +329,9 @@ function updateServiceCardUI(svc) {
         'ssh': ['sshStatusTxt', 'sshAccent', 'btnSshToggle'],
         'dropbear': ['dropStatusTxt', 'dropbearAccent', 'btnDropToggle'],
         'stunnel4': ['stnlStatusTxt', 'stunnelAccent', 'btnStnlToggle'],
-        'mx-proxy': ['proxyStatusTxt', 'proxyAccent', 'btnProxyToggle']
+        'mx-proxy': ['proxyStatusTxt', 'proxyAccent', 'btnProxyToggle'],
+        'hysteria': ['hysteriaStatusTxt', 'hysteriaAccent', 'btnHysteriaToggle'],
+        'udp-custom': ['udp-customStatusTxt', 'udp-customAccent', 'btnUdpToggle']
     };
     
     const ui = map[svc.id];
@@ -342,27 +344,41 @@ function updateServiceUI(id, data, labelId, accentId, btnId) {
     const label = document.getElementById(labelId);
     const accent = document.getElementById(accentId);
     const btnToggle = document.getElementById(btnId);
-    if(!label || !accent || !btnToggle) return;
+    
+    if(label) {
+        if(!data.installed) {
+            label.innerText = 'NO INSTALADO';
+            label.className = 'proto-status-text';
+            label.style.color = '#94a3b8';
+        } else if(data.active) {
+            label.innerText = 'ONLINE';
+            label.className = 'proto-status-text proto-status-online';
+        } else {
+            label.innerText = 'OFFLINE';
+            label.className = 'proto-status-text proto-status-offline';
+        }
+    }
 
-    if(!data.installed) {
-        label.innerText = 'NO INSTALADO';
-        label.className = 'proto-status-text';
-        label.style.color = '#94a3b8';
-        accent.style.background = '#64748b';
-        btnToggle.style.pointerEvents = 'none';
-        btnToggle.style.opacity = '0.5';
-    } else if(data.active) {
-        label.innerText = 'ONLINE';
-        label.className = 'proto-status-text proto-status-online';
-        accent.style.background = '#4ade80';
-        btnToggle.style.pointerEvents = 'auto';
-        btnToggle.style.opacity = '1';
-    } else {
-        label.innerText = 'OFFLINE';
-        label.className = 'proto-status-text proto-status-offline';
-        accent.style.background = '#a855f7';
-        btnToggle.style.pointerEvents = 'auto';
-        btnToggle.style.opacity = '1';
+    if(accent) {
+        if(!data.installed) accent.style.background = '#64748b';
+        else if(data.active) accent.style.background = '#4ade80';
+        else {
+            // Colores por defecto para cada servicio en modo OFFLINE
+            const colors = {
+                'ssh': '#6366f1',
+                'dropbear': '#0ea5e9',
+                'stunnel4': '#a855f7',
+                'mx-proxy': '#3b82f6',
+                'hysteria': '#22d3ee',
+                'udp-custom': '#84cc16'
+            };
+            accent.style.background = colors[id] || '#a855f7';
+        }
+    }
+
+    if(btnToggle) {
+        btnToggle.style.pointerEvents = data.installed ? 'auto' : 'none';
+        btnToggle.style.opacity = data.installed ? '1' : '0.5';
     }
 }
 

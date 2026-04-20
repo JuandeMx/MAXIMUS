@@ -65,7 +65,8 @@ def get_port_for_service(name):
         "mx-proxy": run_command("grep 'ExecStart=' /etc/systemd/system/mx-proxy.service 2>/dev/null | awk '{print $NF}' | sed 's/-//g'") or "80",
         "badvpn": "7300",
         "ws-epro": "80",
-        "udp-custom": "7100-7300",
+        "udp-custom": run_command("iptables -t nat -L PREROUTING -n | grep ':36712' | awk '{print $7}' | awk -F: '{print $NF}' | head -1") or "7100:7300",
+        "hysteria": run_command("iptables -t nat -L PREROUTING -n | grep ':36713' | awk '{print $7}' | awk -F: '{print $NF}' | head -1") or "2000:5000",
         "mx-slowdns": "53/UDP",
     }
     return ports.get(name, "--")
@@ -366,6 +367,22 @@ def update_service_port():
         run_command(f"sed -i 's/accept = .*/accept = {port}/g' /etc/stunnel/stunnel.conf && systemctl restart stunnel4")
     elif sid == "mx-proxy":
         run_command(f"bash /etc/MaximusVpsMx/modules/install_mx-proxy.sh {port}")
+    elif sid == "udp-custom" or sid == "hysteria":
+        # Manejo de Rangos (ej: 7000:8000 o 7000-8000)
+        port = port.replace('-', ':')
+        internal_port = "36712" if sid == "udp-custom" else "36713"
+        
+        # 1. Obtener rango viejo para limpiar
+        old_range = run_command(f"iptables -t nat -L PREROUTING -n | grep ':{internal_port}' | awk '{{print $7}}' | awk -F: '{{print $NF}}' | head -1")
+        if old_range:
+            run_command(f"iptables -t nat -D PREROUTING -p udp --dport {old_range} -j REDIRECT --to-port {internal_port}")
+            run_command(f"ufw delete allow {old_range.replace(':', '/')}/udp")
+        
+        # 2. Aplicar nuevo rango
+        run_command(f"iptables -t nat -I PREROUTING -p udp --dport {port} -j REDIRECT --to-port {internal_port}")
+        run_command(f"ufw allow {port.replace(':', ':')}/udp")
+        run_command("iptables-save > /etc/iptables/rules.v4")
+        run_command(f"systemctl restart {sid}")
     else:
         return jsonify({"success": False, "error": "Servicio no soportado"})
         
