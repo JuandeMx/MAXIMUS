@@ -30,29 +30,36 @@ def init_db():
     cursor = conn.cursor()
     cursor.execute(SQL_CREATE_USERS)
     cursor.execute(SQL_CREATE_SALES)
+    
+    # Migración: Añadir system_user si no existe (v6.1)
+    try:
+        cursor.execute("ALTER TABLE telegram_users ADD COLUMN system_user TEXT")
+    except:
+        pass # La columna ya existe
+        
     conn.commit()
     conn.close()
 
 def get_user_status(user_id):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute('SELECT last_trial, is_admin FROM telegram_users WHERE user_id = ?', (user_id,))
+    cursor.execute('SELECT last_trial, is_admin, system_user FROM telegram_users WHERE user_id = ?', (user_id,))
     row = cursor.fetchone()
     conn.close()
     
     if row:
-        return {"last_trial": row[0], "is_admin": bool(row[1])}
+        return {"last_trial": row[0], "is_admin": bool(row[1]), "system_user": row[2]}
     return None
 
-def update_trial(user_id, username_tg):
+def update_trial(user_id, username_tg, system_user):
     now = datetime.now().isoformat()
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute('''
-        INSERT INTO telegram_users (user_id, last_trial, username_tg) 
-        VALUES (?, ?, ?)
-        ON CONFLICT(user_id) DO UPDATE SET last_trial = ?, username_tg = ?
-    ''', (user_id, now, username_tg, now, username_tg))
+        INSERT INTO telegram_users (user_id, last_trial, username_tg, system_user) 
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(user_id) DO UPDATE SET last_trial = ?, username_tg = ?, system_user = ?
+    ''', (user_id, now, username_tg, system_user, now, username_tg, system_user))
     conn.commit()
     conn.close()
 

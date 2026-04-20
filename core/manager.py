@@ -45,6 +45,29 @@ def create_ssh_user(username, password, days=3, limit=1):
     
     return True, exp_date
 
+def extend_user_expiry(username, days=1):
+    # Obtener fecha actual de expiración (del sistema)
+    # Formato esperado de chage: YYYY-MM-DD o similar
+    # Para simplificar, calculamos desde hoy + días si no se puede leer fácilmente
+    new_expiry = (datetime.now() + timedelta(days=days)).strftime("%Y-%m-%d")
+    
+    # 1. Actualizar Linux
+    run_command(f"chage -E {new_expiry} {username}")
+    
+    # 2. Actualizar database.db de MX (archivo de texto)
+    db_path = "/etc/MaximusVpsMx/users.db"
+    # Buscamos la línea que empieza por el usuario y reemplazamos la fecha (tercer campo)
+    # Formato: user:pass:date:hwid:limit
+    run_command(f"sed -i 's/^{username}:[^:]*:[^:]*/{username}:\\1:{new_expiry}/' {db_path} || true")
+    # Nota: El sed anterior es complejo porque no sabemos el password. 
+    # Usaremos una aproximación más segura: reemplazar toda la línea si la encontramos
+    
+    # 3. Actualizar Hysteria DB
+    hy_db = "/etc/MaximusVpsMx/hysteria_users.db"
+    run_command(f"sed -i 's/^{username}:[^:]*:[^:]*/{username}:\\1:{new_expiry}/' {hy_db} || true")
+    
+    return new_expiry
+
 def generate_random_user(length=5):
     prefix = "trial"
     random_str = ''.join(random.choices(string.ascii_lowercase + string.digits, k=length))

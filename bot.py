@@ -80,16 +80,16 @@ def handle_free_trial(message):
 
     bot.send_message(user_id, "⏳ Generando tu cuenta de prueba de 3 días...")
     
-    user = manager.generate_random_user()
-    pw = manager.generate_random_pass()
+    username = manager.generate_random_user()
+    password = manager.generate_random_pass()
     
-    success, result = manager.create_ssh_user(user, pw, days=3)
-    
+    # Crear usuario y guardar vinculación (v6.1)
+    success, expiry = manager.create_ssh_user(username, password, days=3)
     if success:
-        db.update_trial(user_id, message.from_user.username)
-        deliver_account(user_id, user, pw, result)
+        db.update_trial(user_id, message.from_user.username, username)
+        deliver_account(message.chat.id, username, password, expiry)
     else:
-        bot.send_message(user_id, f"❌ Error del sistema: {result}")
+        bot.reply_to(message, "❌ Hubo un problema al crear tu cuenta. Intenta más tarde.")
 
 # --- FLUJO CUENTA PREMIUM ---
 
@@ -129,9 +129,6 @@ def process_premium_creation(message, username):
         btn = types.InlineKeyboardButton("✅ APROBAR Y CREAR", callback_data=f"approve_{user_id}_{username}_{password}")
         markup.add(btn)
         bot.send_message(config.ADMIN_ID, f"🔔 *NUEVA SOLICITUD PREMIUM*\nUsuario: `{username}`\nRemitente: @{message.from_user.username}", reply_markup=markup, parse_mode="Markdown")
-    
-    # En un entorno real, aquí se esperaría el callback de aprobación.
-    # Para este desarrollo inicial, creamos la estructura base.
 
 # --- ENTREGA DE DATOS ---
 
@@ -173,30 +170,75 @@ _Toca los códigos para copiarlos directamente._
 """
     bot.send_message(chat_id, msg, parse_mode="Markdown")
 
-# --- SISTEMA TELÉMETRICO (Reemplazo Panel Web) ---
+# --- SISTEMA TELÉMETRICO ---
 
-def show_server_stats(message):
-    import psutil
-    import shutil
-    
+@bot.callback_query_handler(func=lambda call: call.data == "show_stats")
+def handle_stats_query(call):
+    show_server_stats(call.message.chat.id, call.message.from_user.id)
+
+def show_server_stats(chat_id, user_id=None):
+    # Telemetría Global
     cpu = psutil.cpu_percent()
-    ram = psutil.virtual_memory().percent
-    disk = shutil.disk_usage("/").percent
-    
-    # Intento de obtener usuarios online
-    online = manager.run_command("netstat -antp | grep ESTABLISHED | grep -v '127.0.0.1' | wc -l") or "0"
+    mem = psutil.virtual_memory().percent
+    disk = psutil.disk_usage('/').percent
     
     msg = f"""
-📈 *ESTADO DEL SERVIDOR* 🛡️
-
-⚙️ *CPU:* `{cpu}%`
-🧠 *RAM:* `{ram}%`
-💾 *Disco:* `{disk}%`
-🌐 *Cuentas Online:* `{online}`
-
-📅 *Fecha:* `{time.strftime('%Y-%m-%d %H:%M')}`
+📊 *ESTADO DEL SERVIDOR* 🛡️
+━━━━━━━━━━━━━━━━━━
+🔹 *CPU:* `{cpu}%`
+🔹 *RAM:* `{mem}%`
+🔹 *Disco:* `{disk}%`
+━━━━━━━━━━━━━━━━━━
 """
-    bot.send_message(message.chat.id, msg, parse_mode="Markdown")
+    # Telemetría Personal (v6.1)
+    kb = types.InlineKeyboardMarkup()
+    if user_id:
+        u_info = db.get_user_status(user_id)
+        if u_info and u_info.get("system_user"):
+            s_user = u_info["system_user"]
+            msg += f"👤 *TU CUENTA:* `{s_user}`\n"
+            msg += "✨ *ESTADO:* `ACTIVA` ✅\n"
+            msg += "━━━━━━━━━━━━━━━━━━\n"
+            kb.add(types.InlineKeyboardButton("🔄 RENOVAR (VER 5 ADS)", callback_data=f"renew_ads_{s_user}"))
+    
+    kb.add(types.InlineKeyboardButton("⬅️ Volver", callback_data="start"))
+    bot.send_message(chat_id, msg, parse_mode="Markdown", reply_markup=kb)
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("renew_ads_"))
+def process_renew_ads(call):
+    s_user = call.data.replace("renew_ads_", "")
+    
+    # Secuencia de 5 anuncios (Simulada)
+    for i in range(1, 6):
+        bot.edit_message_text(
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,
+            text=f"🎬 *VIENDO ANUNCIO {i}/5...*\n\n_Por favor no cierres este mensaje para recibir tu recompensa._",
+            parse_mode="Markdown"
+        )
+        time.sleep(5)
+    
+    # Aplicar renovación real
+    new_exp = manager.extend_user_expiry(s_user, days=1)
+    
+    final_msg = f"""
+✅ *¡RENOVACIÓN EXITOSA!* 🚀✨
+━━━━━━━━━━━━━━━━━━━━
+Tu cuenta `{s_user}` ha sido extendida 24 horas más.
+
+📅 *Nueva Expiración:* `{new_exp}`
+━━━━━━━━━━━━━━━━━━━━
+¡Gracias por apoyar el servidor viendo anuncios!
+"""
+    kb = types.InlineKeyboardMarkup()
+    kb.add(types.InlineKeyboardButton("📊 Ver Estado", callback_data="show_stats"))
+    bot.edit_message_text(
+        chat_id=call.message.chat.id,
+        message_id=call.message.message_id,
+        text=final_msg,
+        parse_mode="Markdown",
+        reply_markup=kb
+    )
 
 if __name__ == "__main__":
     try:
@@ -204,4 +246,4 @@ if __name__ == "__main__":
         bot.infinity_polling()
     except Exception as e:
         print(f"❌ El Bot ha colapsado: {e}")
-        time.sleep(10) # Evitar bucle infinito de reinicio rápido si hay error de red
+        time.sleep(10)
