@@ -104,18 +104,21 @@ systemctl restart ssh 2>/dev/null || systemctl restart sshd 2>/dev/null
 # Corregir bug de Hostinger con useradd congelado (Reiniciar Logind/DBus)
 systemctl restart systemd-logind 2>/dev/null || true
 
-# 6. Global Banner por defecto
-echo -e "\e[1;32m[+] Aplicando Global Banner...\e[0m"
+# 6. Global Banner por defecto (v7.2 Premium)
+echo -e "\e[1;32m[+] Aplicando Global Banner Pro...\e[0m"
 cat > /etc/issue.net << 'BANNER'
-               .:::.   
-     .::.. .. :|::|:   
-   .::.    .: .:' ::   
-   :|:|::: :::: :. ..:..:
-    ..::  ::|:. .. ..  :
-     .::..::  :: |     :
-   .:. :  .. :  ::.. ..:
-     : :..: :   :..:..:: 
-     ..
+ [1;36m
+  __  __         __  __ ___ __  __ _   _  ____  
+ |  \/  |  /\   \ \/ /|_ _|  \/  | | | | / ___| 
+ | |\/| | /  \   \  /  | || |\/| | | | | \___ \ 
+ | |  | |/ /\ \  /  \  | || |  | | | |_| |___) |
+ |_|  |_/_/  \_\/_/\_\|___|_|  |_|  \___/|____/ 
+                                                
+         --- MAXIMUS ELITE VPS ---
+ [0m
+ [1;32m   USE LOS COMANDOS: menu , MENU o MX  [0m
+ [1;33m   PARA ENTRAR AL PANEL DE ADMINISTRACION  [0m
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 BANNER
 cp /etc/issue.net /etc/motd
 
