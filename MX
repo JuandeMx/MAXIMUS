@@ -969,7 +969,7 @@ menu_sistema() {
         ui_subhr
         echo -e "  ${CYAN} [5]>${WHITE} Firewall UFW Config          | $fw_st${NC}"
         echo -e "  ${CYAN} [6]>${WHITE} CLOUDFLARE DDNS              | $cf_st${NC}"
-        echo -e "  ${CYAN} [7]>${GREEN} TELEGRAM BOT (Elite Edition) | $tg_st${NC}"
+        # echo -e "  ${CYAN} [7]>${GREEN} TELEGRAM BOT (Elite Edition) | $tg_st${NC}"
         ui_hr
         echo -e "  ${WHITE}[0] VOLVER AL MENÚ PRINCIPAL${NC}"
         ui_hr
@@ -1013,7 +1013,7 @@ CFEOF
                         echo -e "${GREEN}✅ Activado.${NC}"; sleep 1 ;;
                     3) crontab -l 2>/dev/null | grep -v "cloudflare-ddns" | crontab -; echo -e "${RED}⚠️ Desactivado.${NC}"; sleep 1 ;;
                 esac ;;
-            7) bash /etc/MaximusVpsMx/modules/bot_manager.sh ;;
+            7) echo -e "\n${YELLOW}▶ Opción Mantenimiento (Desactivada)${NC}"; sleep 2 ;; # bash /etc/MaximusVpsMx/modules/bot_manager.sh ;;
             0) return ;;
             *) continue ;;
         esac
