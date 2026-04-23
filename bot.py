@@ -159,13 +159,12 @@ def process_ask_pass(message, user_id):
 📡 *UDP Custom:*
 `{ip}:{config.UDP_RANGE}@{username}:{password}`
 
-🇦🇷 *Payloads Personal AR:*
-`ayudaysoporte.personal.com.ar:80@{username}:{password}`
-`emailmarketing.personal.com.ar:80@{username}:{password}`
-`Sat24.com:80@{username}:{password}`
-`wap.renxo.com:80@{username}:{password}`
-`recargas.personal.com.ar:80@{username}:{password}`
-`mipersonaluat2.personal.com.ar:80@{username}:{password}`
+🇦🇷 *Host Personal Argentina:*
+1. `emailmarketing.personal.com.ar:80@{username}:{password}`
+2. `Sat24.com:80@{username}:{password}`
+3. `wap.renxo.com:80@{username}:{password}`
+4. `recargas.personal.com.ar:80@{username}:{password}`
+5. `mipersonaluat2.personal.com.ar:80@{username}:{password}`
 
 ⚡ *Todos los puertos que estén activos:*
 {active_ports}
