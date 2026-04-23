@@ -969,7 +969,7 @@ menu_sistema() {
         ui_subhr
         echo -e "  ${CYAN} [5]>${WHITE} Firewall UFW Config          | $fw_st${NC}"
         echo -e "  ${CYAN} [6]>${WHITE} CLOUDFLARE DDNS              | $cf_st${NC}"
-        # echo -e "  ${CYAN} [7]>${GREEN} TELEGRAM BOT (Elite Edition) | $tg_st${NC}"
+        echo -e "  ${CYAN} [7]>${GREEN} TELEGRAM BOT (Elite Edition) | $tg_st${NC}"
         ui_hr
         echo -e "  ${WHITE}[0] VOLVER AL MENÚ PRINCIPAL${NC}"
         ui_hr
@@ -1058,7 +1058,7 @@ CFEOF
                         echo -e "${GREEN}✅ Activado.${NC}"; sleep 1 ;;
                     3) crontab -l 2>/dev/null | grep -v "cloudflare-ddns" | crontab -; echo -e "${RED}⚠️ Desactivado.${NC}"; sleep 1 ;;
                 esac ;;
-            7) echo -e "\n${YELLOW}▶ Opción Mantenimiento (Desactivada)${NC}"; sleep 2 ;; # bash /etc/MaximusVpsMx/modules/bot_manager.sh ;;
+            7) bash /etc/MaximusVpsMx/modules/bot_manager.sh ;;
             0) return ;;
             *) continue ;;
         esac
@@ -1069,9 +1069,10 @@ CFEOF
 menu_mantenimiento() {
     while true; do
         ui_header "MANTENIMIENTO Y ACTUALIZACIÓN"
-        echo -e "  ${CYAN}[1]>${WHITE} ACTUALIZACIÓN INTELIGENTE (Mantiene Datos)${NC}"
-        echo -e "  ${CYAN}[2]>${YELLOW} REINSTALACIÓN FORZADA (Limpia y Repara)${NC}"
-        echo -e "  ${CYAN}[3]>${RED} [!] DESINSTALAR / PURGAR TODO EL PANEL${NC}"
+        echo -e "  ${CYAN}[1]>${GREEN} ACTUALIZACIÓN RÁPIDA (Solo Código, Sin Cortes)${NC}"
+        echo -e "  ${CYAN}[2]>${WHITE} ACTUALIZACIÓN INTELIGENTE (Mantiene Datos)${NC}"
+        echo -e "  ${CYAN}[3]>${YELLOW} REINSTALACIÓN FORZADA (Limpia y Repara)${NC}"
+        echo -e "  ${CYAN}[4]>${RED} [!] DESINSTALAR / PURGAR TODO EL PANEL${NC}"
         ui_subhr
         echo -e "  ${WHITE}[0] VOLVER AL MENÚ PRINCIPAL${NC}"
         ui_hr
@@ -1080,6 +1081,25 @@ menu_mantenimiento() {
 
         case $mant_opt in
             1)
+                echo -e "\n${YELLOW}▶ Iniciando Actualización Rápida Express...${NC}"
+                URL_REPO="https://github.com/JuandeMx/MAXIMUS.git"
+                TEMP_DIR="/tmp/MaximusVpsMx_fast"
+                echo -e "${CYAN}[+] Descargando código fresco desde GitHub...${NC}"
+                rm -rf "$TEMP_DIR" 2>/dev/null
+                if git clone -q "$URL_REPO" "$TEMP_DIR"; then
+                    echo -e "${GREEN}[OK] Descarga exitosa. Inyectando cambios...${NC}"
+                    cp -rf $TEMP_DIR/* /etc/MaximusVpsMx/
+                    chmod +x /etc/MaximusVpsMx/MX
+                    chmod +x /etc/MaximusVpsMx/modules/*.sh
+                    chmod +x /etc/MaximusVpsMx/core/*.sh
+                    rm -rf "$TEMP_DIR"
+                    echo -e "${GREEN}✅ ACTUALIZACIÓN RÁPIDA COMPLETADA.${NC}"
+                    echo -e "${WHITE}Nota: Los servicios en vivo no fueron interrumpidos.${NC}"
+                else
+                    echo -e "${RED}❌ ERROR: No se pudo conectar con GitHub.${NC}"
+                fi
+                ui_pause ; return ;;
+            2)
                 echo -e "\n${YELLOW}▶ Iniciando Actualización Inteligente...${NC}"
                 URL_REPO="https://github.com/JuandeMx/MAXIMUS.git"
                 TEMP_DIR="/tmp/MaximusVpsMx_temp"
@@ -1121,7 +1141,7 @@ menu_mantenimiento() {
                 echo -e "\n${GREEN}✅ ACTUALIZACIÓN COMPLETADA EXITOSAMENTE.${NC}"
                 read -p "Presiona Enter para reiniciar el panel..." ; exec "$0" ; exit
                 ;;
-            2)
+            3)
                 echo -e "\n${RED}⚠️ REINSTALACION LIMPIA SELECCIONADA${NC}"
                 read -p "¿Estás 100% seguro de borrar TODO? [S/N]: " conf_clean
                 if [[ "$conf_clean" == "S" || "$conf_clean" == "s" ]]; then
@@ -1137,7 +1157,7 @@ menu_mantenimiento() {
                     exec "$0" ; exit
                 fi
                 ;;
-            3)
+            4)
                 echo -e "\n${RED}================ ¡¡PELIGRO!! ================${NC}"
                 read -p "¿Estás 100% seguro de destruir MaximusVpsMx? [S/N]: " desc
                 if [[ "$desc" == "S" || "$desc" == "s" ]]; then
