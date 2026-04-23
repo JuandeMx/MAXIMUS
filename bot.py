@@ -5,6 +5,8 @@ import core.database as db
 import config
 import os
 import time
+import psutil
+import subprocess
 
 # Inicialización segura de Bot y DB
 if config.BOT_TOKEN == "PENDIENTE" or not config.BOT_TOKEN:
@@ -19,6 +21,68 @@ except Exception as e:
     exit(1)
 
 # --- HANDLERS PRINCIPALES ---
+
+def get_active_service_ports():
+    try:
+        output = subprocess.check_output("netstat -tuln", shell=True).decode()
+        active = []
+        if ":443 " in output: active.append("SSL: `443`")
+        if ":80 " in output: active.append("SSH: `80`")
+        if ":7300 " in output: active.append("BadVPN: `7300`")
+        if ":7200 " in output: active.append("BadVPN: `7200`")
+        if ":44 " in output: active.append("Dropbear: `44`")
+        if ":1194 " in output: active.append("OpenVPN: `1194`")
+        if ":36712 " in output: active.append("UDP-Custom: `36712`")
+        return ", ".join(active) if active else "Ninguno detectado"
+    except:
+        return "Desconocido"
+
+@bot.message_handler(commands=['crear'])
+def handle_crear_comando(message):
+    try:
+        parts = message.text.split()
+        if len(parts) != 4:
+            bot.reply_to(message, "❌ *Uso incorrecto.*\n\n*Formato:* `/crear <usuario> <contraseña> <dias>`\n*Ejemplo:* `/crear maria 121341 30`", parse_mode="Markdown")
+            return
+            
+        _, user, pw, days_str = parts
+        days = int(days_str)
+        
+        bot.send_chat_action(message.chat.id, 'typing')
+        success, result = manager.create_ssh_user(user, pw, days=days)
+        
+        if success:
+            ip = config.HOST_DOMAIN if config.HOST_DOMAIN else manager.get_server_ip()
+            active_ports = get_active_service_ports()
+            msg = f"""✅ *Usuario Premium creado con exito*
+
+🌐 *IP:* `{ip}`
+👤 *USER:* `{user}`
+🔑 *PASS:* `{pw}`
+📅 *VENCE:* `{result}`
+
+📋 *Para copiar directamente:*
+
+🛡️ *SSL:*
+`{ip}:443@{user}:{pw}`
+
+🌐 *SSH 80:*
+`{ip}:80@{user}:{pw}`
+
+📡 *UDP Custom:*
+`{ip}:{config.UDP_RANGE}@{user}:{pw}`
+
+⚡ *Todos los puertos que estén activos:*
+{active_ports}
+"""
+            bot.reply_to(message, msg, parse_mode="Markdown")
+        else:
+            bot.reply_to(message, f"❌ *Error al crear:* {result}", parse_mode="Markdown")
+            
+    except ValueError:
+        bot.reply_to(message, "❌ El parámetro <dias> debe ser un número entero.")
+    except Exception as e:
+        bot.reply_to(message, f"❌ Error del sistema: {e}")
 
 @bot.message_handler(commands=['start', 'menu'])
 def send_welcome(message):
