@@ -1086,6 +1086,7 @@ menu_mantenimiento() {
                 TEMP_DIR="/tmp/MaximusVpsMx_fast"
                 echo -e "${CYAN}[+] Descargando código fresco desde GitHub...${NC}"
                 rm -rf "$TEMP_DIR" 2>/dev/null
+                cd /root || exit
                 if git clone -q "$URL_REPO" "$TEMP_DIR"; then
                     echo -e "${GREEN}[OK] Descarga exitosa. Inyectando cambios...${NC}"
                     cp -rf $TEMP_DIR/* /etc/MaximusVpsMx/
