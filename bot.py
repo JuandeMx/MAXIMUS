@@ -37,52 +37,93 @@ def get_active_service_ports():
     except:
         return "Desconocido"
 
+# --- SISTEMA DE CREACIÓN INTERACTIVA (GRUPO) ---
+
+# Diccionario para almacenar el estado de la conversación
+user_creation_states = {}
+
 @bot.message_handler(commands=['crear'])
-def handle_crear_comando(message):
-    try:
-        parts = message.text.split()
-        if len(parts) != 4:
-            bot.reply_to(message, "❌ *Uso incorrecto.*\n\n*Formato:* `/crear <usuario> <contraseña> <dias>`\n*Ejemplo:* `/crear maria 121341 30`", parse_mode="Markdown")
-            return
-            
-        _, user, pw, days_str = parts
-        days = int(days_str)
+def cmd_crear_interactivo(message):
+    kb = types.InlineKeyboardMarkup()
+    kb.add(types.InlineKeyboardButton("🎟️ Cuenta 7 Días", callback_data="crear_7"))
+    kb.add(types.InlineKeyboardButton("💎 Cuenta 30 Días", callback_data="crear_30"))
+    
+    bot.reply_to(message, "🛠️ *MENÚ DE CREACIÓN PREMIUM*\n\nSeleccione la duración de la cuenta:", parse_mode="Markdown", reply_markup=kb)
+
+@bot.callback_query_handler(func=lambda call: call.data in ["crear_7", "crear_30"])
+def callback_crear_dias(call):
+    days = 7 if call.data == "crear_7" else 30
+    user_id = call.from_user.id
+    chat_id = call.message.chat.id
+    username_tg = call.from_user.username or call.from_user.first_name
+    
+    # Iniciar estado para este usuario
+    user_creation_states[user_id] = {'days': days, 'chat_id': chat_id}
+    
+    msg = bot.send_message(chat_id, f"👤 @{username_tg} Has elegido {days} días.\n\n✍️ *Responde a este mensaje con el NOMBRE de usuario deseado:*", parse_mode="Markdown")
+    bot.register_next_step_handler(msg, process_ask_name, user_id)
+
+def process_ask_name(message, user_id):
+    # Validar que responde la persona correcta en el grupo
+    if message.from_user.id != user_id:
+        bot.register_next_step_handler(message, process_ask_name, user_id)
+        return
         
-        bot.send_chat_action(message.chat.id, 'typing')
-        success, result = manager.create_ssh_user(user, pw, days=days)
+    username = message.text.strip().replace(" ", "")
+    user_creation_states[user_id]['username'] = username
+    
+    msg = bot.reply_to(message, "🔑 *Excelente. Ahora responde a este mensaje con la CONTRASEÑA:*", parse_mode="Markdown")
+    bot.register_next_step_handler(msg, process_ask_pass, user_id)
+
+def process_ask_pass(message, user_id):
+    if message.from_user.id != user_id:
+        bot.register_next_step_handler(message, process_ask_pass, user_id)
+        return
         
-        if success:
-            ip = config.HOST_DOMAIN if config.HOST_DOMAIN else manager.get_server_ip()
-            active_ports = get_active_service_ports()
-            msg = f"""✅ *Usuario Premium creado con exito*
+    password = message.text.strip().replace(" ", "")
+    
+    if user_id not in user_creation_states:
+        bot.reply_to(message, "❌ *La sesión ha expirado.* Por favor, vuelve a intentar con /crear", parse_mode="Markdown")
+        return
+        
+    days = user_creation_states[user_id]['days']
+    username = user_creation_states[user_id]['username']
+    
+    bot.send_chat_action(message.chat.id, 'typing')
+    success, result = manager.create_ssh_user(username, password, days=days)
+    
+    if success:
+        ip = config.HOST_DOMAIN if config.HOST_DOMAIN else manager.get_server_ip()
+        active_ports = get_active_service_ports()
+        
+        final_msg = f"""✅ *Usuario Premium creado con exito*
 
 🌐 *IP:* `{ip}`
-👤 *USER:* `{user}`
-🔑 *PASS:* `{pw}`
+👤 *USER:* `{username}`
+🔑 *PASS:* `{password}`
 📅 *VENCE:* `{result}`
 
 📋 *Para copiar directamente:*
 
 🛡️ *SSL:*
-`{ip}:443@{user}:{pw}`
+`{ip}:443@{username}:{password}`
 
 🌐 *SSH 80:*
-`{ip}:80@{user}:{pw}`
+`{ip}:80@{username}:{password}`
 
 📡 *UDP Custom:*
-`{ip}:{config.UDP_RANGE}@{user}:{pw}`
+`{ip}:{config.UDP_RANGE}@{username}:{password}`
 
 ⚡ *Todos los puertos que estén activos:*
 {active_ports}
 """
-            bot.reply_to(message, msg, parse_mode="Markdown")
-        else:
-            bot.reply_to(message, f"❌ *Error al crear:* {result}", parse_mode="Markdown")
-            
-    except ValueError:
-        bot.reply_to(message, "❌ El parámetro <dias> debe ser un número entero.")
-    except Exception as e:
-        bot.reply_to(message, f"❌ Error del sistema: {e}")
+        bot.reply_to(message, final_msg, parse_mode="Markdown")
+    else:
+        bot.reply_to(message, f"❌ *Error al crear:* {result}", parse_mode="Markdown")
+        
+    # Limpiar estado
+    if user_id in user_creation_states:
+        del user_creation_states[user_id]
 
 @bot.message_handler(commands=['start', 'menu'])
 def send_welcome(message):
