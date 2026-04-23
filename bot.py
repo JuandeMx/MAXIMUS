@@ -231,49 +231,32 @@ def handle_admin_lista(message):
         
     bot.send_message(message.chat.id, msg_text, parse_mode="Markdown")
 
-@bot.message_handler(commands=['start', 'menu'])
-def send_welcome(message):
+@bot.message_handler(commands=['vip'])
+def cmd_vip_menu(message):
+    if not is_admin(message.from_user.id, message.chat.id):
+        return # Ignorar silenciosamente a los no administradores
+        
     markup = types.InlineKeyboardMarkup(row_width=2)
-    item_free = types.InlineKeyboardButton("🆓 Prueba Gratis (3d)", callback_data="get_free")
-    item_buy = types.InlineKeyboardButton("💎 Comprar Premium", callback_data="buy_premium")
-    item_stats = types.InlineKeyboardButton("📊 Estadísticas", callback_data="show_stats")
-    item_support = types.InlineKeyboardButton("🆘 Soporte", url="https://t.me/TuSoporte")
-    
-    markup.add(item_free, item_buy)
-    markup.add(item_stats, item_support)
-    
-    # Agregar panel de admin si tiene permisos
-    if is_admin(message.from_user.id, message.chat.id):
-        markup.add(types.InlineKeyboardButton("─── 🛠️ PANEL ADMIN ───", callback_data="ignore"))
-        markup.row(
-            types.InlineKeyboardButton("➕ Crear", callback_data="admin_crear"),
-            types.InlineKeyboardButton("🗑️ Eliminar", callback_data="admin_eliminar")
-        )
-        markup.row(
-            types.InlineKeyboardButton("⏳ + Días", callback_data="admin_agregar_dias"),
-            types.InlineKeyboardButton("👥 Lista", callback_data="admin_lista")
-        )
+    markup.add(types.InlineKeyboardButton("─── 🛠️ PANEL ADMIN VIP ───", callback_data="ignore"))
+    markup.row(
+        types.InlineKeyboardButton("➕ Crear", callback_data="admin_crear"),
+        types.InlineKeyboardButton("🗑️ Eliminar", callback_data="admin_eliminar")
+    )
+    markup.row(
+        types.InlineKeyboardButton("⏳ + Días", callback_data="admin_agregar_dias"),
+        types.InlineKeyboardButton("👥 Lista", callback_data="admin_lista")
+    )
     
     bot.send_message(
         message.chat.id, 
-        config.WELCOME_MSG, 
+        "👑 *PANEL DE CONTROL VIP*\n\nSelecciona una acción a realizar:", 
         reply_markup=markup, 
         parse_mode="Markdown"
     )
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_handler(call):
-    if call.data == "get_free":
-        handle_free_trial(call.message)
-    elif call.data == "buy_premium":
-        show_buy_menu(call)
-    elif call.data == "get_stats":
-        show_server_stats(call.message.chat.id, call.from_user.id)
-    elif call.data == "show_stats":
-        show_server_stats(call.message.chat.id, call.from_user.id)
-    elif call.data == "start":
-        send_welcome(call.message)
-    elif call.data == "admin_crear":
+    if call.data == "admin_crear":
         if is_admin(call.from_user.id, call.message.chat.id):
             cmd_crear_interactivo(call.message)
     elif call.data == "admin_eliminar":

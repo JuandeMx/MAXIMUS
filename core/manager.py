@@ -73,7 +73,7 @@ def get_all_users():
     lines = run_command(f"cat {db_path} 2>/dev/null")
     users = []
     if lines:
-        for line in lines.split('\\n'):
+        for line in lines.splitlines():
             parts = line.strip().split(':')
             if len(parts) >= 3:
                 users.append({'username': parts[0], 'expiry': parts[2]})
