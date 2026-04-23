@@ -57,6 +57,10 @@ def callback_crear_dias(call):
     chat_id = call.message.chat.id
     username_tg = call.from_user.username or call.from_user.first_name
     
+    # Escapar caracteres conflictivos para Markdown
+    if username_tg:
+        username_tg = str(username_tg).replace("_", "\\_").replace("*", "\\*").replace("`", "\\`")
+    
     # Iniciar estado para este usuario
     user_creation_states[user_id] = {'days': days, 'chat_id': chat_id}
     
@@ -69,6 +73,11 @@ def process_ask_name(message, user_id):
         bot.register_next_step_handler(message, process_ask_name, user_id)
         return
         
+    if not message.text:
+        msg = bot.reply_to(message, "❌ *Por favor envía un texto válido.*\nEscribe el NOMBRE de usuario deseado:", parse_mode="Markdown")
+        bot.register_next_step_handler(msg, process_ask_name, user_id)
+        return
+        
     username = message.text.strip().replace(" ", "")
     user_creation_states[user_id]['username'] = username
     
@@ -78,6 +87,11 @@ def process_ask_name(message, user_id):
 def process_ask_pass(message, user_id):
     if message.from_user.id != user_id:
         bot.register_next_step_handler(message, process_ask_pass, user_id)
+        return
+        
+    if not message.text:
+        msg = bot.reply_to(message, "❌ *Por favor envía un texto válido.*\nEscribe la CONTRASEÑA deseada:", parse_mode="Markdown")
+        bot.register_next_step_handler(msg, process_ask_pass, user_id)
         return
         
     password = message.text.strip().replace(" ", "")
@@ -385,9 +399,10 @@ Tu cuenta `{s_user}` ha sido extendida 24 horas más.
     )
 
 if __name__ == "__main__":
-    try:
-        print("🚀 Bot Maximus Premium en ejecución...")
-        bot.infinity_polling()
-    except Exception as e:
-        print(f"❌ El Bot ha colapsado: {e}")
-        time.sleep(10)
+    print("🚀 Bot Maximus Premium en ejecución...")
+    while True:
+        try:
+            bot.infinity_polling(skip_pending=True)
+        except Exception as e:
+            print(f"❌ El Bot ha colapsado: {e}")
+            time.sleep(5)
