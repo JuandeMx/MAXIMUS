@@ -89,7 +89,22 @@ chmod +x /etc/MaximusVpsMx/core/*.sh 2>/dev/null
 chmod +x /etc/MaximusVpsMx/core/*.py 2>/dev/null
 touch /etc/MaximusVpsMx/hysteria_users.db
 
+# 3. Optimización Automática y Limpieza del Sistema (Cron)
+echo -e "\e[1;32m[+] Configurando sistema de auto-limpieza (Cron & Journald)...\e[0m"
+# Limitar Logs de Systemd a 50MB (Para que no sature el disco con Gigas de logs)
+mkdir -p /etc/systemd/journald.conf.d
+cat > /etc/systemd/journald.conf.d/maximus-limits.conf << 'EOF'
+[Journal]
+SystemMaxUse=50M
+MaxRetentionSec=1month
+EOF
+systemctl restart systemd-journald 2>/dev/null
 
+# Configurar Cron diario (A las 03:00 AM) para limpieza profunda
+if ! grep -q "auto_clean.sh" /etc/crontab; then
+    echo "0 3 * * * root /etc/MaximusVpsMx/core/auto_clean.sh" >> /etc/crontab
+    systemctl restart cron 2>/dev/null || systemctl restart crond 2>/dev/null
+fi
 
 # Compatibilidad Legacy para OpenSSH (HTTP Custom antiguo)
 echo -e "\e[1;32m[+] Configurando algoritmos legacy en OpenSSH...\e[0m"

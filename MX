@@ -977,11 +977,50 @@ menu_sistema() {
         
         case $opt_sys in
             1)
-                echo -e "\n${YELLOW}▶ Iniciando Optimización...${NC}"
-                sync; echo 3 > /proc/sys/vm/drop_caches; swapoff -a && swapon -a
-                journalctl --vacuum-time=1d >/dev/null 2>&1; apt-get clean >/dev/null 2>&1
-                find /var/log -type f -name "*.[0-9]" -delete; find /var/log -type f -name "*.gz" -delete
-                echo -e "${GREEN}✅ VPS OPTIMIZADO.${NC}"; sleep 2 ;;
+                echo -e "\n${CYAN}====================================================${NC}"
+                echo -e "${YELLOW}🔍 ESCÁNER DE ALMACENAMIENTO Y MEMORIA${NC}"
+                echo -e "${CYAN}====================================================${NC}"
+                
+                # Calcular espacio antes
+                DISK_BEFORE=$(df -h / | awk 'NR==2 {print $5}')
+                LOGS_SIZE=$(du -sh /var/log 2>/dev/null | awk '{print $1}')
+                CACHE_SIZE=$(du -sh /var/cache/apt 2>/dev/null | awk '{print $1}')
+                TMP_SIZE=$(du -sh /tmp 2>/dev/null | awk '{print $1}')
+                
+                echo -e "${WHITE}Espacio usado en Disco : ${RED}$DISK_BEFORE${NC}"
+                echo -e "${WHITE}Peso de Logs del Sistema: ${YELLOW}$LOGS_SIZE${NC}"
+                echo -e "${WHITE}Peso de Caché de APT   : ${YELLOW}$CACHE_SIZE${NC}"
+                echo -e "${WHITE}Peso de Archivos Temp  : ${YELLOW}$TMP_SIZE${NC}"
+                ui_hr
+                
+                echo -e "${YELLOW}▶ Iniciando Optimización Profunda...${NC}"
+                echo -e " - Vaciando Caché de RAM (drop_caches)..."
+                sync; echo 3 > /proc/sys/vm/drop_caches; swapoff -a && swapon -a 2>/dev/null
+                
+                echo -e " - Purgando Logs del Sistema (journalctl)..."
+                journalctl --vacuum-time=1d >/dev/null 2>&1
+                
+                echo -e " - Eliminando Caché y Paquetes Huérfanos (apt)..."
+                DEBIAN_FRONTEND=noninteractive apt-get clean >/dev/null 2>&1
+                DEBIAN_FRONTEND=noninteractive apt-get autoremove -y >/dev/null 2>&1
+                
+                echo -e " - Borrando Logs Rotados Antiguos..."
+                find /var/log -type f -name "*.[0-9]" -delete 2>/dev/null
+                find /var/log -type f -name "*.gz" -delete 2>/dev/null
+                
+                echo -e " - Limpiando Archivos Temporales (/tmp)..."
+                find /tmp -type f -atime +2 -delete 2>/dev/null
+                
+                # Calcular espacio despues
+                DISK_AFTER=$(df -h / | awk 'NR==2 {print $5}')
+                LOGS_SIZE_NEW=$(du -sh /var/log 2>/dev/null | awk '{print $1}')
+                
+                ui_hr
+                echo -e "${GREEN}✅ LIMPIEZA FINALIZADA.${NC}"
+                echo -e "${WHITE}Nuevo espacio usado en Disco: ${GREEN}$DISK_AFTER${NC} (antes: $DISK_BEFORE)"
+                echo -e "${WHITE}Nuevo peso de Logs         : ${GREEN}$LOGS_SIZE_NEW${NC} (antes: $LOGS_SIZE)"
+                echo -e "${CYAN}====================================================${NC}"
+                ui_pause ;;
             2) nano /etc/issue.net ;;
             3)
                 echo -e "\n${YELLOW}▶ Generando Backup...${NC}"
