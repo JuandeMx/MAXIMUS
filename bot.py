@@ -37,6 +37,18 @@ def get_active_service_ports():
     except:
         return "Desconocido"
 
+def is_admin(user_id, chat_id=None):
+    try:
+        if str(user_id) == str(config.ADMIN_ID):
+            return True
+        if chat_id:
+            member = bot.get_chat_member(chat_id, user_id)
+            if member.status in ['creator', 'administrator']:
+                return True
+    except Exception as e:
+        print(f"Error checking admin status: {e}")
+    return False
+
 # --- SISTEMA DE CREACIÓN INTERACTIVA (GRUPO) ---
 
 # Diccionario para almacenar el estado de la conversación
@@ -139,6 +151,78 @@ def process_ask_pass(message, user_id):
     if user_id in user_creation_states:
         del user_creation_states[user_id]
 
+# --- FUNCIONES DE ADMINISTRADOR ---
+
+def handle_admin_eliminar(message, admin_id):
+    msg = bot.send_message(message.chat.id, "🗑️ *ELIMINAR USUARIO*\n\n✍️ *Escribe el nombre del usuario que deseas eliminar:*", parse_mode="Markdown")
+    bot.register_next_step_handler(msg, process_admin_eliminar, admin_id)
+
+def process_admin_eliminar(message, admin_id):
+    if message.from_user.id != admin_id:
+        return
+    if not message.text:
+        bot.reply_to(message, "❌ *Nombre inválido.* Operación cancelada.", parse_mode="Markdown")
+        return
+        
+    username = message.text.strip().replace(" ", "")
+    bot.send_chat_action(message.chat.id, 'typing')
+    
+    manager.remove_user(username)
+    bot.reply_to(message, f"✅ *El usuario `{username}` ha sido eliminado de todos los servicios.*", parse_mode="Markdown")
+
+def handle_admin_agregar_dias(message, admin_id):
+    msg = bot.send_message(message.chat.id, "⏳ *AGREGAR DÍAS*\n\n✍️ *Escribe el nombre del usuario:*", parse_mode="Markdown")
+    bot.register_next_step_handler(msg, process_admin_agregar_dias_user, admin_id)
+
+def process_admin_agregar_dias_user(message, admin_id):
+    if message.from_user.id != admin_id:
+        return
+    if not message.text:
+        bot.reply_to(message, "❌ *Nombre inválido.* Operación cancelada.", parse_mode="Markdown")
+        return
+        
+    username = message.text.strip().replace(" ", "")
+    user_creation_states[admin_id] = {'target_user': username}
+    
+    msg = bot.reply_to(message, f"👤 Seleccionado: `{username}`\n\n✍️ *¿Cuántos días deseas agregar? (Ej: 15)*", parse_mode="Markdown")
+    bot.register_next_step_handler(msg, process_admin_agregar_dias_dias, admin_id)
+
+def process_admin_agregar_dias_dias(message, admin_id):
+    if message.from_user.id != admin_id:
+        return
+    if not message.text or not message.text.isdigit():
+        bot.reply_to(message, "❌ *Debes enviar un número válido.* Operación cancelada.", parse_mode="Markdown")
+        if admin_id in user_creation_states:
+            del user_creation_states[admin_id]
+        return
+        
+    days = int(message.text.strip())
+    username = user_creation_states.get(admin_id, {}).get('target_user')
+    
+    if not username:
+        bot.reply_to(message, "❌ *Sesión expirada.*", parse_mode="Markdown")
+        return
+        
+    bot.send_chat_action(message.chat.id, 'typing')
+    new_exp = manager.extend_user_expiry(username, days=days)
+    bot.reply_to(message, f"✅ *Se agregaron {days} días al usuario `{username}`.*\n\n📅 *Nueva Expiración:* `{new_exp}`", parse_mode="Markdown")
+    
+    del user_creation_states[admin_id]
+
+def handle_admin_lista(message):
+    bot.send_chat_action(message.chat.id, 'typing')
+    users = manager.get_all_users()
+    
+    if not users:
+        bot.send_message(message.chat.id, "👥 *LISTA DE USUARIOS*\n\nNo hay usuarios creados aún.", parse_mode="Markdown")
+        return
+        
+    msg_text = "👥 *LISTA DE USUARIOS ACTIVOS*\n\n"
+    for idx, u in enumerate(users, 1):
+        msg_text += f"{idx}. 👤 `{u['username']}` ➔ 📅 `{u['expiry']}`\n"
+        
+    bot.send_message(message.chat.id, msg_text, parse_mode="Markdown")
+
 @bot.message_handler(commands=['start', 'menu'])
 def send_welcome(message):
     markup = types.InlineKeyboardMarkup(row_width=2)
@@ -149,6 +233,18 @@ def send_welcome(message):
     
     markup.add(item_free, item_buy)
     markup.add(item_stats, item_support)
+    
+    # Agregar panel de admin si tiene permisos
+    if is_admin(message.from_user.id, message.chat.id):
+        markup.add(types.InlineKeyboardButton("─── 🛠️ PANEL ADMIN ───", callback_data="ignore"))
+        markup.row(
+            types.InlineKeyboardButton("➕ Crear", callback_data="admin_crear"),
+            types.InlineKeyboardButton("🗑️ Eliminar", callback_data="admin_eliminar")
+        )
+        markup.row(
+            types.InlineKeyboardButton("⏳ + Días", callback_data="admin_agregar_dias"),
+            types.InlineKeyboardButton("👥 Lista", callback_data="admin_lista")
+        )
     
     bot.send_message(
         message.chat.id, 
@@ -169,6 +265,18 @@ def callback_handler(call):
         show_server_stats(call.message.chat.id, call.from_user.id)
     elif call.data == "start":
         send_welcome(call.message)
+    elif call.data == "admin_crear":
+        if is_admin(call.from_user.id, call.message.chat.id):
+            cmd_crear_interactivo(call.message)
+    elif call.data == "admin_eliminar":
+        if is_admin(call.from_user.id, call.message.chat.id):
+            handle_admin_eliminar(call.message, call.from_user.id)
+    elif call.data == "admin_agregar_dias":
+        if is_admin(call.from_user.id, call.message.chat.id):
+            handle_admin_agregar_dias(call.message, call.from_user.id)
+    elif call.data == "admin_lista":
+        if is_admin(call.from_user.id, call.message.chat.id):
+            handle_admin_lista(call.message)
     elif call.data.startswith("approve_"):
         _, client_id, username, password = call.data.split("_")
         process_admin_approval(call, client_id, username, password)
