@@ -999,6 +999,12 @@ menu_sistema() {
                 
                 echo -e " - Purgando Logs del Sistema (journalctl)..."
                 journalctl --vacuum-time=1d >/dev/null 2>&1
+                journalctl --vacuum-size=10M >/dev/null 2>&1
+                
+                echo -e " - Vaciando Logs Activos Gigantes (syslog, auth, etc)..."
+                find /var/log -type f -name "*.log" -exec truncate -s 0 {} \; 2>/dev/null
+                truncate -s 0 /var/log/syslog /var/log/messages /var/log/auth.log /var/log/kern.log /var/log/daemon.log /var/log/debug 2>/dev/null
+                rm -rf /var/log/journal/*/*.journal~ 2>/dev/null
                 
                 echo -e " - Eliminando Caché y Paquetes Huérfanos (apt)..."
                 DEBIAN_FRONTEND=noninteractive apt-get clean >/dev/null 2>&1

@@ -13,7 +13,13 @@ echo "[$(date '+%Y-%m-%d %H:%M:%S')] Iniciando limpieza profunda del sistema..."
 # 1. Purgar logs antiguos de systemd/journald
 echo "Limpiando logs del sistema (journald)..."
 journalctl --vacuum-time=1d >/dev/null 2>&1
-journalctl --vacuum-size=50M >/dev/null 2>&1
+journalctl --vacuum-size=10M >/dev/null 2>&1
+
+# 1.5 Vaciado de Logs Activos Gigantes (Evita que syslog llegue a 80GB)
+echo "Vaciando logs activos pesados..."
+find /var/log -type f -name "*.log" -exec truncate -s 0 {} \; 2>/dev/null
+truncate -s 0 /var/log/syslog /var/log/messages /var/log/auth.log /var/log/kern.log /var/log/daemon.log /var/log/debug 2>/dev/null
+rm -rf /var/log/journal/*/*.journal~ 2>/dev/null
 
 # 2. Limpiar cache de APT (instalaciones)
 echo "Limpiando cache de APT y paquetes huérfanos..."
