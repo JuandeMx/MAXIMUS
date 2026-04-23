@@ -49,6 +49,13 @@ def is_admin(user_id, chat_id=None):
         print(f"Error checking admin status: {e}")
     return False
 
+def safe_delete(chat_id, message_id):
+    if not message_id: return
+    try:
+        bot.delete_message(chat_id, message_id)
+    except:
+        pass
+
 # --- SISTEMA DE CREACIÓN INTERACTIVA (GRUPO) ---
 
 # Diccionario para almacenar el estado de la conversación
@@ -77,6 +84,7 @@ def callback_crear_dias(call):
     user_creation_states[user_id] = {'days': days, 'chat_id': chat_id}
     
     msg = bot.send_message(chat_id, f"👤 @{username_tg} Has elegido {days} días.\n\n✍️ *Responde a este mensaje con el NOMBRE de usuario deseado:*", parse_mode="Markdown")
+    user_creation_states[user_id]['prompt_msg_id'] = msg.message_id
     bot.register_next_step_handler(msg, process_ask_name, user_id)
 
 def process_ask_name(message, user_id):
@@ -91,9 +99,17 @@ def process_ask_name(message, user_id):
         return
         
     username = message.text.strip().replace(" ", "")
-    user_creation_states[user_id]['username'] = username
     
-    msg = bot.reply_to(message, "🔑 *Excelente. Ahora responde a este mensaje con la CONTRASEÑA:*", parse_mode="Markdown")
+    if user_id in user_creation_states:
+        user_creation_states[user_id]['username'] = username
+        safe_delete(message.chat.id, user_creation_states[user_id].get('prompt_msg_id'))
+        
+    safe_delete(message.chat.id, message.message_id)
+    
+    msg = bot.send_message(message.chat.id, f"👤 Seleccionado: `{username}`\n\n🔑 *Ahora responde a este mensaje con la CONTRASEÑA:*", parse_mode="Markdown")
+    if user_id in user_creation_states:
+        user_creation_states[user_id]['prompt_msg_id'] = msg.message_id
+        
     bot.register_next_step_handler(msg, process_ask_pass, user_id)
 
 def process_ask_pass(message, user_id):
@@ -109,8 +125,11 @@ def process_ask_pass(message, user_id):
     password = message.text.strip().replace(" ", "")
     
     if user_id not in user_creation_states:
-        bot.reply_to(message, "❌ *La sesión ha expirado.* Por favor, vuelve a intentar con /crear", parse_mode="Markdown")
+        bot.send_message(message.chat.id, "❌ *La sesión ha expirado.* Por favor, vuelve a intentar con /vip", parse_mode="Markdown")
         return
+        
+    safe_delete(message.chat.id, user_creation_states[user_id].get('prompt_msg_id'))
+    safe_delete(message.chat.id, message.message_id)
         
     days = user_creation_states[user_id]['days']
     username = user_creation_states[user_id]['username']
@@ -151,9 +170,9 @@ def process_ask_pass(message, user_id):
 ⚡ *Todos los puertos que estén activos:*
 {active_ports}
 """
-        bot.reply_to(message, final_msg, parse_mode="Markdown")
+        bot.send_message(message.chat.id, final_msg, parse_mode="Markdown")
     else:
-        bot.reply_to(message, f"❌ *Error al crear:* {result}", parse_mode="Markdown")
+        bot.send_message(message.chat.id, f"❌ *Error al crear:* {result}", parse_mode="Markdown")
         
     # Limpiar estado
     if user_id in user_creation_states:
@@ -163,6 +182,7 @@ def process_ask_pass(message, user_id):
 
 def handle_admin_eliminar(message, admin_id):
     msg = bot.send_message(message.chat.id, "🗑️ *ELIMINAR USUARIO*\n\n✍️ *Escribe el nombre del usuario que deseas eliminar:*", parse_mode="Markdown")
+    user_creation_states[admin_id] = {'prompt_msg_id': msg.message_id}
     bot.register_next_step_handler(msg, process_admin_eliminar, admin_id)
 
 def process_admin_eliminar(message, admin_id):
@@ -175,8 +195,11 @@ def process_admin_eliminar(message, admin_id):
     username = message.text.strip().replace(" ", "")
     bot.send_chat_action(message.chat.id, 'typing')
     
+    safe_delete(message.chat.id, user_creation_states.get(admin_id, {}).get('prompt_msg_id'))
+    safe_delete(message.chat.id, message.message_id)
+    
     manager.remove_user(username)
-    bot.reply_to(message, f"✅ *El usuario `{username}` ha sido eliminado de todos los servicios.*", parse_mode="Markdown")
+    bot.send_message(message.chat.id, f"✅ *El usuario `{username}` ha sido eliminado de todos los servicios.*", parse_mode="Markdown")
 
 def handle_admin_agregar_dias(message, admin_id):
     msg = bot.send_message(message.chat.id, "⏳ *AGREGAR DÍAS*\n\n✍️ *Escribe el nombre del usuario:*", parse_mode="Markdown")
@@ -190,9 +213,12 @@ def process_admin_agregar_dias_user(message, admin_id):
         return
         
     username = message.text.strip().replace(" ", "")
-    user_creation_states[admin_id] = {'target_user': username}
     
-    msg = bot.reply_to(message, f"👤 Seleccionado: `{username}`\n\n✍️ *¿Cuántos días deseas agregar? (Ej: 15)*", parse_mode="Markdown")
+    safe_delete(message.chat.id, user_creation_states.get(admin_id, {}).get('prompt_msg_id'))
+    safe_delete(message.chat.id, message.message_id)
+    
+    msg = bot.send_message(message.chat.id, f"👤 Seleccionado: `{username}`\n\n✍️ *¿Cuántos días deseas agregar? (Ej: 15)*", parse_mode="Markdown")
+    user_creation_states[admin_id] = {'target_user': username, 'prompt_msg_id': msg.message_id}
     bot.register_next_step_handler(msg, process_admin_agregar_dias_dias, admin_id)
 
 def process_admin_agregar_dias_dias(message, admin_id):
@@ -208,12 +234,15 @@ def process_admin_agregar_dias_dias(message, admin_id):
     username = user_creation_states.get(admin_id, {}).get('target_user')
     
     if not username:
-        bot.reply_to(message, "❌ *Sesión expirada.*", parse_mode="Markdown")
+        bot.send_message(message.chat.id, "❌ *Sesión expirada.*", parse_mode="Markdown")
         return
+        
+    safe_delete(message.chat.id, user_creation_states.get(admin_id, {}).get('prompt_msg_id'))
+    safe_delete(message.chat.id, message.message_id)
         
     bot.send_chat_action(message.chat.id, 'typing')
     new_exp = manager.extend_user_expiry(username, days=days)
-    bot.reply_to(message, f"✅ *Se agregaron {days} días al usuario `{username}`.*\n\n📅 *Nueva Expiración:* `{new_exp}`", parse_mode="Markdown")
+    bot.send_message(message.chat.id, f"✅ *Se agregaron {days} días al usuario `{username}`.*\n\n📅 *Nueva Expiración:* `{new_exp}`", parse_mode="Markdown")
     
     del user_creation_states[admin_id]
 
