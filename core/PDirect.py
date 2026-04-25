@@ -78,6 +78,13 @@ class ConnectionHandler(threading.Thread):
         try:
             self.client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
             self.client.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+            
+            # KeepAlive Agresivo (Linux)
+            try:
+                self.client.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, 20)
+                self.client.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 10)
+                self.client.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 5)
+            except: pass
 
             # --- MOTOR HÍBRIDO v4.0 (Peeking) ---
             client_buffer = b''
@@ -129,6 +136,11 @@ class ConnectionHandler(threading.Thread):
                     target = socket.create_connection(('127.0.0.1', port), timeout=3)
                     target.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
                     target.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+                    try:
+                        target.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, 20)
+                        target.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 10)
+                        target.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 5)
+                    except: pass
                     break
                 except: continue
 
@@ -152,22 +164,33 @@ class ConnectionHandler(threading.Thread):
 
             # --- RELAY BIDIRECCIONAL SELECT ENGINE ---
             sockets = [self.client, target]
-            while True:
-                r, _, e = select.select(sockets, [], sockets, 60)
-                if e: break
-                for sock in r:
-                    data = sock.recv(BUFLEN)
-                    if not data: return
-                    out = target if sock is self.client else self.client
-                    out.sendall(data)
+            running_relay = True
+            while running_relay:
+                try:
+                    r, _, e = select.select(sockets, [], sockets, 30)
+                    if e: break
+                    for sock in r:
+                        data = sock.recv(BUFLEN)
+                        if not data: 
+                            running_relay = False
+                            break
+                        
+                        out = target if sock is self.client else self.client
+                        out.sendall(data)
+                except (socket.error, Exception):
+                    break
 
         except Exception as e:
             log_error(f"Handler error ({self.addr}): {e}")
         finally:
-            try: self.client.close()
+            try:
+                self.client.shutdown(socket.SHUT_RDWR)
+                self.client.close()
             except: pass
             try: 
-                if target: target.close()
+                if target:
+                    target.shutdown(socket.SHUT_RDWR)
+                    target.close()
             except: pass
 
 if __name__ == '__main__':

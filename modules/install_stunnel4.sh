@@ -97,8 +97,8 @@ socket = r:TCP_NODELAY=1
 socket = l:SO_KEEPALIVE=1
 socket = r:SO_KEEPALIVE=1
 TIMEOUTclose = 0
-TIMEOUTconnect = 10
-TIMEOUTidle = 600
+TIMEOUTconnect = 20
+TIMEOUTidle = 28800
 
 # Compatibilidad Suprema
 sslVersion = all

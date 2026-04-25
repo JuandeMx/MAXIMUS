@@ -23,13 +23,17 @@ read -p "🔹 Ingresa tu BOT_TOKEN de Telegram: " TOKEN
 read -p "🔹 Ingresa tu Admin ID (puedes verlo en @userinfobot): " ADMIN_ID
 read -p "🔹 Ingresa tu Dominio/Cloudflare (Opcional, Enter para omitir): " DOMAIN
 
+read -p "🔹 Comando de inicio (Ej: start, vip, free) [Default: vip]: " BOT_COMMAND
+BOT_COMMAND=${BOT_COMMAND:-vip}
+
 # 3. Crear archivo de configuración JSON
 mkdir -p /etc/MaximusVpsMx/core
 cat <<EOF > /etc/MaximusVpsMx/bot_config.json
 {
     "BOT_TOKEN": "$TOKEN",
     "ADMIN_ID": $ADMIN_ID,
-    "HOST_DOMAIN": "$DOMAIN"
+    "HOST_DOMAIN": "$DOMAIN",
+    "BOT_COMMAND": "$BOT_COMMAND"
 }
 EOF
 

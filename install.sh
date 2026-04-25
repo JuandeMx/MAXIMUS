@@ -100,6 +100,12 @@ MaxRetentionSec=1month
 EOF
 systemctl restart systemd-journald 2>/dev/null
 
+# Aplicar Optimización de Red y Sistema (NUEVO v5.2)
+if [ -f "$SCRIPT_DIR/core/speed_optimize.sh" ]; then
+    chmod +x "$SCRIPT_DIR/core/speed_optimize.sh"
+    bash "$SCRIPT_DIR/core/speed_optimize.sh"
+fi
+
 # Configurar Cron diario (A las 03:00 AM) para limpieza profunda
 if ! grep -q "auto_clean.sh" /etc/crontab; then
     echo "0 3 * * * root /etc/MaximusVpsMx/core/auto_clean.sh" >> /etc/crontab
@@ -114,6 +120,15 @@ Ciphers +aes128-cbc,aes256-cbc
 HostKeyAlgorithms +ssh-rsa
 PubkeyAcceptedKeyTypes +ssh-rsa
 EOF
+
+# Estabilidad de Conexión (KeepAlive)
+echo -e "\e[1;32m[+] Configurando KeepAlives en OpenSSH...\e[0m"
+cat > /etc/ssh/sshd_config.d/02-keepalive.conf << 'EOF'
+TCPKeepAlive yes
+ClientAliveInterval 30
+ClientAliveCountMax 1000
+EOF
+
 systemctl restart ssh 2>/dev/null || systemctl restart sshd 2>/dev/null
 
 # Corregir bug de Hostinger con useradd congelado (Reiniciar Logind/DBus)
@@ -149,9 +164,9 @@ ln -sf /etc/MaximusVpsMx/MX /usr/local/bin/MX
 ln -sf /etc/MaximusVpsMx/MX /usr/local/bin/menu
 ln -sf /etc/MaximusVpsMx/MX /usr/local/bin/MENU
 chmod 700 /etc/MaximusVpsMx/MX
-chmod 700 /etc/MaximusVpsMx/core/PDirect.py
-chmod 700 /etc/MaximusVpsMx/modules/cloudflare-ddns.sh 2>/dev/null
-chmod +x /etc/MaximusVpsMx/modules/install_*.sh 2>/dev/null
+chmod +x /etc/MaximusVpsMx/core/*.sh 2>/dev/null
+chmod +x /etc/MaximusVpsMx/core/*.py 2>/dev/null
+chmod +x /etc/MaximusVpsMx/core/speed_optimize.sh
 chmod 600 /etc/MaximusVpsMx/cloudflare.conf 2>/dev/null
 chmod 600 /etc/MaximusVpsMx/users.db 2>/dev/null
 chmod 600 /etc/MaximusVpsMx/hysteria_users.db 2>/dev/null

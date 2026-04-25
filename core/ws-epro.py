@@ -29,6 +29,14 @@ class Proxy(threading.Thread):
     def run(self):
         target = None
         try:
+            self.client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+            self.client.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+            try:
+                self.client.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, 20)
+                self.client.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 10)
+                self.client.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 5)
+            except: pass
+            
             self.client.settimeout(2.0)
             client_buffer = b''
             
@@ -87,25 +95,36 @@ class Proxy(threading.Thread):
                 target.send(client_buffer)
 
             sockets = [self.client, target]
-            while True:
-                r, _, _ = select.select(sockets, [], [], 120)
-                if not r: break # Timeout
-                
-                if self.client in r:
-                    data = self.client.recv(BUFLEN)
-                    if not data: break
-                    target.sendall(data)
+            running_relay = True
+            while running_relay:
+                try:
+                    # Timeout de 2 horas para inactividad extrema (7200s)
+                    r, _, e = select.select(sockets, [], sockets, 7200)
+                    if not r or e: break 
                     
-                if target in r:
-                    data = target.recv(BUFLEN)
-                    if not data: break
-                    self.client.sendall(data)
+                    for sock in r:
+                        data = sock.recv(BUFLEN)
+                        if not data: 
+                            running_relay = False
+                            break
+                        
+                        out = target if sock is self.client else self.client
+                        out.sendall(data)
+                except:
+                    break
                     
         except Exception:
             pass
         finally:
-            self.client.close()
-            if target: target.close()
+            try:
+                self.client.shutdown(socket.SHUT_RDWR)
+                self.client.close()
+            except: pass
+            try:
+                if target:
+                    target.shutdown(socket.SHUT_RDWR)
+                    target.close()
+            except: pass
 
 def main():
     try:

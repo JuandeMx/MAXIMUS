@@ -33,12 +33,16 @@ config_bot() {
     read -p " 🔹 Admin ID (tu ID de Telegram): " ADMIN_ID
     read -p " 🔹 Dominio/IP (Enter si no tienes): " DOMAIN
     
+    read -p " 🔹 Comando de inicio (Ej: start, vip, free) [Default: vip]: " BOT_COMMAND
+    BOT_COMMAND=${BOT_COMMAND:-vip}
+    
     mkdir -p /etc/MaximusVpsMx/core
     cat <<EOF > "$CONF_FILE"
 {
     "BOT_TOKEN": "$TOKEN",
     "ADMIN_ID": $ADMIN_ID,
-    "HOST_DOMAIN": "$DOMAIN"
+    "HOST_DOMAIN": "$DOMAIN",
+    "BOT_COMMAND": "$BOT_COMMAND"
 }
 EOF
     echo -e "${GREEN}✅ Configuración guardada en $CONF_FILE${NC}"

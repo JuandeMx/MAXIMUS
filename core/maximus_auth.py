@@ -1,39 +1,49 @@
-#!/usr/bin/env python3
-import os, time, datetime
+import os, time, datetime, psutil
 
-# MaximusVpsMx Elite Auth Module v1.0
+# MaximusVpsMx Elite Auth Module v2.0 (High Performance)
 USER_DB = "/etc/MaximusVpsMx/users.db"
 
+# Caché simple en memoria para evitar I/O de disco excesivo
+_user_cache = {}
+_cache_ttl = 5 # segundos
+_last_cache_update = 0
+
 def get_user_info(target_user):
-    if not os.path.exists(USER_DB):
-        return None
-    try:
-        with open(USER_DB, "r") as f:
-            for line in f:
-                parts = line.strip().split(":")
-                if len(parts) >= 3 and parts[0] == target_user:
-                    # user:pass:exp:hwid:limit
-                    info = {
-                        "user": parts[0],
-                        "pass": parts[1],
-                        "exp": parts[2],
-                        "hwid": parts[3] if len(parts) > 3 else "OFF",
-                        "limit": int(parts[4]) if len(parts) > 4 else 1
-                    }
-                    return info
-    except:
-        pass
-    return None
+    global _last_cache_update, _user_cache
+    
+    current_time = time.time()
+    if current_time - _last_cache_update > _cache_ttl:
+        if os.path.exists(USER_DB):
+            try:
+                new_cache = {}
+                with open(USER_DB, "r") as f:
+                    for line in f:
+                        parts = line.strip().split(":")
+                        if len(parts) >= 3:
+                            new_cache[parts[0]] = {
+                                "user": parts[0],
+                                "pass": parts[1],
+                                "exp": parts[2],
+                                "hwid": parts[3] if len(parts) > 3 else "OFF",
+                                "limit": int(parts[4]) if len(parts) > 4 else 1
+                            }
+                _user_cache = new_cache
+                _last_cache_update = current_time
+            except: pass
+            
+    return _user_cache.get(target_user)
 
 def check_limit(username, limit):
-    # Contamos procesos del usuario. 
-    # Cada conexión SSH/Dropbear suele generar al menos 1-2 procesos del usuario.
-    # Usamos pgrep para mayor precisión.
+    # Contamos procesos del usuario de forma eficiente usando psutil
     try:
-        cmd = f"pgrep -u {username} | wc -l"
-        count = int(os.popen(cmd).read().strip())
-        # Ajuste: A veces el sistema reporta 0 si el proceso es muy efímero.
-        # En Maximus tomamos el límite como sesiones activas.
+        count = 0
+        for proc in psutil.process_iter(['username']):
+            try:
+                if proc.info['username'] == username:
+                    count += 1
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+        
         if count >= limit:
             return False, f"Limit Reached ({count}/{limit})"
     except:

@@ -15,6 +15,8 @@ _cfg = load_config()
 BOT_TOKEN = _cfg.get("BOT_TOKEN", "PENDIENTE")
 ADMIN_ID = _cfg.get("ADMIN_ID", 0)
 HOST_DOMAIN = _cfg.get("HOST_DOMAIN", "")
+BOT_COMMAND = _cfg.get("BOT_COMMAND", "vip")
+
 
 # Precios en Telegram Stars (XTR)
 PRICE_7_DAYS = 50

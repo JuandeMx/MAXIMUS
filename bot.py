@@ -125,7 +125,7 @@ def process_ask_pass(message, user_id):
     password = message.text.strip().replace(" ", "")
     
     if user_id not in user_creation_states:
-        bot.send_message(message.chat.id, "❌ *La sesión ha expirado.* Por favor, vuelve a intentar con /vip", parse_mode="Markdown")
+        bot.send_message(message.chat.id, f"❌ *La sesión ha expirado.* Por favor, vuelve a intentar con /{config.BOT_COMMAND}", parse_mode="Markdown")
         return
         
     safe_delete(message.chat.id, user_creation_states[user_id].get('prompt_msg_id'))
@@ -259,7 +259,7 @@ def handle_admin_lista(message):
         
     bot.send_message(message.chat.id, msg_text, parse_mode="Markdown")
 
-@bot.message_handler(commands=['vip'])
+@bot.message_handler(commands=[config.BOT_COMMAND])
 def cmd_vip_menu(message):
     if not is_admin(message.from_user.id, message.chat.id):
         return # Ignorar silenciosamente a los no administradores

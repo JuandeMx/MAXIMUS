@@ -27,7 +27,7 @@ dropbearkey -t ed25519 -f /etc/dropbear/dropbear_ed25519_host_key 2>/dev/null
 cat > /etc/default/dropbear << DROPCONF
 NO_START=0
 DROPBEAR_PORT=$drop_port
-DROPBEAR_EXTRA_ARGS="-b /etc/issue.net"
+DROPBEAR_EXTRA_ARGS="-b /etc/issue.net -K 30 -I 0"
 DROPBEAR_BANNER=""
 DROPBEAR_RECEIVE_WINDOW=65536
 DROPCONF
