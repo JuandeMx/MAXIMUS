@@ -25,10 +25,16 @@ if [[ "$dns_port" == "53" ]]; then
     echo "nameserver 1.1.1.1" >> /etc/resolv.conf
 fi
 
-# Instalar Go si no existe
-if ! command -v go &>/dev/null; then
-    echo -e "\e[1;33m    → Instalando compilador Go...\e[0m"
-    DEBIAN_FRONTEND=noninteractive apt-get install -y golang-go 2>/dev/null
+# Instalar Go moderno (1.21.6) asegurando compilación correcta
+if ! command -v go &>/dev/null || [[ $(go version | awk '{print $3}' | sed 's/go//;s/\..*//') -lt 1 || $(go version | awk '{print $3}' | awk -F'.' '{print $2}') -lt 18 ]]; then
+    echo -e "\e[1;33m    → Instalando compilador Go moderno (1.21.6)...\e[0m"
+    cd /tmp
+    wget -q https://go.dev/dl/go1.21.6.linux-amd64.tar.gz
+    rm -rf /usr/local/go
+    tar -C /usr/local -xzf go1.21.6.linux-amd64.tar.gz
+    rm -f go1.21.6.linux-amd64.tar.gz
+    export PATH=$PATH:/usr/local/go/bin
+    grep -q "/usr/local/go/bin" /etc/profile || echo "export PATH=\$PATH:/usr/local/go/bin" >> /etc/profile
 fi
 
 echo -e "\e[1;33m    → Instalando motor real DNSTT-Server desde fuente oficial...\e[0m"
@@ -74,4 +80,14 @@ ufw allow 5353/tcp 2>/dev/null
 systemctl daemon-reload
 systemctl enable --now mx-slowdns 2>/dev/null
 echo -e "\e[1;32m[✓] SlowDNS instalado y activo en puerto $dns_port.\e[0m"
-sleep 3
+echo -e "\e[1;36m═════════════════════════════════════════════════════════\e[0m"
+echo -e "\e[1;33m 🔑 TU LLAVE PÚBLICA (Cópiala a HTTP Custom / Injector):\e[0m"
+if [ -f /etc/MaximusVpsMx/slowdns/server.pub ]; then
+    echo -e "\e[1;37m    $(cat /etc/MaximusVpsMx/slowdns/server.pub)\e[0m"
+else
+    echo -e "\e[1;31m    Error: No se encontró la llave.\e[0m"
+fi
+echo -e "\e[1;33m 🌐 DOMINIO NS:\e[0m"
+echo -e "\e[1;37m    $ns_dom\e[0m"
+echo -e "\e[1;36m═════════════════════════════════════════════════════════\e[0m"
+sleep 5
