@@ -76,11 +76,28 @@ class Proxy(threading.Thread):
                 # Responder con 101 Switching Protocols sin importar qué headers traiga (Payload Inyectado)
                 self.client.send(RESPONSE_WS)
             
-            # Conectar al backend (Dropbear/OpenSSH)
-            target = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            target.settimeout(3)
-            target.connect(('127.0.0.1', TARGET_PORT))
-            target.setblocking(1)
+            # Conectar al backend con Fallback (Dropbear/OpenSSH)
+            target = None
+            ports_to_try = [TARGET_PORT]
+            if TARGET_PORT == 22: ports_to_try.append(44)
+            elif TARGET_PORT == 44: ports_to_try.append(22)
+            
+            for pt in ports_to_try:
+                try:
+                    target = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    target.settimeout(3)
+                    target.connect(('127.0.0.1', pt))
+                    target.setblocking(1)
+                    break
+                except:
+                    if target:
+                        target.close()
+                    target = None
+                    
+            if not target:
+                self.client.close()
+                return
+
             self.client.setblocking(1)
 
             # Extraer y enviar el cuerpo remanente si existiera
