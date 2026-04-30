@@ -146,19 +146,19 @@ systemctl restart systemd-logind 2>/dev/null || true
 # 6. Global Banner por defecto (v7.2 Premium Custom)
 echo -e "\e[1;32m[+] Aplicando Global Banner Pro...\e[0m"
 cat > /etc/issue.net << 'BANNER'
-<br><br>
-<center>
-  <h1><font color="red" size="10"><b>SERVIDORES PREMIUM</b></font></h1>
-  <br>
-  <h1>
-    <font color="#74ACDF"><b>VIP </b></font>
-    <font color="white"><b>TEAM </b></font>
-    <font color="#74ACDF"><b>LATAM</b></font>
-  </h1>
-  <br>
-  <h1><font color="white" size="10"><b>LA MEJOR CALIDAD</b></font></h1>
-</center>
-<br><br>
+ [1;36m
+   *                )  (       *            (     
+ (  `     (      ( /(  )\ )  (  `           )\ )  
+ )\))(    )\     )\())(()/(  )\))(      (  (()/(  
+((_)()\((((_)(  ((_)\  /(_))((_)()\     )\  /(_)) 
+(_()((_))\ _ )\ __((_)(_))  (_()((_) _ ((_)(_))   
+|  \/  |(_)_\(_)\ \/ /|_ _| |  \/  || | | |/ __|  
+| |\/| | / _ \   >  <  | |  | |\/| || |_| |\__ \  
+|_|  |_|/_/ \_\ /_/\_\|___| |_|  |_| \___/ |___/  
+ [0m
+ [1;32m   USE LOS COMANDOS: menu , MENU o MX  [0m
+ [1;33m   PARA ENTRAR AL PANEL DE ADMINISTRACION  [0m
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 BANNER
 cp /etc/issue.net /etc/motd
 
@@ -177,8 +177,8 @@ chmod +x /etc/MaximusVpsMx/core/*.sh 2>/dev/null
 chmod +x /etc/MaximusVpsMx/core/*.py 2>/dev/null
 chmod +x /etc/MaximusVpsMx/core/speed_optimize.sh
 chmod 600 /etc/MaximusVpsMx/cloudflare.conf 2>/dev/null
-chmod 644 /etc/MaximusVpsMx/users.db 2>/dev/null
-chmod 644 /etc/MaximusVpsMx/hysteria_users.db 2>/dev/null
+chmod 600 /etc/MaximusVpsMx/users.db 2>/dev/null
+chmod 600 /etc/MaximusVpsMx/hysteria_users.db 2>/dev/null
 chown -R root:root /etc/MaximusVpsMx
 
 
