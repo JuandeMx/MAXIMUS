@@ -17,6 +17,7 @@ ui_hr() { echo -e "${CYAN}══════════════════
 # Función para instalar dependencias de Python
 install_deps() {
     echo -e "${YELLOW}[+] Verificando dependencias de Python y Herramientas de Compilación...${NC}"
+    rm -f /etc/apt/sources.list.d/monarx.list 2>/dev/null
     apt-get update -y >/dev/null 2>&1
     DEBIAN_FRONTEND=noninteractive apt-get install -y python3-pip python3-dev sqlite3 gcc make >/dev/null 2>&1
     pip3 install --upgrade pip --break-system-packages >/dev/null 2>&1
