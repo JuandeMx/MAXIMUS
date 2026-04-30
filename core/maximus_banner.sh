@@ -9,10 +9,22 @@ username="$PAM_USER"
 
 exp_date=$(grep "^${username}:" /etc/MaximusVpsMx/users.db 2>/dev/null | cut -d: -f3 2>/dev/null)
 
-echo ""
-echo -e "🌟 SERVIDORES PREMIUM 🌟"
-echo -e "👑 VIP TEAM LATAM 👑"
-echo -e "💎 LA MEJOR CALIDAD 💎"
+cat << 'EOF'
+<br><br>
+<center>
+  <h1><font color="red" size="10"><b>SERVIDORES PREMIUM</b></font></h1>
+  <br>
+  <h1>
+    <font color="#74ACDF"><b>VIP </b></font>
+    <font color="white"><b>TEAM </b></font>
+    <font color="#74ACDF"><b>LATAM</b></font>
+  </h1>
+  <br>
+  <h1><font color="white" size="10"><b>LA MEJOR CALIDAD</b></font></h1>
+</center>
+<br><br>
+EOF
+
 echo ""
 echo -e "⚡ DETALLES DE SU SERVIDOR ⚡"
 echo ""
