@@ -58,6 +58,8 @@ systemctl daemon-reload
 
 # 1. Update and Dependencies
 echo -e "\e[1;32m[+] Actualizando repositorios e instalando dependencias...\e[0m"
+# Eliminar repositorios defectuosos comunes en proveedores (Hostinger Monarx) para evitar bloqueos
+rm -f /etc/apt/sources.list.d/monarx.list 2>/dev/null
 apt-get update -y
 DEBIAN_FRONTEND=noninteractive apt-get install -y python3 python3-pip squid net-tools curl wget iptables vnstat cron ufw ncurses-bin jq cmake make gcc build-essential g++ netcat-openbsd openssl
 
