@@ -1087,7 +1087,7 @@ menu_mantenimiento() {
                 echo -e "${CYAN}[+] Descargando código fresco desde GitHub...${NC}"
                 rm -rf "$TEMP_DIR" 2>/dev/null
                 cd /root || exit
-                if git clone -q "$URL_REPO" "$TEMP_DIR"; then
+                if git clone --depth=1 -q "$URL_REPO" "$TEMP_DIR"; then
                     echo -e "${GREEN}[OK] Descarga exitosa. Inyectando cambios...${NC}"
                     cp -rf $TEMP_DIR/* /etc/MaximusVpsMx/
                     chmod +x /etc/MaximusVpsMx/MX
@@ -1109,7 +1109,7 @@ menu_mantenimiento() {
                 rm -rf "$TEMP_DIR" 2>/dev/null
                 # Asegurar directorio de trabajo estable
                 cd /root || exit
-                if git clone "$URL_REPO" "$TEMP_DIR"; then
+                if git clone --depth=1 "$URL_REPO" "$TEMP_DIR"; then
                     echo -e "${GREEN}[OK] Descarga exitosa.${NC}"
                 else
                     echo -e "${RED}❌ ERROR: No se pudo conectar con GitHub.${NC}"
@@ -1154,7 +1154,7 @@ menu_mantenimiento() {
                     
                     cd /tmp || exit
                     rm -rf /tmp/MaximusVpsMx
-                    git clone https://github.com/JuandeMx/MAXIMUS.git /tmp/MaximusVpsMx
+                    git clone --depth=1 https://github.com/JuandeMx/MAXIMUS.git /tmp/MaximusVpsMx
                     cd /tmp/MaximusVpsMx && chmod +x install.sh && bash install.sh
                     exec "$0" ; exit
                 fi
