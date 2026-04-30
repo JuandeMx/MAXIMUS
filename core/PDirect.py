@@ -131,7 +131,7 @@ class ConnectionHandler(threading.Thread):
                                 drop_port = int(line.split('=')[1].strip())
             except: pass
 
-            for port in [drop_port, 22, 2222]:
+            for port in [22, drop_port, 2222]:
                 try:
                     target = socket.create_connection(('127.0.0.1', port), timeout=3)
                     target.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
