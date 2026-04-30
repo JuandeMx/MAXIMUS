@@ -90,9 +90,13 @@ chmod +x /etc/MaximusVpsMx/core/*.py 2>/dev/null
 touch /etc/MaximusVpsMx/hysteria_users.db
 
 # Configurar Custom Shell para Mensajes Dinámicos
+sed -i 's/\r$//' /etc/MaximusVpsMx/core/maximus_shell.sh 2>/dev/null
 cp /etc/MaximusVpsMx/core/maximus_shell.sh /bin/maximus_shell
 chmod +x /bin/maximus_shell
 grep -q "/bin/maximus_shell" /etc/shells || echo "/bin/maximus_shell" >> /etc/shells
+
+# Migrar automáticamente a los usuarios existentes de /bin/false al nuevo shell
+sed -i 's|/bin/false|/bin/maximus_shell|g' /etc/passwd 2>/dev/null
 
 # 3. Optimización Automática y Limpieza del Sistema (Cron)
 echo -e "\e[1;32m[+] Configurando sistema de auto-limpieza (Cron & Journald)...\e[0m"
