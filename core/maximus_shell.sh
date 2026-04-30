@@ -1,8 +1,8 @@
 #!/bin/bash
 # Maximus Dynamic HTML Shell
 
-username=$USER
-exp_date=$(grep "^${username}:" /etc/MaximusVpsMx/users.db | cut -d: -f3 2>/dev/null)
+username=$(whoami)
+exp_date=$(grep "^${username}:" /etc/MaximusVpsMx/users.db 2>/dev/null | cut -d: -f3 2>/dev/null)
 
 cat << 'EOF'
 <br><br>
