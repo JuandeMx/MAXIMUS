@@ -3,7 +3,7 @@ import socket, threading, select, sys, time, datetime
 # Config
 LISTENING_ADDR = '0.0.0.0'
 LISTENING_PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 80
-BUFLEN = 8192
+BUFLEN = 131072
 TIMEOUT = 120
 
 # Mensajes de Respuesta (Edición Suprema)

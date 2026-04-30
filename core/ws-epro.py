@@ -17,7 +17,7 @@ if len(sys.argv) < 3:
 LISTENING_PORT = int(sys.argv[1])
 TARGET_PORT = int(sys.argv[2])
 LISTENING_ADDR = '0.0.0.0'
-BUFLEN = 8192
+BUFLEN = 131072
 
 RESPONSE_WS = b'HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nServer: Maximus-WSEngine\r\n\r\n'
 

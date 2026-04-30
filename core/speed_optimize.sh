@@ -12,6 +12,8 @@ echo -e "\e[1;32m[+] Iniciando Optimización de Red y Sistema (Modo Bestia)...\e
 # 1. Optimización del Kernel (Sysctl)
 cat > /etc/sysctl.d/99-maximus-speed.conf << 'EOF'
 # Optimización de Red para Servidores VPN/Proxy - Maximus Elite
+net.core.default_qdisc = fq
+net.ipv4.tcp_congestion_control = bbr
 net.core.somaxconn = 65535
 net.core.netdev_max_backlog = 65535
 net.ipv4.tcp_max_syn_backlog = 65535
