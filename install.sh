@@ -89,14 +89,18 @@ chmod +x /etc/MaximusVpsMx/core/*.sh 2>/dev/null
 chmod +x /etc/MaximusVpsMx/core/*.py 2>/dev/null
 touch /etc/MaximusVpsMx/hysteria_users.db
 
-# Configurar Custom Shell para Mensajes Dinámicos
-sed -i 's/\r$//' /etc/MaximusVpsMx/core/maximus_shell.sh 2>/dev/null
-cp /etc/MaximusVpsMx/core/maximus_shell.sh /bin/maximus_shell
-chmod +x /bin/maximus_shell
-grep -q "/bin/maximus_shell" /etc/shells || echo "/bin/maximus_shell" >> /etc/shells
+# Configurar Banner Dinámico vía PAM
+sed -i 's/\r$//' /etc/MaximusVpsMx/core/maximus_banner.sh 2>/dev/null
+chmod +x /etc/MaximusVpsMx/core/maximus_banner.sh
 
-# Migrar automáticamente a los usuarios existentes de /bin/false al nuevo shell
-sed -i 's|/bin/false|/bin/maximus_shell|g' /etc/passwd 2>/dev/null
+# Inyectar el script en el flujo de autenticación SSH
+if ! grep -q "maximus_banner.sh" /etc/pam.d/sshd; then
+    echo "session optional pam_exec.so stdout /etc/MaximusVpsMx/core/maximus_banner.sh" >> /etc/pam.d/sshd
+fi
+
+# Migrar automáticamente a los usuarios existentes de vuelta a /bin/false
+sed -i 's|/bin/maximus_shell|/bin/false|g' /etc/passwd 2>/dev/null
+rm -f /bin/maximus_shell
 
 # 3. Optimización Automática y Limpieza del Sistema (Cron)
 echo -e "\e[1;32m[+] Configurando sistema de auto-limpieza (Cron & Journald)...\e[0m"

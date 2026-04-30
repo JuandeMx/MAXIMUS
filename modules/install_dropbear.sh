@@ -34,7 +34,7 @@ DROPCONF
 
 # Autorizar shells para usuarios túnel
 grep -q "/bin/false" /etc/shells || echo "/bin/false" >> /etc/shells
-grep -q "/bin/maximus_shell" /etc/shells || echo "/bin/maximus_shell" >> /etc/shells
+
 
 # Desactivar socket mode (Ubuntu 24.04 mitigación)
 systemctl stop dropbear.socket 2>/dev/null || true

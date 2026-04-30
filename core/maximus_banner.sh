@@ -1,7 +1,12 @@
 #!/bin/bash
-# Maximus Dynamic Shell
+# Maximus Dynamic PAM Banner
 
-username=$(whoami)
+# El módulo pam_exec exporta la variable PAM_USER con el nombre del usuario
+username="$PAM_USER"
+
+# Si no hay usuario, salir silenciosamente
+[ -z "$username" ] && exit 0
+
 exp_date=$(grep "^${username}:" /etc/MaximusVpsMx/users.db 2>/dev/null | cut -d: -f3 2>/dev/null)
 
 echo ""
@@ -29,8 +34,5 @@ echo ""
 echo -e "✨ CUOTA ILIMITADA ♾️"
 echo ""
 
-# Mantener el canal SSH abierto para que la VPN pueda leer el texto
-trap 'exit 0' SIGINT SIGTERM SIGHUP
-while true; do
-    sleep 3600
-done
+# Finalizar inmediatamente para no retrasar la conexión SSH
+exit 0

@@ -23,8 +23,7 @@ def create_ssh_user(username, password, days=3, limit=1):
     exp_date = (datetime.datetime.now() + datetime.timedelta(days=days)).strftime('%Y-%m-%d')
     db_path = "/etc/MaximusVpsMx/users.db"
     
-    # comando useradd: -M (no home), -s (custom shell), -e (expiry)
-    cmd = f"useradd -M -s /bin/maximus_shell -e {exp_date} {username}"
+    cmd = f"useradd -M -s /bin/false -e {exp_date} {username}"
     if run_command(cmd) is None:
         return False, "Error al ejecutar useradd"
     
