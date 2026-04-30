@@ -29,7 +29,6 @@ echo ""
 echo -e "⚡ DETALLES DE SU SERVIDOR ⚡"
 echo ""
 echo -e "🛡️ USUARIO : $username"
-echo -e "👥 GRUPO   : Premium"
 
 if [ -n "$exp_date" ]; then
     today=$(date +%s)
