@@ -88,7 +88,7 @@ class ConnectionHandler(threading.Thread):
 
             # --- MOTOR HÍBRIDO v4.0 (Peeking) ---
             client_buffer = b''
-            r, _, _ = select.select([self.client], [], [], 0.5)
+            r, _, _ = select.select([self.client], [], [], 3.0)
             
             if r:
                 client_buffer = self.client.recv(BUFLEN)

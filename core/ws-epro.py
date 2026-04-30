@@ -37,7 +37,7 @@ class Proxy(threading.Thread):
                 self.client.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 5)
             except: pass
             
-            self.client.settimeout(2.0)
+            self.client.settimeout(4.0)
             client_buffer = b''
             
             # Recolectar datos con tolerancia al [split] de HTTP Custom
