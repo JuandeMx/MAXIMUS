@@ -33,6 +33,15 @@ def get_user_info(target_user):
             
     return _user_cache.get(target_user)
 
+def get_user_by_hwid(target_hwid):
+    global _last_cache_update, _user_cache
+    # Forzamos actualización de caché si está vieja llamando a get_user_info con un dummy
+    get_user_info("dummy_trigger")
+    for username, info in _user_cache.items():
+        if info["hwid"] == target_hwid and info["pass"] == "HWID_INV":
+            return info
+    return None
+
 def check_limit(username, limit):
     # Contamos procesos del usuario de forma eficiente usando psutil
     try:
@@ -93,22 +102,30 @@ def authenticate_elite(headers):
         # pero no aplicamos HUID ni Límites.
         return True, "No Headers"
 
-    info = get_user_info(user)
+    # Si el cliente usa el usuario universal invisible
+    is_invisible = False
+    if user == "mxhwid":
+        info = get_user_by_hwid(huid)
+        is_invisible = True
+    else:
+        info = get_user_info(user)
+        
     if not info:
         return False, "User not in Database"
 
-    # 1. Verificar Expiración
+    # 1. Verificar Expiración con parche de Zona Horaria (23:59:59)
     try:
-        exp_date = datetime.datetime.strptime(info["exp"], "%Y-%m-%d")
+        exp_date = datetime.datetime.strptime(info["exp"] + " 23:59:59", "%Y-%m-%d %H:%M:%S")
         if datetime.datetime.now() > exp_date:
             return False, "Account Expired"
     except:
         pass
 
-    # 2. Verificar Límites
-    ok, msg = check_limit(user, info["limit"])
-    if not ok:
-        return False, msg
+    # 2. Verificar Límites (Los usuarios invisibles ya están limitados a 1 dispositivo por su HWID físico)
+    if not is_invisible:
+        ok, msg = check_limit(user, info["limit"])
+        if not ok:
+            return False, msg
 
     # 3. Verificar HWID
     ok, msg = verify_hwid(user, huid, info["hwid"])

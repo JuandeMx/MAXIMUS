@@ -157,7 +157,8 @@ menu_usuarios() {
                     echo "$user:$pass:$exp_date:HWID_INV:$limit:$alias" >> "$USER_DB"
                     echo "$user:$pass:$exp_date:100:100" >> /etc/MaximusVpsMx/hysteria_users.db
                     echo -e "${GREEN}✅ Cliente HWID ($alias) creado exitosamente por $dias días.${NC}"
-                    echo -e "${CYAN}   El cliente debe conectar con el payload: @${hwid_val}:${hwid_val}${NC}"
+                    echo -e "${CYAN}   Para conectar, el cliente debe usar en SSH el usuario y clave: mxhwid${NC}"
+                    echo -e "${CYAN}   (También debe enviar su HWID en el payload: $hwid_val)${NC}"
                     ui_pause
                 else
                     echo -e "\n${YELLOW}▶ Crear Usuario Premium${NC}"

