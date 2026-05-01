@@ -128,36 +128,72 @@ menu_usuarios() {
 
         case $opt_user in
             1)
-                echo -e "\n${YELLOW}▶ Crear Usuario Premium${NC}"
-                read -p " Nombre del Usuario: " user
-                [ -z "$user" ] && continue
-                grep -qw "$user" "$USER_DB" && { echo -e "${RED}❌ Error: Usuario ya existe.${NC}"; sleep 2; continue; }
-                read -p " Contraseña: " pass
-                read -p " Días de Duración: " dias
-                read -p " Límite de Conexiones [1]: " limit
-                [ -z "$limit" ] && limit=1
-                echo -e "${CYAN} ¿Activar Bloqueo por HUID? (s/n)${NC}"
-                read -p " Opción: " h_opt
-                hwid_val="OFF"
-                if [[ "$h_opt" == "S" || "$h_opt" == "s" ]]; then
-                    echo -e "   ${YELLOW}▶ Selecciona el Método de Registro:${NC}"
-                    echo -e "   [1] Automático (Capturar en primer login)"
-                    echo -e "   [2] Manual (Ingresar Token ahora)"
-                    read -p "   Opción [1]: " m_hwid
-                    if [[ "$m_hwid" == "2" ]]; then
-                        read -p "   Ingresa el Token/HUID: " hwid_val
-                    else
-                        hwid_val="NONE"
-                    fi
-                fi
+                echo -e "\n${YELLOW}▶ MODO DE CREACIÓN${NC}"
+                echo -e "  ${CYAN}[1]${NC} Usuario Normal (Clásico)"
+                echo -e "  ${CYAN}[2]${NC} Usuario Hardware ID (Invisible)"
+                read -p " Opción: " tipo_creacion
 
-                exp_date=$(date -d "+$dias days" +%Y-%m-%d)
-                rm -f /etc/passwd.lock /etc/shadow.lock
-                useradd -e $exp_date -s /bin/false -M $user 2>/dev/null
-                echo "$user:$pass" | chpasswd
-                echo "$user:$pass:$exp_date:$hwid_val:$limit" >> "$USER_DB"
-                echo -e "${GREEN}✅ Usuario $user creado ($limit SSH, HUID: $hwid_val) por $dias días.${NC}"
-                ui_pause
+                if [[ "$tipo_creacion" == "2" ]]; then
+                    echo -e "\n${YELLOW}▶ Crear Cliente Hardware ID${NC}"
+                    read -p " Nombre/Alias (Ej: Juan): " alias
+                    [ -z "$alias" ] && continue
+                    read -p " Hardware ID del Cliente: " hwid_val
+                    [ -z "$hwid_val" ] && continue
+                    # Transformamos el HWID a minúsculas para que Linux lo acepte
+                    user=$(echo "$hwid_val" | tr '[:upper:]' '[:lower:]')
+                    pass=$user
+                    read -p " Días de Duración: " dias
+                    [ -z "$dias" ] && dias=30
+                    limit=1
+                    
+                    grep -qw "$user" "$USER_DB" && { echo -e "${RED}❌ Error: Este HWID ya está registrado.${NC}"; sleep 2; continue; }
+                    
+                    exp_date=$(date -d "+$dias days" +%Y-%m-%d)
+                    linux_exp_date=$(date -d "+$((dias + 1)) days" +%Y-%m-%d)
+                    
+                    rm -f /etc/passwd.lock /etc/shadow.lock
+                    useradd -e $linux_exp_date -s /bin/false -M $user 2>/dev/null
+                    echo "$user:$pass" | chpasswd
+                    echo "$user:$pass:$exp_date:HWID_INV:$limit:$alias" >> "$USER_DB"
+                    echo "$user:$pass:$exp_date:100:100" >> /etc/MaximusVpsMx/hysteria_users.db
+                    echo -e "${GREEN}✅ Cliente HWID ($alias) creado exitosamente por $dias días.${NC}"
+                    echo -e "${CYAN}   El cliente debe conectar con el payload: @${hwid_val}:${hwid_val}${NC}"
+                    ui_pause
+                else
+                    echo -e "\n${YELLOW}▶ Crear Usuario Premium${NC}"
+                    read -p " Nombre del Usuario: " user
+                    [ -z "$user" ] && continue
+                    grep -qw "$user" "$USER_DB" && { echo -e "${RED}❌ Error: Usuario ya existe.${NC}"; sleep 2; continue; }
+                    read -p " Contraseña: " pass
+                    read -p " Días de Duración: " dias
+                    [ -z "$dias" ] && dias=30
+                    limit=1
+                    
+                    echo -e "${CYAN} ¿Activar Bloqueo por HUID? (s/n)${NC}"
+                    read -p " Opción: " h_opt
+                    hwid_val="OFF"
+                    if [[ "$h_opt" == "S" || "$h_opt" == "s" ]]; then
+                        echo -e "   ${YELLOW}▶ Selecciona el Método de Registro:${NC}"
+                        echo -e "   [1] Automático (Capturar en primer login)"
+                        echo -e "   [2] Manual (Ingresar Token ahora)"
+                        read -p "   Opción [1]: " m_hwid
+                        if [[ "$m_hwid" == "2" ]]; then
+                            read -p "   Ingresa el Token/HUID: " hwid_val
+                        else
+                            hwid_val="NONE"
+                        fi
+                    fi
+
+                    exp_date=$(date -d "+$dias days" +%Y-%m-%d)
+                    linux_exp_date=$(date -d "+$((dias + 1)) days" +%Y-%m-%d)
+                    rm -f /etc/passwd.lock /etc/shadow.lock
+                    useradd -e $linux_exp_date -s /bin/false -M $user 2>/dev/null
+                    echo "$user:$pass" | chpasswd
+                    echo "$user:$pass:$exp_date:$hwid_val:$limit" >> "$USER_DB"
+                    echo "$user:$pass:$exp_date:100:100" >> /etc/MaximusVpsMx/hysteria_users.db
+                    echo -e "${GREEN}✅ Usuario $user creado (HUID: $hwid_val) por $dias días.${NC}"
+                    ui_pause
+                fi
                 ;;
             2)
                 echo -e "\n${RED}▶ Eliminar Sistema${NC}"
@@ -212,17 +248,43 @@ menu_usuarios() {
                 sleep 2
                 ;;
             7)
-                echo -e "\n${YELLOW}▶ Detalles de Usuarios VIP (Elite Series):${NC}"
+                echo -e "\n${YELLOW}▶ LISTA DE USUARIOS${NC}"
+                echo -e "  ${CYAN}[1]${NC} Ver Usuarios Normales"
+                echo -e "  ${CYAN}[2]${NC} Ver Clientes HWID"
+                read -p " Opción: " ver_opt
                 ui_hr
-                printf "${WHITE}%-12s | %-12s | %-10s | %-8s | %-6s${NC}\n" "USUARIO" "PASS" "EXPIRA" "HUID" "LIM"
-                ui_subhr
-                if [ -s "$USER_DB" ]; then
-                    while IFS=: read -r d_user d_pass d_exp d_hwid d_limit; do
-                        h_color="${GREEN}" ; [ "$d_hwid" == "OFF" ] && h_color="${RED}"
-                        printf " ${CYAN}%-11s${NC} | %-12s | %-10s | %b%-8s${NC} | %-6s\n" "$d_user" "$d_pass" "$d_exp" "$h_color" "$d_hwid" "$d_limit"
-                    done < "$USER_DB"
+                
+                if [[ "$ver_opt" == "2" ]]; then
+                    printf "${WHITE}%-15s | %-12s | %-10s${NC}\n" "ALIAS" "HWID CODE" "EXPIRA"
+                    ui_subhr
+                    if [ -s "$USER_DB" ]; then
+                        encontrados=0
+                        while IFS=: read -r d_user d_pass d_exp d_hwid d_limit d_alias; do
+                            if [[ "$d_hwid" == "HWID_INV" ]]; then
+                                printf " ${CYAN}%-14s${NC} | %-12s | %-10s\n" "$d_alias" "$d_user" "$d_exp"
+                                encontrados=1
+                            fi
+                        done < "$USER_DB"
+                        [ "$encontrados" -eq 0 ] && echo -e " ${RED}No hay clientes HWID registrados.${NC}"
+                    else
+                        echo -e " ${RED}No hay usuarios registrados.${NC}"
+                    fi
                 else
-                    echo -e " ${RED}No hay usuarios registrados.${NC}"
+                    printf "${WHITE}%-12s | %-12s | %-10s | %-8s | %-6s${NC}\n" "USUARIO" "PASS" "EXPIRA" "HUID" "LIM"
+                    ui_subhr
+                    if [ -s "$USER_DB" ]; then
+                        encontrados=0
+                        while IFS=: read -r d_user d_pass d_exp d_hwid d_limit d_alias; do
+                            if [[ "$d_hwid" != "HWID_INV" ]]; then
+                                h_color="${GREEN}" ; [ "$d_hwid" == "OFF" ] && h_color="${RED}"
+                                printf " ${CYAN}%-11s${NC} | %-12s | %-10s | %b%-8s${NC} | %-6s\n" "$d_user" "$d_pass" "$d_exp" "$h_color" "$d_hwid" "$d_limit"
+                                encontrados=1
+                            fi
+                        done < "$USER_DB"
+                        [ "$encontrados" -eq 0 ] && echo -e " ${RED}No hay usuarios normales registrados.${NC}"
+                    else
+                        echo -e " ${RED}No hay usuarios registrados.${NC}"
+                    fi
                 fi
                 ui_hr
                 ui_pause

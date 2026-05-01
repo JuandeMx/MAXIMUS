@@ -21,9 +21,11 @@ def check_user_exists(username):
 def create_ssh_user(username, password, days=3, limit=1):
     # Generar fecha de expiración para useradd (YYYY-MM-DD)
     exp_date = (datetime.datetime.now() + datetime.timedelta(days=days)).strftime('%Y-%m-%d')
+    # Añadir 1 día extra a Linux para que el corte real sea a las 23:59:59 del día de expiración
+    linux_exp_date = (datetime.datetime.now() + datetime.timedelta(days=days + 1)).strftime('%Y-%m-%d')
     db_path = "/etc/MaximusVpsMx/users.db"
     
-    cmd = f"useradd -M -s /bin/false -e {exp_date} {username}"
+    cmd = f"useradd -M -s /bin/false -e {linux_exp_date} {username}"
     if run_command(cmd) is None:
         return False, "Error al ejecutar useradd"
     
@@ -44,12 +46,44 @@ def create_ssh_user(username, password, days=3, limit=1):
     
     return True, exp_date
 
+def create_hwid_user(alias, hwid, days=3):
+    # Convertir el HWID a minúsculas para que sea un usuario Linux válido
+    linux_user = str(hwid).lower()
+    password = str(hwid).lower()
+    limit = 1 # Internamente fijado en 1
+    
+    exp_date = (datetime.datetime.now() + datetime.timedelta(days=days)).strftime('%Y-%m-%d')
+    linux_exp_date = (datetime.datetime.now() + datetime.timedelta(days=days + 1)).strftime('%Y-%m-%d')
+    db_path = "/etc/MaximusVpsMx/users.db"
+    
+    cmd = f"useradd -M -s /bin/false -e {linux_exp_date} {linux_user}"
+    if run_command(cmd) is None:
+        # Si falla (tal vez ya existe), intentamos actualizar la expiración
+        run_command(f"chage -E {linux_exp_date} {linux_user}")
+        pass
+    
+    # establecer contraseña
+    if run_command(f"echo '{linux_user}:{password}' | chpasswd") is None:
+        return False, "Error al establecer contraseña"
+    
+    # Formato HWID: user:pass:exp:HWID_INV:limit:alias
+    user_entry = f"{linux_user}:{password}:{exp_date}:HWID_INV:{limit}:{alias}"
+    run_command(f"echo '{user_entry}' >> {db_path}")
+    
+    # Hysteria format: no usa alias
+    hy_db = "/etc/MaximusVpsMx/hysteria_users.db"
+    hy_entry = f"{linux_user}:{password}:{exp_date}:100:100"
+    run_command(f"echo '{hy_entry}' >> {hy_db}")
+    
+    return True, exp_date
+
 def extend_user_expiry(username, days=1):
     import datetime
     new_expiry = (datetime.datetime.now() + datetime.timedelta(days=days)).strftime("%Y-%m-%d")
+    linux_expiry = (datetime.datetime.now() + datetime.timedelta(days=days + 1)).strftime("%Y-%m-%d")
     
     # 1. Actualizar Linux
-    run_command(f"chage -E {new_expiry} {username}")
+    run_command(f"chage -E {linux_expiry} {username}")
     
     # 2. Actualizar database.db de MX (archivo de texto)
     db_path = "/etc/MaximusVpsMx/users.db"
