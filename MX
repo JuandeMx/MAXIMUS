@@ -156,9 +156,25 @@ menu_usuarios() {
                     echo "$user:$pass" | chpasswd
                     echo "$user:$pass:$exp_date:HWID_INV:$limit:$alias" >> "$USER_DB"
                     echo "$user:$pass:$exp_date:100:100" >> /etc/MaximusVpsMx/hysteria_users.db
-                    echo -e "${GREEN}✅ Cliente HWID ($alias) creado exitosamente por $dias días.${NC}"
-                    echo -e "${CYAN}   Para conectar, el cliente debe usar en SSH el usuario y clave: mxhwid${NC}"
-                    echo -e "${CYAN}   (También debe enviar su HWID en el payload: $hwid_val)${NC}"
+                    # Obtener IP y Dominio
+                    server_ip=$(curl -s ifconfig.me)
+                    domain=$(cat /etc/MaximusVpsMx/cloudflare.conf | grep "DOMAIN=" | cut -d= -f2)
+                    [ -z "$domain" ] && domain="$server_ip"
+                    
+                    echo -e "\n${YELLOW}*====================================*${NC}"
+                    echo -e "${WHITE}  CREACIÓN DE CLIENTE HWID EXITOSA${NC}"
+                    echo -e "${YELLOW}*====================================*${NC}"
+                    echo -e "${CYAN} DOMINIO :${NC} $domain"
+                    echo -e "${CYAN} HOST/IP :${NC} $server_ip"
+                    echo -e "${CYAN} ALIAS   :${NC} $alias"
+                    echo -e "${CYAN} HWID    :${NC} $hwid_val"
+                    echo -e "${CYAN} VALIDEZ :${NC} $exp_date ($dias Días)"
+                    echo -e "${YELLOW}--------------------------------------${NC}"
+                    echo -e "${WHITE} En APPS como HTTP Custom o Injector:${NC}"
+                    echo -e "${GREEN} 👤 Usuario SSH :${NC} mxhwid"
+                    echo -e "${GREEN} 🔑 Clave SSH   :${NC} mxhwid"
+                    echo -e "${RED} (Recuerda exportar bloqueando el SSH)${NC}"
+                    echo -e "${YELLOW}--------------------------------------${NC}"
                     ui_pause
                 else
                     echo -e "\n${YELLOW}▶ Crear Usuario Premium${NC}"
