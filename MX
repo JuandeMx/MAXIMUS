@@ -129,6 +129,8 @@ master_restore() {
 }
 
 # --- SUBMENÚ DE USUARIOS ---
+menu_usuarios() {
+    while true; do
         ui_header "ADMINISTRACIÓN DE CUENTAS SSH / DROPBEAR"
         echo -e "  ${CYAN}[1]>${WHITE} CREAR NUEVO USUARIO PREMIUM${NC}"
         echo -e "  ${CYAN}[2]>${RED} REMOVER / ELIMINAR USUARIO${NC}"
@@ -235,13 +237,12 @@ master_restore() {
                 fi
                 ;;
             2)
-                echo -e "\n${RED}▶ Eliminar Sistema${NC}"
-                read -p " Username a destruir: " user
+                echo -e "\n${RED}▶ Eliminar Usuario${NC}"
+                read -p " Username a borrar: " user
                 userdel -f $user 2>/dev/null
-                sed -i "/^$user:/d" "$USER_DB" 2>/dev/null
-                echo -e "${GREEN}✅ Usuario eliminado de la base de datos.${NC}"
-                ui_pause
-                ;;
+                sqlite3 "$DB_PATH" "DELETE FROM users WHERE username='$user'"
+                echo -e "${GREEN}✅ Usuario eliminado.${NC}"
+                ui_pause ;;
             3)
                 echo -e "\n${YELLOW}▶ Renovar Usuario${NC}"
                 read -p " Escribe el Username: " user
