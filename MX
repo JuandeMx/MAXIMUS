@@ -1351,5 +1351,11 @@ main_menu() {
     done
 }
 
+# Manejo de argumentos
+if [[ "$1" == "--restore" ]]; then
+    master_restore
+    exit 0
+fi
+
 # Inicializar
 main_menu
