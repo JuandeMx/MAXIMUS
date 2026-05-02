@@ -1,31 +1,30 @@
 #!/bin/bash
 
-# Maximus Restoration Master v2.0 (Bash Edition)
-# Diseñado para una limpieza profunda y restauración de 45 usuarios
+# Maximus Restoration Master v3.0 (Official Format Edition)
+# Este script usa el formato EXACTO del panel MX
 
 DB_PATH="/etc/MaximusVpsMx/maximus.db"
 DB_PATH2="/etc/MaximusVpsMx/users.db"
 DB_PATH3="/etc/MaximusVpsMx/hysteria_users.db"
 
-echo -e "🚀 Iniciando LIMPIEZA MAESTRA y Restauración de 45 clientes..."
-
-# 1. Borrar bases de datos corruptas
-rm -f "$DB_PATH" "$DB_PATH2" "$DB_PATH3"
-
-# 2. Crear las bases de datos desde cero con el formato exacto
-create_db() {
-    local path=$1
-    sqlite3 "$path" "CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE, password TEXT, expiry_date TEXT, hwid TEXT DEFAULT 'OFF', device_limit INTEGER DEFAULT 1);"
-}
+echo -e "🚀 Sincronizando 45 usuarios con el formato OFICIAL del panel..."
 
 # Asegurar directorio
 mkdir -p /etc/MaximusVpsMx/
 
-create_db "$DB_PATH"
-create_db "$DB_PATH2"
-create_db "$DB_PATH3"
+# 1. Limpiar y Crear usando el comando oficial del panel
+setup_db() {
+    local path=$1
+    rm -f "$path"
+    # Formato oficial detectado en el script MX
+    sqlite3 "$path" "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE, password TEXT, expiry_date TEXT, hwid TEXT DEFAULT 'OFF', device_limit INTEGER DEFAULT 1);"
+}
 
-# 3. Lista de usuarios (45 en total)
+setup_db "$DB_PATH"
+setup_db "$DB_PATH2"
+setup_db "$DB_PATH3"
+
+# 2. Lista de 45 usuarios
 USERS=(
     "Juande|mx|2026-05-15" "Hugo|123|2026-05-24" "Juan|123|2026-05-24" "Andrea|1234|2026-05-25"
     "Oscar|Paciencia|2026-05-25" "Mario|Cliente|2026-05-26" "myreyna|bella|2026-05-26" "Ariel|Byjuande|2026-05-27"
@@ -41,22 +40,22 @@ USERS=(
     "Brian|Cliente|2026-05-31" "Yoel|Personal|2026-06-01"
 )
 
-# 4. Inyección Masiva
+# 3. Inyección usando el comando INSERT oficial
 for row in "${USERS[@]}"; do
     IFS='|' read -r u p e <<< "$row"
     
-    # Crear en Linux (Solo si no existe)
+    # Sistema
     if ! id "$u" &>/dev/null; then
         useradd -M -s /bin/false "$u" &>/dev/null
     fi
     echo "$u:$p" | chpasswd &>/dev/null
     
-    # Inyectar en las 3 bases de datos
+    # Insertar (usando comillas simples para evitar errores de shell)
     sqlite3 "$DB_PATH" "INSERT INTO users (username, password, expiry_date, hwid, device_limit) VALUES ('$u', '$p', '$e', 'OFF', 1);"
     sqlite3 "$DB_PATH2" "INSERT INTO users (username, password, expiry_date, hwid, device_limit) VALUES ('$u', '$p', '$e', 'OFF', 1);"
     sqlite3 "$DB_PATH3" "INSERT INTO users (username, password, expiry_date, hwid, device_limit) VALUES ('$u', '$p', '$e', 'OFF', 1);"
     
-    echo -e " [+] Restaurado: $u"
+    echo -ne " [+] Sincronizando: $u\r"
 done
 
-echo -e "\n✅ ¡PROCESO COMPLETADO! 45 clientes listos en el panel."
+echo -e "\n\n✅ ¡LISTO! Todos los clientes han sido restaurados con el formato oficial."
