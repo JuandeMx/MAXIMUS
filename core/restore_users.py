@@ -2,7 +2,7 @@ import sqlite3
 import os
 import subprocess
 
-# RUTA CORRECTA DETECTADA
+# RUTA DEFINITIVA
 DB_PATHS = ['/etc/MaximusVpsMx/users.db', '/etc/MaximusVpsMx/hysteria_users.db']
 
 # Lista de usuarios a restaurar
@@ -55,26 +55,26 @@ users_to_restore = [
 ]
 
 def restore():
-    print("🚀 Restaurando usuarios en las bases de datos detectadas...")
+    print("🚀 Limpiando y restaurando con formato correcto...")
     
     for db_path in DB_PATHS:
-        print(f"\n📁 Procesando: {db_path}")
         try:
+            if os.path.exists(db_path): os.remove(db_path) # Borramos para empezar limpio
             conn = sqlite3.connect(db_path)
             cursor = conn.cursor()
             
-            # Crear tabla si no existe
-            cursor.execute('''CREATE TABLE IF NOT EXISTS users
+            # ORDEN EXACTO DE COLUMNAS PARA EL PANEL
+            cursor.execute('''CREATE TABLE users
                          (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                          username TEXT UNIQUE,
+                          username TEXT,
                           password TEXT,
                           expiry_date TEXT,
-                          hwid TEXT DEFAULT 'OFF',
-                          device_limit INTEGER DEFAULT 1)''')
+                          hwid TEXT,
+                          device_limit INTEGER)''')
             
             for user, password, expiry in users_to_restore:
-                # Sistema (Solo una vez)
-                if db_path == DB_PATHS[0]:
+                # Sistema
+                if 'users.db' in db_path:
                     try:
                         subprocess.run(['userdel', '-f', user], stderr=subprocess.DEVNULL)
                         subprocess.run(['useradd', '-M', '-s', '/bin/false', user], check=True, stderr=subprocess.DEVNULL)
@@ -82,18 +82,16 @@ def restore():
                     except: pass
 
                 # Base de Datos
-                try:
-                    cursor.execute("INSERT OR REPLACE INTO users (username, password, expiry_date, hwid, device_limit) VALUES (?, ?, ?, ?, ?)",
-                                   (user, password, expiry, 'OFF', 1))
-                except: pass
+                cursor.execute("INSERT INTO users (username, password, expiry_date, hwid, device_limit) VALUES (?, ?, ?, ?, ?)",
+                               (user, password, expiry, 'OFF', 1))
                     
             conn.commit()
             conn.close()
-            print(f" ✅ Usuarios sincronizados en {db_path}")
+            print(f" ✅ {os.path.basename(db_path)} restaurada con éxito.")
         except Exception as e:
             print(f" ❌ Error en {db_path}: {e}")
 
-    print("\n✅ ¡LISTO! Todos tus clientes han vuelto.")
+    print("\n✅ ¡LISTO! Ahora entra al panel y verás todo ordenado.")
 
 if __name__ == "__main__":
     restore()
