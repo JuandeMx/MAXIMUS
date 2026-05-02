@@ -26,8 +26,8 @@ if [ -z "$2" ]; then
     echo -e "     ${YELLOW}* El clásico, máxima velocidad, sin Payloads ni Websockets.${NC}"
     echo -e " [2] HÍBRIDO MÁXIMO (Puerto 80 + 443)"
     echo -e "     ${YELLOW}* Motor Agnóstico Universal usando puerto 80 (Soporta TODAS las combinaciones).${NC}"
-    echo -e " [3] HÍBRIDO SEGURO (Puerto 8080 + 443)"
-    echo -e "     ${YELLOW}* Motor Agnóstico Universal usando puerto 8080 (Para evitar conflictos si tienes WebServer en 80).${NC}"
+    echo -e " [3] HÍBRIDO UNIVERSAL (Puerto 80 + 443)"
+    echo -e "     ${YELLOW}* El modo recomendado, compatible con todos los payloads en puerto 80.${NC}"
     echo -ne "${RED}-------------------------------------------------------${NC}\n"
     read -p " Selecciona una opción [1-3]: " mode_opt
 else
@@ -68,7 +68,7 @@ case $mode_opt in
             read -p " Puerto SSL (Default 443): " SSL_PORT
             [ -z "$SSL_PORT" ] && SSL_PORT=443
         fi
-        PROXY_PORT=8080
+        PROXY_PORT=80
         echo -e "${YELLOW}[+] Levantando Proxy Universal (Agnóstico) en puerto $PROXY_PORT...${NC}"
         bash /etc/MaximusVpsMx/modules/install_mx-proxy.sh $PROXY_PORT > /dev/null 2>&1
         CONNECT_TARGET="127.0.0.1:$PROXY_PORT"

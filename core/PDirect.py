@@ -117,8 +117,8 @@ class ConnectionHandler(threading.Thread):
                 else:
                     self.client.sendall(RESPONSE_STD)
                 
-                # Sincronización pequeña para separar cabeceras del flujo SSH
-                time.sleep(0.1)
+                # Sincronización mínima
+                pass
 
             # Conexión al Backend local (OpenSSH 22 o Dropbear paramétrico)
             drop_port = 44
