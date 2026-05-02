@@ -22,6 +22,7 @@ UI_WIDTH=55
 
 # --- CONFIGURACIÓN DE BASE DE DATOS ---
 DB_PATH="/etc/MaximusVpsMx/maximus.db"
+USER_DB="/etc/MaximusVpsMx/users.db"
 mkdir -p /etc/MaximusVpsMx
 
 ui_hr() { echo -e "${CYAN}═══════════════════════════════════════════════════════${NC}"; }
@@ -103,6 +104,9 @@ master_restore() {
     echo -e " ${YELLOW}🚀 Iniciando Restauración Maestra de 45 Clientes...${NC}"
     sqlite3 "$DB_PATH" "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE, password TEXT, expiry_date TEXT, hwid TEXT DEFAULT 'OFF', device_limit INTEGER DEFAULT 1);"
     
+    # Limpiar archivo de texto viejo para reconstruirlo
+    > "$USER_DB"
+    
     USERS=(
         "Juande|mx|2026-05-15" "Hugo|123|2026-05-24" "Juan|123|2026-05-24" "Andrea|1234|2026-05-25"
         "Oscar|Paciencia|2026-05-25" "Mario|Cliente|2026-05-26" "myreyna|bella|2026-05-26" "Ariel|Byjuande|2026-05-27"
@@ -123,6 +127,7 @@ master_restore() {
         useradd -M -s /bin/false "$u" &>/dev/null
         echo "$u:$p" | chpasswd &>/dev/null
         sqlite3 "$DB_PATH" "INSERT OR REPLACE INTO users (username, password, expiry_date, hwid, device_limit) VALUES ('$u', '$p', '$e', 'OFF', 1);"
+        echo "$u:$p:$e:OFF:1" >> "$USER_DB"
     done
     
     echo -e " ${GREEN}✅ 45 Clientes restaurados con éxito.${NC}"
