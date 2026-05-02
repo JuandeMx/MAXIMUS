@@ -165,9 +165,10 @@ class ConnectionHandler(threading.Thread):
             # --- RELAY BIDIRECCIONAL SELECT ENGINE ---
             sockets = [self.client, target]
             running_relay = True
+            is_first_data = True
             while running_relay:
                 try:
-                    r, _, e = select.select(sockets, [], sockets, 30)
+                    r, _, e = select.select(sockets, [], sockets, 60)
                     if e: break
                     for sock in r:
                         data = sock.recv(BUFLEN)
@@ -176,6 +177,18 @@ class ConnectionHandler(threading.Thread):
                             break
                         
                         out = target if sock is self.client else self.client
+                        
+                        # --- FILTRO ANTIGOLPE (v4.5 Universal) ---
+                        # Limpiamos basura de payloads agresivos (Split/Instant)
+                        if is_first_data and sock is self.client and is_payload:
+                            is_first_data = False
+                            # Si el cliente enva ms cabeceras HTTP antes del SSH
+                            if (b'HTTP/' in data or b'Host:' in data) and b'SSH-' not in data:
+                                continue 
+                            elif b'SSH-' in data and (b'HTTP/' in data or b'Host:' in data):
+                                # Extraemos solo la parte del banner SSH
+                                data = data[data.find(b'SSH-'):]
+                        
                         out.sendall(data)
                 except (socket.error, Exception):
                     break
