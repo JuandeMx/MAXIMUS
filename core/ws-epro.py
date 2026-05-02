@@ -17,7 +17,7 @@ if len(sys.argv) < 3:
 LISTENING_PORT = int(sys.argv[1])
 TARGET_PORT = int(sys.argv[2])
 LISTENING_ADDR = '0.0.0.0'
-BUFLEN = 131072
+BUFLEN = 8192
 
 RESPONSE_WS = b'HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nServer: Maximus-WSEngine\r\n\r\n'
 
@@ -37,7 +37,7 @@ class Proxy(threading.Thread):
                 self.client.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 5)
             except: pass
             
-            self.client.settimeout(4.0)
+            self.client.settimeout(2.0)
             client_buffer = b''
             
             # Recolectar datos con tolerancia al [split] de HTTP Custom

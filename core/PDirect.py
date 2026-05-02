@@ -3,7 +3,7 @@ import socket, threading, select, sys, time, datetime
 # Config
 LISTENING_ADDR = '0.0.0.0'
 LISTENING_PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 80
-BUFLEN = 131072
+BUFLEN = 8192
 TIMEOUT = 120
 
 # Mensajes de Respuesta (Edición Suprema)
@@ -88,7 +88,7 @@ class ConnectionHandler(threading.Thread):
 
             # --- MOTOR HÍBRIDO v4.0 (Peeking) ---
             client_buffer = b''
-            r, _, _ = select.select([self.client], [], [], 3.0)
+            r, _, _ = select.select([self.client], [], [], 0.5)
             
             if r:
                 client_buffer = self.client.recv(BUFLEN)
@@ -131,7 +131,7 @@ class ConnectionHandler(threading.Thread):
                                 drop_port = int(line.split('=')[1].strip())
             except: pass
 
-            for port in [22, drop_port, 2222]:
+            for port in [drop_port, 22, 2222]:
                 try:
                     target = socket.create_connection(('127.0.0.1', port), timeout=3)
                     target.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
