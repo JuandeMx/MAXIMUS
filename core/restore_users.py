@@ -2,6 +2,7 @@ import sqlite3
 import os
 import subprocess
 
+# RUTA CRÍTICA: Aseguramos que sea la que usa el panel
 DB_PATH = '/etc/MaximusVpsMx/core/maximus.db'
 
 # Lista de usuarios a restaurar
@@ -54,13 +55,11 @@ users_to_restore = [
 ]
 
 def restore():
-    # Asegurar directorio
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-    
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     
-    # CREAR TABLAS SI NO EXISTEN
+    # Asegurar tabla
     cursor.execute('''CREATE TABLE IF NOT EXISTS users
                  (id INTEGER PRIMARY KEY AUTOINCREMENT,
                   username TEXT UNIQUE,
@@ -69,30 +68,28 @@ def restore():
                   hwid TEXT DEFAULT 'OFF',
                   device_limit INTEGER DEFAULT 1)''')
     
-    print("🚀 Iniciando restauración masiva de usuarios...")
+    print(f"🚀 Restaurando usuarios en: {DB_PATH}")
     
     for user, password, expiry in users_to_restore:
-        # 1. Crear usuario en el sistema
+        # 1. Sistema
         try:
-            # Forzar borrado si ya existía en sistema para evitar errores de chpasswd
             subprocess.run(['userdel', '-f', user], stderr=subprocess.DEVNULL)
             subprocess.run(['useradd', '-M', '-s', '/bin/false', user], check=True, stderr=subprocess.DEVNULL)
             subprocess.run(['bash', '-c', f'echo "{user}:{password}" | chpasswd'], check=True)
             print(f" [+] Sistema: {user}")
-        except:
-            print(f" [!] Sistema: {user} (Error o ya existía)")
+        except: pass
 
-        # 2. Registrar en la base de datos
+        # 2. Base de Datos
         try:
             cursor.execute("INSERT OR REPLACE INTO users (username, password, expiry_date, hwid, device_limit) VALUES (?, ?, ?, ?, ?)",
                            (user, password, expiry, 'OFF', 1))
             print(f" [✓] DB: {user} ({expiry})")
         except Exception as e:
-            print(f" [X] DB Error {user}: {e}")
+            print(f" [X] Error {user}: {e}")
             
     conn.commit()
     conn.close()
-    print("\n✅ Restauración completada. ¡Revisa tu lista de usuarios!")
+    print("\n✅ ¡LISTO! Revisa tu panel MX ahora.")
 
 if __name__ == "__main__":
     restore()
