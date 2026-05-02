@@ -1001,7 +1001,7 @@ menu_protocolos() {
 
         if [ -f /usr/local/bin/badvpn-udpgw ]; then
             if ps -ef | grep -q "[b]advpn-udpgw"; then
-                P_BAD=$(ps -ef | grep badvpn-udpgw | grep -v grep | grep -oP "(?<=listen-addr 127\.0\.0\.1:)[0-9]+" | head -1)
+                P_BAD=$(ps -ef | grep badvpn-udpgw | grep -v grep | awk -F'listen-addr ' '{print $2}' | awk -F':' '{print $2}' | awk '{print $1}')
                 [ -z "$P_BAD" ] && P_BAD="7300"; st_udp="${GREEN}[ON] ${NC}"
             else P_BAD="--"; st_udp="${RED}[OFF]${NC}"; fi
         else P_BAD="--"; st_udp="${RED}[OFF]${NC}"; fi

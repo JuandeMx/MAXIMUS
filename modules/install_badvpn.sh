@@ -14,12 +14,27 @@ echo -e "\n\e[1;32m[+] Compilando/Configurando BadVPN-udpgw en puerto $bad_port.
 
 # Si no existe el binario, lo instalamos compilándolo
 if [ ! -f /usr/local/bin/badvpn-udpgw ]; then
-    DEBIAN_FRONTEND=noninteractive apt-get install -y cmake make gcc build-essential 2>/dev/null
-    git clone https://github.com/ambrop72/badvpn.git /tmp/badvpn 2>/dev/null
-    cd /tmp/badvpn
-    cmake -DBUILD_NOTHING_BY_DEFAULT=1 -DBUILD_UDPGW=1 >/dev/null 2>&1
-    make install >/dev/null 2>&1
+    echo -e "${YELLOW}[+] Instalando dependencias de compilación...${NC}"
+    DEBIAN_FRONTEND=noninteractive apt-get install -y cmake make gcc build-essential git 2>/dev/null
+    echo -e "${YELLOW}[+] Clonando repositorio de BadVPN...${NC}"
     rm -rf /tmp/badvpn
+    git clone https://github.com/ambrop72/badvpn.git /tmp/badvpn >/dev/null 2>&1
+    if [ ! -d /tmp/badvpn ]; then
+        echo -e "${RED}❌ Error al clonar el repositorio. Verifica tu conexión.${NC}"
+        exit 1
+    fi
+    cd /tmp/badvpn
+    echo -e "${YELLOW}[+] Compilando BadVPN-udpgw (esto puede tardar un momento)...${NC}"
+    mkdir build && cd build
+    cmake .. -DBUILD_NOTHING_BY_DEFAULT=1 -DBUILD_UDPGW=1 >/dev/null 2>&1
+    make install >/dev/null 2>&1
+    cd /root
+    rm -rf /tmp/badvpn
+fi
+
+if [ ! -f /usr/local/bin/badvpn-udpgw ]; then
+    echo -e "${RED}❌ Error: No se pudo compilar/instalar badvpn-udpgw.${NC}"
+    exit 1
 fi
 
 cat > /etc/systemd/system/badvpn.service << EOF
@@ -29,7 +44,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/badvpn-udpgw --listen-addr 127.0.0.1:$bad_port --max-clients 1000 --max-connections-for-client 10
+ExecStart=/usr/local/bin/badvpn-udpgw --listen-addr 0.0.0.0:$bad_port --max-clients 1000 --max-connections-for-client 10
 Restart=always
 
 [Install]
@@ -37,9 +52,16 @@ WantedBy=multi-user.target
 EOF
 
 ufw allow ${bad_port}/udp 2>/dev/null
+ufw allow ${bad_port}/tcp 2>/dev/null
 
 systemctl daemon-reload
 systemctl enable --now badvpn 2>/dev/null
 systemctl restart badvpn 2>/dev/null
-echo -e "\e[1;32m[✓] BadVPN UDP activo en el puerto local $bad_port.\e[0m"
+
+if systemctl is-active --quiet badvpn; then
+    echo -e "\e[1;32m[✓] BadVPN UDP activo en el puerto $bad_port.\e[0m"
+else
+    echo -e "\e[1;31m[❌] El servicio BadVPN no pudo iniciarse. Revisa los logs.${NC}"
+fi
 sleep 3
+
