@@ -1,7 +1,9 @@
 import sqlite3
 import os
 import subprocess
-import sys
+
+# RUTA CORRECTA DETECTADA
+DB_PATHS = ['/etc/MaximusVpsMx/users.db', '/etc/MaximusVpsMx/hysteria_users.db']
 
 # Lista de usuarios a restaurar
 users_to_restore = [
@@ -52,48 +54,46 @@ users_to_restore = [
     ("Yoel", "Personal", "2026-06-01")
 ]
 
-def find_db():
-    print("🔍 Buscando base de datos real del panel...")
-    try:
-        # Buscamos archivos .db en /etc/
-        result = subprocess.check_output(['find', '/etc', '-name', '*.db']).decode().splitlines()
-        if result:
-            print(f" ✨ Bases de datos encontradas: {result}")
-            return result[0] # Tomamos la primera que encuentre
-    except: pass
-    return '/etc/MaximusVpsMx/maximus.db'
-
-def restore(db_path):
-    os.makedirs(os.path.dirname(db_path), exist_ok=True)
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
+def restore():
+    print("🚀 Restaurando usuarios en las bases de datos detectadas...")
     
-    cursor.execute('''CREATE TABLE IF NOT EXISTS users
-                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                  username TEXT UNIQUE,
-                  password TEXT,
-                  expiry_date TEXT,
-                  hwid TEXT DEFAULT 'OFF',
-                  device_limit INTEGER DEFAULT 1)''')
-    
-    print(f"🚀 Restaurando usuarios en: {db_path}")
-    
-    for user, password, expiry in users_to_restore:
+    for db_path in DB_PATHS:
+        print(f"\n📁 Procesando: {db_path}")
         try:
-            subprocess.run(['userdel', '-f', user], stderr=subprocess.DEVNULL)
-            subprocess.run(['useradd', '-M', '-s', '/bin/false', user], check=True, stderr=subprocess.DEVNULL)
-            subprocess.run(['bash', '-c', f'echo "{user}:{password}" | chpasswd'], check=True)
-        except: pass
-
-        try:
-            cursor.execute("INSERT OR REPLACE INTO users (username, password, expiry_date, hwid, device_limit) VALUES (?, ?, ?, ?, ?)",
-                           (user, password, expiry, 'OFF', 1))
-        except: pass
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
             
-    conn.commit()
-    conn.close()
-    print("\n✅ ¡Restauración finalizada con éxito!")
+            # Crear tabla si no existe
+            cursor.execute('''CREATE TABLE IF NOT EXISTS users
+                         (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                          username TEXT UNIQUE,
+                          password TEXT,
+                          expiry_date TEXT,
+                          hwid TEXT DEFAULT 'OFF',
+                          device_limit INTEGER DEFAULT 1)''')
+            
+            for user, password, expiry in users_to_restore:
+                # Sistema (Solo una vez)
+                if db_path == DB_PATHS[0]:
+                    try:
+                        subprocess.run(['userdel', '-f', user], stderr=subprocess.DEVNULL)
+                        subprocess.run(['useradd', '-M', '-s', '/bin/false', user], check=True, stderr=subprocess.DEVNULL)
+                        subprocess.run(['bash', '-c', f'echo "{user}:{password}" | chpasswd'], check=True)
+                    except: pass
+
+                # Base de Datos
+                try:
+                    cursor.execute("INSERT OR REPLACE INTO users (username, password, expiry_date, hwid, device_limit) VALUES (?, ?, ?, ?, ?)",
+                                   (user, password, expiry, 'OFF', 1))
+                except: pass
+                    
+            conn.commit()
+            conn.close()
+            print(f" ✅ Usuarios sincronizados en {db_path}")
+        except Exception as e:
+            print(f" ❌ Error en {db_path}: {e}")
+
+    print("\n✅ ¡LISTO! Todos tus clientes han vuelto.")
 
 if __name__ == "__main__":
-    target_db = find_db() if '--find' in sys.argv else '/etc/MaximusVpsMx/maximus.db'
-    restore(target_db)
+    restore()
