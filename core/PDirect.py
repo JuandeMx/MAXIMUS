@@ -101,24 +101,17 @@ class ConnectionHandler(threading.Thread):
             if is_payload:
                 # MODO PROXY (HTTP / CLOUDFRONT / WEBSOCKET)
                 client_buffer = collect_headers(self.client, client_buffer, 5)
-                is_ws = b'upgrade: websocket' in client_buffer.lower()
-                is_split = b'100-continue' in client_buffer.lower()
-
-                if is_split:
-                    self.client.sendall(RESPONSE_CONTINUE)
-                    second_buffer = b''
-                    second_buffer = collect_headers(self.client, second_buffer, 3)
-                    if b'websocket' in second_buffer.lower():
-                        self.client.sendall(RESPONSE_WS)
-                    else:
-                        self.client.sendall(RESPONSE_STD)
-                elif is_ws:
+                
+                # Buscamos 'websocket' en todo lo recolectado hasta ahora
+                is_ws = b'websocket' in client_buffer.lower()
+                
+                if is_ws:
                     self.client.sendall(RESPONSE_WS)
                 else:
                     self.client.sendall(RESPONSE_STD)
                 
-                # Sincronización pequeña para separar cabeceras del flujo SSH
-                time.sleep(0.1)
+                # Sincronización mínima
+                pass
 
             # Conexión al Backend local (OpenSSH 22 o Dropbear paramétrico)
             drop_port = 44
@@ -136,11 +129,6 @@ class ConnectionHandler(threading.Thread):
                     target = socket.create_connection(('127.0.0.1', port), timeout=3)
                     target.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
                     target.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
-                    try:
-                        target.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, 20)
-                        target.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 10)
-                        target.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 5)
-                    except: pass
                     break
                 except: continue
 
@@ -148,23 +136,14 @@ class ConnectionHandler(threading.Thread):
                 self.client.close()
                 return
 
-            # Manejo del flujo inicial
+            # Manejo del flujo inicial (Solo si es SSH directo, si es payload el relay se encarga)
             if is_ssh:
                 target.sendall(client_buffer)
-            elif is_payload:
-                header_end = -1
-                if b'\r\n\r\n' in client_buffer:
-                    header_end = client_buffer.find(b'\r\n\r\n') + 4
-                elif b'\n\n' in client_buffer:
-                    header_end = client_buffer.find(b'\n\n') + 2
-                
-                if header_end != -1:
-                    leftover = client_buffer[header_end:]
-                    if leftover: target.sendall(leftover)
 
-            # --- RELAY BIDIRECCIONAL SELECT ENGINE ---
+            # --- RELAY BIDIRECCIONAL CON FILTRO PERSISTENTE (v4.6) ---
             sockets = [self.client, target]
             running_relay = True
+            is_first_data = True
             while running_relay:
                 try:
                     r, _, e = select.select(sockets, [], sockets, 30)
@@ -176,6 +155,18 @@ class ConnectionHandler(threading.Thread):
                             break
                         
                         out = target if sock is self.client else self.client
+                        
+                        # --- FILTRO ANTIGOLPE (Swallow HTTP Junk) ---
+                        if is_first_data and sock is self.client:
+                            # Si es basura de payload y no tiene el banner SSH, la descartamos
+                            if (b'HTTP/' in data or b'Host:' in data or b'COPY ' in data or b'GET ' in data or b'POST ' in data or b'X /' in data) and b'SSH-' not in data:
+                                continue 
+                            
+                            # Si encontramos el banner (solo o pegado a junk), limpiamos y pasamos
+                            is_first_data = False
+                            if b'SSH-' in data:
+                                data = data[data.find(b'SSH-'):]
+                        
                         out.sendall(data)
                 except (socket.error, Exception):
                     break
