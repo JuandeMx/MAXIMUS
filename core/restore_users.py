@@ -4,10 +4,9 @@ import subprocess
 
 DB_PATH = '/etc/MaximusVpsMx/core/maximus.db'
 
-# Lista de usuarios a restaurar (Tomada de la captura anterior)
-# Formato: (usuario, contraseña, fecha_expiracion)
+# Lista de usuarios a restaurar
 users_to_restore = [
-    ("Juande", "mx", "2026-05-15"), # Actualizado para que no esté expirado
+    ("Juande", "mx", "2026-05-15"),
     ("Hugo", "123", "2026-05-24"),
     ("Juan", "123", "2026-05-24"),
     ("Andrea", "1234", "2026-05-25"),
@@ -55,31 +54,45 @@ users_to_restore = [
 ]
 
 def restore():
+    # Asegurar directorio
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
+    
+    # CREAR TABLAS SI NO EXISTEN
+    cursor.execute('''CREATE TABLE IF NOT EXISTS users
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  username TEXT UNIQUE,
+                  password TEXT,
+                  expiry_date TEXT,
+                  hwid TEXT DEFAULT 'OFF',
+                  device_limit INTEGER DEFAULT 1)''')
     
     print("🚀 Iniciando restauración masiva de usuarios...")
     
     for user, password, expiry in users_to_restore:
         # 1. Crear usuario en el sistema
         try:
+            # Forzar borrado si ya existía en sistema para evitar errores de chpasswd
+            subprocess.run(['userdel', '-f', user], stderr=subprocess.DEVNULL)
             subprocess.run(['useradd', '-M', '-s', '/bin/false', user], check=True, stderr=subprocess.DEVNULL)
             subprocess.run(['bash', '-c', f'echo "{user}:{password}" | chpasswd'], check=True)
-            print(f" [+] Creado en sistema: {user}")
+            print(f" [+] Sistema: {user}")
         except:
-            print(f" [!] Usuario {user} ya existe o error al crear.")
+            print(f" [!] Sistema: {user} (Error o ya existía)")
 
         # 2. Registrar en la base de datos
         try:
             cursor.execute("INSERT OR REPLACE INTO users (username, password, expiry_date, hwid, device_limit) VALUES (?, ?, ?, ?, ?)",
                            (user, password, expiry, 'OFF', 1))
-            print(f" [✓] Registrado en DB: {user} (Expira: {expiry})")
+            print(f" [✓] DB: {user} ({expiry})")
         except Exception as e:
-            print(f" [X] Error en DB para {user}: {e}")
+            print(f" [X] DB Error {user}: {e}")
             
     conn.commit()
     conn.close()
-    print("\n✅ Restauración completada. ¡Tus clientes están de vuelta!")
+    print("\n✅ Restauración completada. ¡Revisa tu lista de usuarios!")
 
 if __name__ == "__main__":
     restore()
