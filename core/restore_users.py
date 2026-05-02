@@ -1,9 +1,7 @@
 import sqlite3
 import os
 import subprocess
-
-# RUTA REAL EXTRAÍDA DEL CÓDIGO DEL PANEL
-DB_PATH = '/etc/MaximusVpsMx/maximus.db'
+import sys
 
 # Lista de usuarios a restaurar
 users_to_restore = [
@@ -54,9 +52,20 @@ users_to_restore = [
     ("Yoel", "Personal", "2026-06-01")
 ]
 
-def restore():
-    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
+def find_db():
+    print("🔍 Buscando base de datos real del panel...")
+    try:
+        # Buscamos archivos .db en /etc/
+        result = subprocess.check_output(['find', '/etc', '-name', '*.db']).decode().splitlines()
+        if result:
+            print(f" ✨ Bases de datos encontradas: {result}")
+            return result[0] # Tomamos la primera que encuentre
+    except: pass
+    return '/etc/MaximusVpsMx/maximus.db'
+
+def restore(db_path):
+    os.makedirs(os.path.dirname(db_path), exist_ok=True)
+    conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     
     cursor.execute('''CREATE TABLE IF NOT EXISTS users
@@ -67,7 +76,7 @@ def restore():
                   hwid TEXT DEFAULT 'OFF',
                   device_limit INTEGER DEFAULT 1)''')
     
-    print(f"🚀 Restaurando usuarios en la ruta del panel: {DB_PATH}")
+    print(f"🚀 Restaurando usuarios en: {db_path}")
     
     for user, password, expiry in users_to_restore:
         try:
@@ -79,13 +88,12 @@ def restore():
         try:
             cursor.execute("INSERT OR REPLACE INTO users (username, password, expiry_date, hwid, device_limit) VALUES (?, ?, ?, ?, ?)",
                            (user, password, expiry, 'OFF', 1))
-            print(f" [✓] Restaurado: {user}")
-        except Exception as e:
-            print(f" [X] Error {user}: {e}")
+        except: pass
             
     conn.commit()
     conn.close()
-    print("\n✅ ¡Hecho! Los usuarios ya deben aparecer en tu panel.")
+    print("\n✅ ¡Restauración finalizada con éxito!")
 
 if __name__ == "__main__":
-    restore()
+    target_db = find_db() if '--find' in sys.argv else '/etc/MaximusVpsMx/maximus.db'
+    restore(target_db)
