@@ -1172,10 +1172,10 @@ menu_mantenimiento() {
                     chmod +x /etc/MaximusVpsMx/MX
                     chmod +x /etc/MaximusVpsMx/modules/*.sh
                     chmod +x /etc/MaximusVpsMx/core/*.sh
-                    systemctl restart maximus-bot 2>/dev/null
+                    systemctl restart mx-proxy ws-epro stunnel4 maximus-bot 2>/dev/null
                     rm -rf "$TEMP_DIR"
                     echo -e "${GREEN}✅ ACTUALIZACIÓN RÁPIDA COMPLETADA.${NC}"
-                    echo -e "${WHITE}Nota: Los servicios en vivo no fueron interrumpidos.${NC}"
+                    echo -e "${WHITE}Nota: Todos los servicios han sido reiniciados con el código nuevo.${NC}"
                 else
                     echo -e "${RED}❌ ERROR: No se pudo conectar con GitHub.${NC}"
                 fi
