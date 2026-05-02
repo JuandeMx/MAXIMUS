@@ -18,6 +18,9 @@ create_db() {
     sqlite3 "$path" "CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE, password TEXT, expiry_date TEXT, hwid TEXT DEFAULT 'OFF', device_limit INTEGER DEFAULT 1);"
 }
 
+# Asegurar directorio
+mkdir -p /etc/MaximusVpsMx/
+
 create_db "$DB_PATH"
 create_db "$DB_PATH2"
 create_db "$DB_PATH3"
