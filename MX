@@ -20,6 +20,10 @@ NC='\033[0m'
 # --- UI / THEME ---
 UI_WIDTH=55
 
+# --- CONFIGURACIÓN DE BASE DE DATOS ---
+DB_PATH="/etc/MaximusVpsMx/maximus.db"
+mkdir -p /etc/MaximusVpsMx
+
 ui_hr() { echo -e "${CYAN}═══════════════════════════════════════════════════════${NC}"; }
 ui_subhr() { echo -e "${CYAN}───────────────────────────────────────────────────────${NC}"; }
 ui_prompt() { echo -ne "${YELLOW}$1${NC}"; }
@@ -81,15 +85,18 @@ get_telemetry() {
     RAM_BUFF=$(awk '/Buffers:/ {printf("%.2fMB", $2/1024)}' /proc/meminfo)
     RAM_CACHE=$(awk '/^Cached:/ {printf("%.2fMB", $2/1024)}' /proc/meminfo)
 
-    # Cuentas SSH
-    if [ -f /etc/MaximusVpsMx/users.db ]; then
-        TOTAL=$(wc -l < /etc/MaximusVpsMx/users.db)
-        ACTIVA=$(grep -v "^#" /etc/MaximusVpsMx/users.db | wc -l)
-        EXPIRADA=0
-        BLOQUEADA=0
-    else
-        TOTAL=0; ACTIVA=0; EXPIRADA=0; BLOQUEADA=0
-    fi
+    # Cuentas SSH (SQLite v2.0)
+    TOTAL=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM users")
+    [ -z "$TOTAL" ] && TOTAL=0
+    
+    fecha_actual=$(date +"%Y-%m-%d")
+    ACTIVA=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM users WHERE expiry_date >= '$fecha_actual'")
+    [ -z "$ACTIVA" ] && ACTIVA=0
+    
+    EXPIRADA=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM users WHERE expiry_date < '$fecha_actual'")
+    [ -z "$EXPIRADA" ] && EXPIRADA=0
+    
+    BLOQUEADA=0
 }
 
 master_restore() {
@@ -122,20 +129,6 @@ master_restore() {
 }
 
 # --- SUBMENÚ DE USUARIOS ---
-menu_usuarios() {
-    while true; do
-        local USER_DB="/etc/MaximusVpsMx/users.db"
-        mkdir -p /etc/MaximusVpsMx
-        [ ! -f "$USER_DB" ] && touch "$USER_DB"
-
-        # Hilo de Migración Automática (v1 -> v2)
-        if [ -f "$USER_DB" ]; then
-            if [ $(head -n 1 "$USER_DB" | grep -o ":" | wc -l) -lt 4 ]; then
-                echo -e "${YELLOW}⚙️ Migrando base de datos de usuarios al nuevo formato...${NC}"
-                sed -i 's/$/:NONE:1/' "$USER_DB"
-            fi
-        fi
-
         ui_header "ADMINISTRACIÓN DE CUENTAS SSH / DROPBEAR"
         echo -e "  ${CYAN}[1]>${WHITE} CREAR NUEVO USUARIO PREMIUM${NC}"
         echo -e "  ${CYAN}[2]>${RED} REMOVER / ELIMINAR USUARIO${NC}"
@@ -1358,4 +1351,5 @@ if [[ "$1" == "--restore" ]]; then
 fi
 
 # Inicializar
+master_restore > /dev/null 2>&1
 main_menu
