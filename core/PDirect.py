@@ -178,15 +178,16 @@ class ConnectionHandler(threading.Thread):
                         
                         out = target if sock is self.client else self.client
                         
-                        # --- FILTRO ANTIGOLPE (v4.5 Universal) ---
-                        # Limpiamos basura de payloads agresivos (Split/Instant)
+                        # --- FILTRO ANTIGOLPE (v4.6 Universal) ---
                         if is_first_data and sock is self.client and is_payload:
-                            is_first_data = False
-                            # Si el cliente enva ms cabeceras HTTP antes del SSH
-                            if (b'HTTP/' in data or b'Host:' in data) and b'SSH-' not in data:
+                            # Si es pura basura de payload (HTTP headers) y no trae el banner SSH
+                            if (b'HTTP/' in data or b'Host:' in data or b'COPY ' in data or b'GET ' in data or b'POST ' in data or b'X /' in data) and b'SSH-' not in data:
+                                # Ignoramos el paquete pero seguimos en modo "is_first_data" para el siguiente
                                 continue 
-                            elif b'SSH-' in data and (b'HTTP/' in data or b'Host:' in data):
-                                # Extraemos solo la parte del banner SSH
+                            
+                            # Si encontramos el banner (solo o pegado a junk) o es data no-HTTP, salimos del filtro
+                            is_first_data = False
+                            if b'SSH-' in data:
                                 data = data[data.find(b'SSH-'):]
                         
                         out.sendall(data)
