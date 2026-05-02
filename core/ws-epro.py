@@ -113,7 +113,6 @@ class Proxy(threading.Thread):
 
             sockets = [self.client, target]
             running_relay = True
-            is_first_data = True
             while running_relay:
                 try:
                     # Timeout de 2 horas para inactividad extrema (7200s)
@@ -127,16 +126,6 @@ class Proxy(threading.Thread):
                             break
                         
                         out = target if sock is self.client else self.client
-
-                        # --- FILTRO ANTIGOLPE (v4.6 Universal) ---
-                        if is_first_data and sock is self.client:
-                            if (b'HTTP/' in data or b'Host:' in data or b'COPY ' in data or b'GET ' in data or b'POST ' in data or b'X /' in data) and b'SSH-' not in data:
-                                continue 
-                            
-                            is_first_data = False
-                            if b'SSH-' in data:
-                                data = data[data.find(b'SSH-'):]
-                                
                         out.sendall(data)
                 except:
                     break

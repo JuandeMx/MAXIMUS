@@ -165,10 +165,9 @@ class ConnectionHandler(threading.Thread):
             # --- RELAY BIDIRECCIONAL SELECT ENGINE ---
             sockets = [self.client, target]
             running_relay = True
-            is_first_data = True
             while running_relay:
                 try:
-                    r, _, e = select.select(sockets, [], sockets, 60)
+                    r, _, e = select.select(sockets, [], sockets, 30)
                     if e: break
                     for sock in r:
                         data = sock.recv(BUFLEN)
@@ -177,19 +176,6 @@ class ConnectionHandler(threading.Thread):
                             break
                         
                         out = target if sock is self.client else self.client
-                        
-                        # --- FILTRO ANTIGOLPE (v4.6 Universal) ---
-                        if is_first_data and sock is self.client and is_payload:
-                            # Si es pura basura de payload (HTTP headers) y no trae el banner SSH
-                            if (b'HTTP/' in data or b'Host:' in data or b'COPY ' in data or b'GET ' in data or b'POST ' in data or b'X /' in data) and b'SSH-' not in data:
-                                # Ignoramos el paquete pero seguimos en modo "is_first_data" para el siguiente
-                                continue 
-                            
-                            # Si encontramos el banner (solo o pegado a junk) o es data no-HTTP, salimos del filtro
-                            is_first_data = False
-                            if b'SSH-' in data:
-                                data = data[data.find(b'SSH-'):]
-                        
                         out.sendall(data)
                 except (socket.error, Exception):
                     break
