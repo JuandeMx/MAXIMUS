@@ -68,7 +68,7 @@ case $mode_opt in
             read -p " Puerto SSL (Default 443): " SSL_PORT
             [ -z "$SSL_PORT" ] && SSL_PORT=443
         fi
-        PROXY_PORT=80
+        PROXY_PORT=8080
         echo -e "${YELLOW}[+] Levantando Proxy Universal (Agnóstico) en puerto $PROXY_PORT...${NC}"
         bash /etc/MaximusVpsMx/modules/install_mx-proxy.sh $PROXY_PORT > /dev/null 2>&1
         CONNECT_TARGET="127.0.0.1:$PROXY_PORT"

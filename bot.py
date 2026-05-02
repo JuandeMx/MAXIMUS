@@ -245,6 +245,45 @@ def process_admin_agregar_dias_dias(message, admin_id):
     
     del user_creation_states[admin_id]
 
+# --- GENERADOR DE PAYLOADS ---
+
+def handle_admin_payload(message, admin_id):
+    msg = bot.send_message(message.chat.id, "📡 *GENERADOR DE PAYLOADS MAXIMUS*\n\n✍️ *Ingresa el BUG / SNI (Ej: m.facebook.com):*", parse_mode="Markdown")
+    user_creation_states[admin_id] = {'prompt_msg_id': msg.message_id}
+    bot.register_next_step_handler(msg, process_admin_payload_bug, admin_id)
+
+def process_admin_payload_bug(message, admin_id):
+    if message.from_user.id != admin_id:
+        return
+    if not message.text:
+        bot.reply_to(message, "❌ *BUG inválido.* Operación cancelada.", parse_mode="Markdown")
+        return
+        
+    bug = message.text.strip().replace(" ", "")
+    
+    # Limpiar mensajes previos
+    safe_delete(message.chat.id, user_creation_states.get(admin_id, {}).get('prompt_msg_id'))
+    safe_delete(message.chat.id, message.message_id)
+    
+    # Generar Payloads
+    payloads = {
+        "🚀 WS CLOUDFRONT": f"GET / HTTP/1.1[crlf]Host: {bug}[crlf]Upgrade: websocket[crlf]Connection: Upgrade[crlf][crlf]",
+        "⚡ WS DIRECT": f"GET / HTTP/1.1[crlf]Host: [host][crlf]Upgrade: websocket[crlf]Connection: Upgrade[crlf][crlf]",
+        "🌀 SPLIT WS": f"GET / HTTP/1.1[crlf]Host: {bug}[crlf]Expect: 100-continue[crlf]Upgrade: websocket[crlf]Connection: Upgrade[crlf][crlf]",
+        "🛡️ SSL SNI (HTTP CUSTOM)": f"GET / HTTP/1.1[crlf]Host: {bug}[crlf]Upgrade: websocket[crlf]Connection: Upgrade[crlf][crlf]"
+    }
+    
+    response = f"📡 *PAYLOADS GENERADOS PARA:* `{bug}`\n━━━━━━━━━━━━━━━━━━━━\n"
+    for name, pay in payloads.items():
+        response += f"🔹 *{name}:*\n`{pay}`\n\n"
+    
+    response += "━━━━━━━━━━━━━━━━━━━━\n_Toca para copiar. Funcionan con el Proxy Universal de Maximus._"
+    
+    bot.send_message(message.chat.id, response, parse_mode="Markdown")
+    
+    if admin_id in user_creation_states:
+        del user_creation_states[admin_id]
+
 def handle_admin_lista(message):
     bot.send_chat_action(message.chat.id, 'typing')
     users = manager.get_all_users()
@@ -274,6 +313,9 @@ def cmd_vip_menu(message):
         types.InlineKeyboardButton("⏳ + Días", callback_data="admin_agregar_dias"),
         types.InlineKeyboardButton("👥 Lista", callback_data="admin_lista")
     )
+    markup.row(
+        types.InlineKeyboardButton("📡 Generador Payload", callback_data="admin_payload")
+    )
     
     bot.send_message(
         message.chat.id, 
@@ -296,6 +338,9 @@ def callback_handler(call):
     elif call.data == "admin_lista":
         if is_admin(call.from_user.id, call.message.chat.id):
             handle_admin_lista(call.message)
+    elif call.data == "admin_payload":
+        if is_admin(call.from_user.id, call.message.chat.id):
+            handle_admin_payload(call.message, call.from_user.id)
     elif call.data.startswith("approve_"):
         _, client_id, username, password = call.data.split("_")
         process_admin_approval(call, client_id, username, password)

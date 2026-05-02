@@ -79,14 +79,40 @@ def create_hwid_user(alias, hwid, days=3):
 
 def extend_user_expiry(username, days=1):
     import datetime
-    new_expiry = (datetime.datetime.now() + datetime.timedelta(days=days)).strftime("%Y-%m-%d")
-    linux_expiry = (datetime.datetime.now() + datetime.timedelta(days=days + 1)).strftime("%Y-%m-%d")
+    db_path = "/etc/MaximusVpsMx/users.db"
+    current_expiry = None
+    
+    # Intentar obtener la fecha actual de la DB
+    try:
+        with open(db_path, "r") as f:
+            for line in f:
+                parts = line.strip().split(":")
+                if parts[0] == username:
+                    current_expiry = parts[2]
+                    break
+    except: pass
+
+    # Calcular base de tiempo
+    now = datetime.datetime.now()
+    try:
+        if current_expiry:
+            base_date = datetime.datetime.strptime(current_expiry, "%Y-%m-%d")
+            # Si ya venció, empezamos desde hoy. Si no, sumamos a la vieja.
+            if base_date < now:
+                base_date = now
+        else:
+            base_date = now
+    except:
+        base_date = now
+
+    new_date_obj = base_date + datetime.timedelta(days=days)
+    new_expiry = new_date_obj.strftime("%Y-%m-%d")
+    linux_expiry = (new_date_obj + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
     
     # 1. Actualizar Linux
     run_command(f"chage -E {linux_expiry} {username}")
     
-    # 2. Actualizar database.db de MX (archivo de texto)
-    db_path = "/etc/MaximusVpsMx/users.db"
+    # 2. Actualizar database.db de MX
     run_command(f"sed -i 's/^\\({username}:[^:]*:\\)[^:]*/\\1{new_expiry}/' {db_path} 2>/dev/null || true")
     
     # 3. Actualizar Hysteria DB

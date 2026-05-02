@@ -1198,6 +1198,8 @@ menu_mantenimiento() {
                 echo -e "${CYAN}[+] Creando respaldo de datos vitales...${NC}"
                 mkdir -p /tmp/MX_BACKUP
                 [ -f /etc/MaximusVpsMx/users.db ] && cp /etc/MaximusVpsMx/users.db /tmp/MX_BACKUP/
+                [ -f /etc/MaximusVpsMx/bot_config.json ] && cp /etc/MaximusVpsMx/bot_config.json /tmp/MX_BACKUP/
+                [ -f /etc/MaximusVpsMx/hysteria_users.db ] && cp /etc/MaximusVpsMx/hysteria_users.db /tmp/MX_BACKUP/
                 [ -f /etc/MaximusVpsMx/cloudflare.conf ] && cp /etc/MaximusVpsMx/cloudflare.conf /tmp/MX_BACKUP/
                 [ -f /etc/MaximusVpsMx/slowdns/ns-domain.conf ] && cp /etc/MaximusVpsMx/slowdns/ns-domain.conf /tmp/MX_BACKUP/
                 [ -f /etc/stunnel/stunnel.pem ] && cp /etc/stunnel/stunnel.pem /tmp/MX_BACKUP/
@@ -1213,6 +1215,8 @@ menu_mantenimiento() {
 
                 echo -e "${CYAN}[+] Restaurando respaldo de datos...${NC}"
                 [ -f /tmp/MX_BACKUP/users.db ] && cp /tmp/MX_BACKUP/users.db /etc/MaximusVpsMx/
+                [ -f /tmp/MX_BACKUP/bot_config.json ] && cp /tmp/MX_BACKUP/bot_config.json /etc/MaximusVpsMx/
+                [ -f /tmp/MX_BACKUP/hysteria_users.db ] && cp /tmp/MX_BACKUP/hysteria_users.db /etc/MaximusVpsMx/
                 [ -f /tmp/MX_BACKUP/cloudflare.conf ] && cp /tmp/MX_BACKUP/cloudflare.conf /etc/MaximusVpsMx/
                 [ -f /tmp/MX_BACKUP/ns-domain.conf ] && cp /tmp/MX_BACKUP/ns-domain.conf /etc/MaximusVpsMx/slowdns/
                 [ -f /tmp/MX_BACKUP/stunnel.pem ] && cp /tmp/MX_BACKUP/stunnel.pem /etc/stunnel/

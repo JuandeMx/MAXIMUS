@@ -24,7 +24,7 @@ case $MODE_OPT in
         ;;
     3) # UNIVERSAL (Puerto 8080)
         # Sincronizamos con la terminal para usar 8080 o 80 según preferencia
-        PROXY_PORT=80
+        PROXY_PORT=8080
         bash /etc/MaximusVpsMx/modules/install_mx-proxy.sh $PROXY_PORT > /dev/null 2>&1
         CONNECT_TARGET="127.0.0.1:$PROXY_PORT"
         ;;

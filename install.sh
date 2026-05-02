@@ -69,6 +69,7 @@ ufw allow 22/tcp 2>/dev/null
 ufw allow 44/tcp 2>/dev/null
 ufw allow 80/tcp 2>/dev/null
 ufw allow 443/tcp 2>/dev/null
+ufw allow 8080/tcp 2>/dev/null
 ufw allow 7300/udp 2>/dev/null
 ufw allow 54321/tcp 2>/dev/null
 # ufw allow 8082/tcp (Web Panel Desactivado)
