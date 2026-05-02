@@ -136,14 +136,25 @@ class ConnectionHandler(threading.Thread):
                 self.client.close()
                 return
 
-            # Manejo del flujo inicial (Solo si es SSH directo, si es payload el relay se encarga)
-            if is_ssh:
-                target.sendall(client_buffer)
-
-            # --- RELAY BIDIRECCIONAL CON FILTRO PERSISTENTE (v4.6) ---
+            # --- RELAY BIDIRECCIONAL CON FILTRO PERSISTENTE (v4.7 Escudo Total) ---
             sockets = [self.client, target]
             running_relay = True
             is_first_data = True
+            
+            # Procesamos el buffer inicial que ya leímos del cliente (el payload)
+            if client_buffer:
+                data = client_buffer
+                # Aplicamos el filtro a la ráfaga inicial
+                if is_first_data:
+                    if (b'HTTP/' in data or b'Host:' in data or b'COPY ' in data or b'GET ' in data or b'POST ' in data or b'X /' in data) and b'SSH-' not in data:
+                        # Si es pura basura, la ignoramos y esperamos al siguiente paquete en el loop
+                        pass 
+                    else:
+                        is_first_data = False
+                        if b'SSH-' in data:
+                            data = data[data.find(b'SSH-'):]
+                        if data: target.sendall(data)
+
             while running_relay:
                 try:
                     r, _, e = select.select(sockets, [], sockets, 30)
@@ -156,13 +167,12 @@ class ConnectionHandler(threading.Thread):
                         
                         out = target if sock is self.client else self.client
                         
-                        # --- FILTRO ANTIGOLPE (Swallow HTTP Junk) ---
+                        # --- FILTRO ANTIGOLPE (v4.7) ---
                         if is_first_data and sock is self.client:
                             # Si es basura de payload y no tiene el banner SSH, la descartamos
                             if (b'HTTP/' in data or b'Host:' in data or b'COPY ' in data or b'GET ' in data or b'POST ' in data or b'X /' in data) and b'SSH-' not in data:
                                 continue 
                             
-                            # Si encontramos el banner (solo o pegado a junk), limpiamos y pasamos
                             is_first_data = False
                             if b'SSH-' in data:
                                 data = data[data.find(b'SSH-'):]
