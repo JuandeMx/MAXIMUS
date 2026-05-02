@@ -2,6 +2,7 @@ import telebot
 from telebot import types
 import core.manager as manager
 import core.database as db
+import core.backup_manager as backup
 import config
 import os
 import time
@@ -245,44 +246,77 @@ def process_admin_agregar_dias_dias(message, admin_id):
     
     del user_creation_states[admin_id]
 
-# --- GENERADOR DE PAYLOADS ---
+# --- SISTEMA DE BACKUPS ---
 
-def handle_admin_payload(message, admin_id):
-    msg = bot.send_message(message.chat.id, "📡 *GENERADOR DE PAYLOADS MAXIMUS*\n\n✍️ *Ingresa el BUG / SNI (Ej: m.facebook.com):*", parse_mode="Markdown")
-    user_creation_states[admin_id] = {'prompt_msg_id': msg.message_id}
-    bot.register_next_step_handler(msg, process_admin_payload_bug, admin_id)
+def handle_backup_menu(message):
+    kb = types.InlineKeyboardMarkup(row_width=2)
+    kb.row(
+        types.InlineKeyboardButton("➕ Crear Backup", callback_data="bk_create"),
+        types.InlineKeyboardButton("📋 Ver Backups", callback_data="bk_list")
+    )
+    kb.row(
+        types.InlineKeyboardButton("♻️ Restaurar", callback_data="bk_restore_list"),
+        types.InlineKeyboardButton("🗑️ Eliminar", callback_data="bk_delete_list")
+    )
+    kb.add(types.InlineKeyboardButton("⬅️ Volver", callback_data=f"back_vip"))
+    bot.send_message(message.chat.id, "💾 *GESTIÓN DE BACKUPS*\n\nSelecciona una acción:", parse_mode="Markdown", reply_markup=kb)
 
-def process_admin_payload_bug(message, admin_id):
-    if message.from_user.id != admin_id:
+def handle_bk_create(call):
+    bot.edit_message_text("⏳ *Creando backup...*", call.message.chat.id, call.message.message_id, parse_mode="Markdown")
+    success, name, size = backup.create_backup("manual")
+    if success:
+        kb = types.InlineKeyboardMarkup()
+        kb.add(types.InlineKeyboardButton("⬅️ Volver a Backups", callback_data="admin_backup_menu"))
+        bot.edit_message_text(f"✅ *Backup creado exitosamente*\n\n📦 `{name}`\n📏 Tamaño: `{size} KB`", call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=kb)
+    else:
+        bot.edit_message_text(f"❌ *Error:* {name}", call.message.chat.id, call.message.message_id, parse_mode="Markdown")
+
+def handle_bk_list(call):
+    backups = backup.list_backups()
+    if not backups:
+        kb = types.InlineKeyboardMarkup()
+        kb.add(types.InlineKeyboardButton("➕ Crear Ahora", callback_data="bk_create"))
+        kb.add(types.InlineKeyboardButton("⬅️ Volver", callback_data="admin_backup_menu"))
+        bot.edit_message_text("📋 *No hay backups disponibles.*", call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=kb)
         return
-    if not message.text:
-        bot.reply_to(message, "❌ *BUG inválido.* Operación cancelada.", parse_mode="Markdown")
+    
+    msg = "📋 *BACKUPS DISPONIBLES*\n━━━━━━━━━━━━━━━━━━━━\n"
+    for i, b in enumerate(backups, 1):
+        msg += f"{i}. 📦 `{b['filename']}`\n   📅 {b['date']} | 📏 {b['size_kb']} KB\n\n"
+    
+    kb = types.InlineKeyboardMarkup()
+    kb.add(types.InlineKeyboardButton("⬅️ Volver", callback_data="admin_backup_menu"))
+    bot.edit_message_text(msg, call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=kb)
+
+def handle_bk_restore_list(call):
+    backups = backup.list_backups()
+    if not backups:
+        kb = types.InlineKeyboardMarkup()
+        kb.add(types.InlineKeyboardButton("⬅️ Volver", callback_data="admin_backup_menu"))
+        bot.edit_message_text("❌ *No hay backups para restaurar.*", call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=kb)
         return
-        
-    bug = message.text.strip().replace(" ", "")
     
-    # Limpiar mensajes previos
-    safe_delete(message.chat.id, user_creation_states.get(admin_id, {}).get('prompt_msg_id'))
-    safe_delete(message.chat.id, message.message_id)
+    kb = types.InlineKeyboardMarkup()
+    for b in backups[:10]:
+        short = b['filename'].replace('backup_', '').replace('.tar.gz', '')
+        kb.add(types.InlineKeyboardButton(f"♻️ {short} ({b['size_kb']}KB)", callback_data=f"bk_restore_{b['filename']}"))
+    kb.add(types.InlineKeyboardButton("⬅️ Volver", callback_data="admin_backup_menu"))
+    bot.edit_message_text("♻️ *Selecciona el backup a restaurar:*", call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=kb)
+
+def handle_bk_delete_list(call):
+    backups = backup.list_backups()
+    if not backups:
+        kb = types.InlineKeyboardMarkup()
+        kb.add(types.InlineKeyboardButton("⬅️ Volver", callback_data="admin_backup_menu"))
+        bot.edit_message_text("❌ *No hay backups para eliminar.*", call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=kb)
+        return
     
-    # Generar Payloads
-    payloads = {
-        "🚀 WS CLOUDFRONT": f"GET / HTTP/1.1[crlf]Host: {bug}[crlf]Upgrade: websocket[crlf]Connection: Upgrade[crlf][crlf]",
-        "⚡ WS DIRECT": f"GET / HTTP/1.1[crlf]Host: [host][crlf]Upgrade: websocket[crlf]Connection: Upgrade[crlf][crlf]",
-        "🌀 SPLIT WS": f"GET / HTTP/1.1[crlf]Host: {bug}[crlf]Expect: 100-continue[crlf]Upgrade: websocket[crlf]Connection: Upgrade[crlf][crlf]",
-        "🛡️ SSL SNI (HTTP CUSTOM)": f"GET / HTTP/1.1[crlf]Host: {bug}[crlf]Upgrade: websocket[crlf]Connection: Upgrade[crlf][crlf]"
-    }
-    
-    response = f"📡 *PAYLOADS GENERADOS PARA:* `{bug}`\n━━━━━━━━━━━━━━━━━━━━\n"
-    for name, pay in payloads.items():
-        response += f"🔹 *{name}:*\n`{pay}`\n\n"
-    
-    response += "━━━━━━━━━━━━━━━━━━━━\n_Toca para copiar. Funcionan con el Proxy Universal de Maximus._"
-    
-    bot.send_message(message.chat.id, response, parse_mode="Markdown")
-    
-    if admin_id in user_creation_states:
-        del user_creation_states[admin_id]
+    kb = types.InlineKeyboardMarkup()
+    for b in backups[:10]:
+        short = b['filename'].replace('backup_', '').replace('.tar.gz', '')
+        kb.add(types.InlineKeyboardButton(f"🗑️ {short} ({b['size_kb']}KB)", callback_data=f"bk_del_{b['filename']}"))
+    kb.add(types.InlineKeyboardButton("⬅️ Volver", callback_data="admin_backup_menu"))
+    bot.edit_message_text("🗑️ *Selecciona el backup a eliminar:*", call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=kb)
 
 def handle_admin_lista(message):
     bot.send_chat_action(message.chat.id, 'typing')
@@ -314,7 +348,7 @@ def cmd_vip_menu(message):
         types.InlineKeyboardButton("👥 Lista", callback_data="admin_lista")
     )
     markup.row(
-        types.InlineKeyboardButton("📡 Generador Payload", callback_data="admin_payload")
+        types.InlineKeyboardButton("💾 Backups", callback_data="admin_backup_menu")
     )
     
     bot.send_message(
@@ -338,9 +372,45 @@ def callback_handler(call):
     elif call.data == "admin_lista":
         if is_admin(call.from_user.id, call.message.chat.id):
             handle_admin_lista(call.message)
-    elif call.data == "admin_payload":
+    elif call.data == "admin_backup_menu":
         if is_admin(call.from_user.id, call.message.chat.id):
-            handle_admin_payload(call.message, call.from_user.id)
+            handle_backup_menu(call.message)
+    elif call.data == "bk_create":
+        if is_admin(call.from_user.id, call.message.chat.id):
+            handle_bk_create(call)
+    elif call.data == "bk_list":
+        if is_admin(call.from_user.id, call.message.chat.id):
+            handle_bk_list(call)
+    elif call.data == "bk_restore_list":
+        if is_admin(call.from_user.id, call.message.chat.id):
+            handle_bk_restore_list(call)
+    elif call.data == "bk_delete_list":
+        if is_admin(call.from_user.id, call.message.chat.id):
+            handle_bk_delete_list(call)
+    elif call.data.startswith("bk_restore_backup_"):
+        if is_admin(call.from_user.id, call.message.chat.id):
+            fname = call.data.replace("bk_restore_", "")
+            bot.edit_message_text("⏳ *Restaurando backup...*", call.message.chat.id, call.message.message_id, parse_mode="Markdown")
+            ok, msg = backup.restore_backup(fname)
+            kb = types.InlineKeyboardMarkup()
+            kb.add(types.InlineKeyboardButton("⬅️ Volver", callback_data="admin_backup_menu"))
+            if ok:
+                bot.edit_message_text(f"✅ *{msg}*\n\nArchivo: `{fname}`", call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=kb)
+            else:
+                bot.edit_message_text(f"❌ *Error:* {msg}", call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=kb)
+    elif call.data.startswith("bk_del_backup_"):
+        if is_admin(call.from_user.id, call.message.chat.id):
+            fname = call.data.replace("bk_del_", "")
+            ok, msg = backup.delete_backup(fname)
+            kb = types.InlineKeyboardMarkup()
+            kb.add(types.InlineKeyboardButton("⬅️ Volver", callback_data="admin_backup_menu"))
+            if ok:
+                bot.edit_message_text(f"✅ *Backup eliminado:* `{fname}`", call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=kb)
+            else:
+                bot.edit_message_text(f"❌ *Error:* {msg}", call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=kb)
+    elif call.data == "back_vip":
+        if is_admin(call.from_user.id, call.message.chat.id):
+            cmd_vip_menu(call.message)
     elif call.data.startswith("approve_"):
         _, client_id, username, password = call.data.split("_")
         process_admin_approval(call, client_id, username, password)
@@ -572,6 +642,10 @@ Tu cuenta `{s_user}` ha sido extendida 24 horas más.
 
 if __name__ == "__main__":
     print("🚀 Bot Maximus Premium en ejecución...")
+    # Configurar backup automático diario a las 3 AM
+    backup.setup_daily_cron()
+    backup.ensure_backup_dir()
+    print("💾 Cron de backup diario configurado (3:00 AM)")
     while True:
         try:
             bot.infinity_polling(skip_pending=True)
