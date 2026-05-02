@@ -3,7 +3,7 @@ import socket, threading, select, sys, time, datetime
 # Config
 LISTENING_ADDR = '0.0.0.0'
 LISTENING_PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 80
-BUFLEN = 8192
+BUFLEN = 131072
 TIMEOUT = 120
 
 # Mensajes de Respuesta (Edición Suprema)
@@ -117,8 +117,8 @@ class ConnectionHandler(threading.Thread):
                 else:
                     self.client.sendall(RESPONSE_STD)
                 
-                # Sincronización mínima
-                pass
+                # Sincronización pequeña para separar cabeceras del flujo SSH
+                time.sleep(0.1)
 
             # Conexión al Backend local (OpenSSH 22 o Dropbear paramétrico)
             drop_port = 44
