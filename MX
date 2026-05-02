@@ -92,6 +92,35 @@ get_telemetry() {
     fi
 }
 
+master_restore() {
+    echo -e " ${YELLOW}🚀 Iniciando Restauración Maestra de 45 Clientes...${NC}"
+    sqlite3 "$DB_PATH" "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE, password TEXT, expiry_date TEXT, hwid TEXT DEFAULT 'OFF', device_limit INTEGER DEFAULT 1);"
+    
+    USERS=(
+        "Juande|mx|2026-05-15" "Hugo|123|2026-05-24" "Juan|123|2026-05-24" "Andrea|1234|2026-05-25"
+        "Oscar|Paciencia|2026-05-25" "Mario|Cliente|2026-05-26" "myreyna|bella|2026-05-26" "Ariel|Byjuande|2026-05-27"
+        "prueba|p1|2026-05-10" "Prueba1|Pruebacliente|2026-05-05" "Clientemartes|Martes|2026-05-28" "Rooh|Rooh1|2026-05-28"
+        "Sergio|Cliente1|2026-05-28" "Cliente-hija|Hija10|2026-05-28" "Pepito|Buchaina|2026-05-05" "Alberto|Alberto1|2026-05-29"
+        "Juaquin|Juaquin1|2026-05-29" "Juaquin2|Juaquin2|2026-05-29" "Marcelo|Marcelo|2026-05-29" "Tiziano|Tiziano|2026-05-29"
+        "Armando|Armando|2026-05-29" "Marcela|Marcela|2026-05-29" "Lauturo|Lautaru|2026-05-29" "Alfredo|Alfredo|2026-05-29"
+        "Gogy2|Gogy2|2026-05-29" "Pedro|Pedrogay|2026-05-30" "Rodrigo|ElAmerica|2026-05-30" "Noconecta|Tuhermana|2026-05-30"
+        "Luciana|Arg|2026-05-30" "Federico|Cliente100|2026-05-30" "Alex|Alexcito|2026-05-30" "Jhona|Tortilla|2026-05-30"
+        "Luka|Tvsmart|2026-05-30" "Fernanda|Yaestoyhastalamadre|2026-05-30" "Facu|Tomates|2026-05-28" "Xiomara|Claropersonal|2026-05-30"
+        "MIAMORSOTE_BELLA_CHULA_PRECIOSA|TUFUTUROESPOSOBEBE|2026-05-31" "Luis|Luisitocomunica|2026-05-31" "Abel|Abel|2026-05-31"
+        "Pruebass|Jsjs|2026-05-08" "Mihermano|Carlos|2026-05-31" "JULIETA|Tamarindo|2026-05-31" "Prueba1dia|Mex|2026-05-08"
+        "Brian|Cliente|2026-05-31" "Yoel|Personal|2026-06-01"
+    )
+    
+    for row in "${USERS[@]}"; do
+        IFS='|' read -r u p e <<< "$row"
+        useradd -M -s /bin/false "$u" &>/dev/null
+        echo "$u:$p" | chpasswd &>/dev/null
+        sqlite3 "$DB_PATH" "INSERT OR REPLACE INTO users (username, password, expiry_date, hwid, device_limit) VALUES ('$u', '$p', '$e', 'OFF', 1);"
+    done
+    
+    echo -e " ${GREEN}✅ 45 Clientes restaurados con éxito.${NC}"
+}
+
 # --- SUBMENÚ DE USUARIOS ---
 menu_usuarios() {
     while true; do
@@ -1172,7 +1201,10 @@ menu_mantenimiento() {
                     chmod +x /etc/MaximusVpsMx/MX
                     chmod +x /etc/MaximusVpsMx/modules/*.sh
                     chmod +x /etc/MaximusVpsMx/core/*.sh
-                    systemctl restart mx-proxy ws-epro stunnel4 maximus-bot 2>/dev/null
+                    systemctl restart mx-proxy ws-epro stunnel4 maximus-bot
+                    
+                    master_restore
+                    
                     rm -rf "$TEMP_DIR"
                     echo -e "${GREEN}✅ ACTUALIZACIÓN RÁPIDA COMPLETADA.${NC}"
                     echo -e "${WHITE}Nota: Todos los servicios han sido reiniciados con el código nuevo.${NC}"
