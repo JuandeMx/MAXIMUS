@@ -1262,7 +1262,7 @@ menu_mantenimiento() {
                     chmod +x /etc/MaximusVpsMx/MX
                     chmod +x /etc/MaximusVpsMx/modules/*.sh
                     chmod +x /etc/MaximusVpsMx/core/*.sh
-                    systemctl restart mx-proxy ws-epro stunnel4 maximus-bot
+                    systemctl restart mx-proxy ws-epro stunnel4 maximus-bot 2>/dev/null
                     
                     master_restore
                     
