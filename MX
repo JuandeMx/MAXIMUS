@@ -1060,6 +1060,105 @@ menu_protocolos() {
     done
 }
 
+# --- SUBMENÚ OPTIMIZACIÓN Y LIMPIEZA ---
+sub_optimizacion() {
+    while true; do
+        ui_header "OPTIMIZACIÓN Y AUTO-LIMPIEZA"
+        crontab -l 2>/dev/null | grep -q "auto_clean.sh" && ac_st="${GREEN}[Activo]${NC}" || ac_st="${RED}[Inactivo]${NC}"
+        
+        echo -e "  ${CYAN}[1]>${WHITE} Limpieza Profunda Manual (RAM, Logs, Cache)${NC}"
+        echo -e "  ${CYAN}[2]>${WHITE} Aplicar Optimizaciones de Red (Modo Bestia)${NC}"
+        echo -e "  ${CYAN}[3]>${WHITE} Programar Limpieza Automática | $ac_st${NC}"
+        ui_hr
+        echo -e "  ${WHITE}[0] VOLVER${NC}"
+        ui_hr
+        ui_prompt " Selecciona: " ; read opt_opti
+        
+        case $opt_opti in
+            1)
+                echo -e "\n${CYAN}====================================================${NC}"
+                echo -e "${YELLOW}🔍 ESCÁNER DE ALMACENAMIENTO Y MEMORIA${NC}"
+                echo -e "${CYAN}====================================================${NC}"
+                
+                DISK_BEFORE=$(df -h / | awk 'NR==2 {print $5}')
+                LOGS_SIZE=$(du -sh /var/log 2>/dev/null | awk '{print $1}')
+                CACHE_SIZE=$(du -sh /var/cache/apt 2>/dev/null | awk '{print $1}')
+                TMP_SIZE=$(du -sh /tmp 2>/dev/null | awk '{print $1}')
+                
+                echo -e "${WHITE}Espacio usado en Disco : ${RED}$DISK_BEFORE${NC}"
+                echo -e "${WHITE}Peso de Logs del Sistema: ${YELLOW}$LOGS_SIZE${NC}"
+                echo -e "${WHITE}Peso de Caché de APT   : ${YELLOW}$CACHE_SIZE${NC}"
+                echo -e "${WHITE}Peso de Archivos Temp  : ${YELLOW}$TMP_SIZE${NC}"
+                ui_hr
+                
+                echo -e "${YELLOW}▶ Iniciando Optimización Profunda...${NC}"
+                if [ -f /etc/MaximusVpsMx/core/auto_clean.sh ]; then
+                    bash /etc/MaximusVpsMx/core/auto_clean.sh
+                else
+                    echo -e " - Ejecutando limpieza integrada..."
+                    sync; echo 3 > /proc/sys/vm/drop_caches; swapoff -a && swapon -a 2>/dev/null
+                    journalctl --vacuum-time=1d >/dev/null 2>&1
+                    journalctl --vacuum-size=10M >/dev/null 2>&1
+                    find /var/log -type f -name "*.log" -exec truncate -s 0 {} \; 2>/dev/null
+                    truncate -s 0 /var/log/syslog /var/log/messages /var/log/auth.log /var/log/kern.log /var/log/daemon.log /var/log/debug 2>/dev/null
+                    rm -rf /var/log/journal/*/*.journal~ 2>/dev/null
+                    DEBIAN_FRONTEND=noninteractive apt-get clean >/dev/null 2>&1
+                    DEBIAN_FRONTEND=noninteractive apt-get autoremove -y >/dev/null 2>&1
+                    find /var/log -type f -name "*.[0-9]" -delete 2>/dev/null
+                    find /var/log -type f -name "*.gz" -delete 2>/dev/null
+                    find /tmp -type f -atime +2 -delete 2>/dev/null
+                fi
+                
+                DISK_AFTER=$(df -h / | awk 'NR==2 {print $5}')
+                LOGS_SIZE_NEW=$(du -sh /var/log 2>/dev/null | awk '{print $1}')
+                
+                ui_hr
+                echo -e "${GREEN}✅ LIMPIEZA FINALIZADA.${NC}"
+                echo -e "${WHITE}Nuevo espacio usado en Disco: ${GREEN}$DISK_AFTER${NC} (antes: $DISK_BEFORE)"
+                echo -e "${WHITE}Nuevo peso de Logs         : ${GREEN}$LOGS_SIZE_NEW${NC} (antes: $LOGS_SIZE)"
+                echo -e "${CYAN}====================================================${NC}"
+                ui_pause ;;
+            2)
+                if [ -f /etc/MaximusVpsMx/core/speed_optimize.sh ]; then
+                    bash /etc/MaximusVpsMx/core/speed_optimize.sh
+                else
+                    echo -e "${RED}Script de optimización no encontrado (/etc/MaximusVpsMx/core/speed_optimize.sh).${NC}"
+                fi
+                ui_pause ;;
+            3)
+                ui_header "PROGRAMAR AUTO-LIMPIEZA"
+                echo -e " ${CYAN}[1] Cada 6 Horas${NC}"
+                echo -e " ${CYAN}[2] Diario (Medianoche)${NC}"
+                echo -e " ${CYAN}[3] Desactivar${NC}"
+                echo -e " ${CYAN}[0] Volver${NC}"
+                read -p " Opción: " opt_cron
+                
+                crontab -l 2>/dev/null | grep -v "auto_clean.sh" > /tmp/cron_temp
+                
+                case $opt_cron in
+                    1) 
+                        echo "0 */6 * * * /bin/bash /etc/MaximusVpsMx/core/auto_clean.sh" >> /tmp/cron_temp
+                        crontab /tmp/cron_temp
+                        echo -e "${GREEN}✅ Limpieza programada cada 6 horas.${NC}"
+                        ;;
+                    2)
+                        echo "0 0 * * * /bin/bash /etc/MaximusVpsMx/core/auto_clean.sh" >> /tmp/cron_temp
+                        crontab /tmp/cron_temp
+                        echo -e "${GREEN}✅ Limpieza programada diariamente.${NC}"
+                        ;;
+                    3)
+                        crontab /tmp/cron_temp
+                        echo -e "${RED}✅ Auto-Limpieza desactivada.${NC}"
+                        ;;
+                esac
+                rm -f /tmp/cron_temp
+                sleep 2 ;;
+            0) return ;;
+            *) continue ;;
+        esac
+    done
+}
+
 # --- SUBMENÚ DE SISTEMA ---
 menu_sistema() {
     while true; do
@@ -1069,7 +1168,7 @@ menu_sistema() {
         systemctl is-active --quiet mx-webpanel && wp_st="${GREEN}[ON]${NC}" || wp_st="${RED}[OFF]${NC}"
         systemctl is-active --quiet maximus-bot && tg_st="${GREEN}[ON]${NC}" || tg_st="${RED}[OFF]${NC}"
 
-        echo -e "  ${CYAN}[1]>${WHITE} Optimizar VPS (Limpiar RAM y Caché)${NC}"
+        echo -e "  ${CYAN}[1]>${WHITE} Optimización y Auto-Limpieza${NC}"
         echo -e "  ${CYAN}[2]>${WHITE} Editor de Banner Global (SSH/Issue)${NC}"
         echo -e "  ${CYAN}[3]>${WHITE} Respaldar Cuentas Localmente${NC}"
         echo -e "  ${CYAN}[4]>${WHITE} Monitor de Tráfico (vnstat)${NC}"
@@ -1083,57 +1182,7 @@ menu_sistema() {
         ui_prompt " Selecciona una opción: " ; read opt_sys
         
         case $opt_sys in
-            1)
-                echo -e "\n${CYAN}====================================================${NC}"
-                echo -e "${YELLOW}🔍 ESCÁNER DE ALMACENAMIENTO Y MEMORIA${NC}"
-                echo -e "${CYAN}====================================================${NC}"
-                
-                # Calcular espacio antes
-                DISK_BEFORE=$(df -h / | awk 'NR==2 {print $5}')
-                LOGS_SIZE=$(du -sh /var/log 2>/dev/null | awk '{print $1}')
-                CACHE_SIZE=$(du -sh /var/cache/apt 2>/dev/null | awk '{print $1}')
-                TMP_SIZE=$(du -sh /tmp 2>/dev/null | awk '{print $1}')
-                
-                echo -e "${WHITE}Espacio usado en Disco : ${RED}$DISK_BEFORE${NC}"
-                echo -e "${WHITE}Peso de Logs del Sistema: ${YELLOW}$LOGS_SIZE${NC}"
-                echo -e "${WHITE}Peso de Caché de APT   : ${YELLOW}$CACHE_SIZE${NC}"
-                echo -e "${WHITE}Peso de Archivos Temp  : ${YELLOW}$TMP_SIZE${NC}"
-                ui_hr
-                
-                echo -e "${YELLOW}▶ Iniciando Optimización Profunda...${NC}"
-                echo -e " - Vaciando Caché de RAM (drop_caches)..."
-                sync; echo 3 > /proc/sys/vm/drop_caches; swapoff -a && swapon -a 2>/dev/null
-                
-                echo -e " - Purgando Logs del Sistema (journalctl)..."
-                journalctl --vacuum-time=1d >/dev/null 2>&1
-                journalctl --vacuum-size=10M >/dev/null 2>&1
-                
-                echo -e " - Vaciando Logs Activos Gigantes (syslog, auth, etc)..."
-                find /var/log -type f -name "*.log" -exec truncate -s 0 {} \; 2>/dev/null
-                truncate -s 0 /var/log/syslog /var/log/messages /var/log/auth.log /var/log/kern.log /var/log/daemon.log /var/log/debug 2>/dev/null
-                rm -rf /var/log/journal/*/*.journal~ 2>/dev/null
-                
-                echo -e " - Eliminando Caché y Paquetes Huérfanos (apt)..."
-                DEBIAN_FRONTEND=noninteractive apt-get clean >/dev/null 2>&1
-                DEBIAN_FRONTEND=noninteractive apt-get autoremove -y >/dev/null 2>&1
-                
-                echo -e " - Borrando Logs Rotados Antiguos..."
-                find /var/log -type f -name "*.[0-9]" -delete 2>/dev/null
-                find /var/log -type f -name "*.gz" -delete 2>/dev/null
-                
-                echo -e " - Limpiando Archivos Temporales (/tmp)..."
-                find /tmp -type f -atime +2 -delete 2>/dev/null
-                
-                # Calcular espacio despues
-                DISK_AFTER=$(df -h / | awk 'NR==2 {print $5}')
-                LOGS_SIZE_NEW=$(du -sh /var/log 2>/dev/null | awk '{print $1}')
-                
-                ui_hr
-                echo -e "${GREEN}✅ LIMPIEZA FINALIZADA.${NC}"
-                echo -e "${WHITE}Nuevo espacio usado en Disco: ${GREEN}$DISK_AFTER${NC} (antes: $DISK_BEFORE)"
-                echo -e "${WHITE}Nuevo peso de Logs         : ${GREEN}$LOGS_SIZE_NEW${NC} (antes: $LOGS_SIZE)"
-                echo -e "${CYAN}====================================================${NC}"
-                ui_pause ;;
+            1) sub_optimizacion ;;
             2) nano /etc/issue.net ;;
             3)
                 echo -e "\n${YELLOW}▶ Generando Backup...${NC}"
