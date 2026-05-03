@@ -54,14 +54,16 @@ EOF
 ufw allow ${bad_port}/udp 2>/dev/null
 ufw allow ${bad_port}/tcp 2>/dev/null
 
+killall -9 badvpn-udpgw 2>/dev/null
 systemctl daemon-reload
-systemctl enable --now badvpn 2>/dev/null
+systemctl enable badvpn 2>/dev/null
 systemctl restart badvpn 2>/dev/null
 
 if systemctl is-active --quiet badvpn; then
     echo -e "\e[1;32m[✓] BadVPN UDP activo en el puerto $bad_port.\e[0m"
 else
-    echo -e "\e[1;31m[❌] El servicio BadVPN no pudo iniciarse. Revisa los logs.${NC}"
+    echo -e "\e[1;31m[❌] El servicio BadVPN no pudo iniciarse. Revisa los logs:\e[0m"
+    journalctl -u badvpn -n 10 --no-pager
 fi
 sleep 3
 
