@@ -86,16 +86,29 @@ get_telemetry() {
     RAM_BUFF=$(awk '/Buffers:/ {printf("%.2fMB", $2/1024)}' /proc/meminfo)
     RAM_CACHE=$(awk '/^Cached:/ {printf("%.2fMB", $2/1024)}' /proc/meminfo)
 
-    # Cuentas SSH (SQLite v2.0)
-    TOTAL=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM users")
-    [ -z "$TOTAL" ] && TOTAL=0
+    # Cuentas SSH (Conteo robusto desde archivo local)
+    TOTAL=0
+    ACTIVA=0
+    EXPIRADA=0
     
-    fecha_actual=$(date +"%Y-%m-%d")
-    ACTIVA=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM users WHERE expiry_date >= '$fecha_actual'")
-    [ -z "$ACTIVA" ] && ACTIVA=0
-    
-    EXPIRADA=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM users WHERE expiry_date < '$fecha_actual'")
-    [ -z "$EXPIRADA" ] && EXPIRADA=0
+    if [ -s "$USER_DB" ]; then
+        TOTAL=$(grep -c -v "^$" "$USER_DB")
+        fecha_actual_sec=$(date +%s)
+        
+        while IFS=: read -r d_user d_pass d_exp d_hwid d_limit d_alias; do
+            # Validar que no sea línea vacía
+            [ -z "$d_user" ] && continue
+            
+            exp_sec=$(date -d "$d_exp" +%s 2>/dev/null)
+            if [ -n "$exp_sec" ]; then
+                if [ "$exp_sec" -ge "$fecha_actual_sec" ]; then
+                    ACTIVA=$((ACTIVA+1))
+                else
+                    EXPIRADA=$((EXPIRADA+1))
+                fi
+            fi
+        done < "$USER_DB"
+    fi
     
     BLOQUEADA=0
 }
