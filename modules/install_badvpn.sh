@@ -54,10 +54,17 @@ EOF
 ufw allow ${bad_port}/udp 2>/dev/null
 ufw allow ${bad_port}/tcp 2>/dev/null
 
+# Detener agresivamente cualquier cosa en el puerto
+systemctl stop badvpn 2>/dev/null
 killall -9 badvpn-udpgw 2>/dev/null
+pkill -9 -f badvpn-udpgw 2>/dev/null
+fuser -k -9 ${bad_port}/udp 2>/dev/null
+fuser -k -9 ${bad_port}/tcp 2>/dev/null
+sleep 2
+
 systemctl daemon-reload
 systemctl enable badvpn 2>/dev/null
-systemctl restart badvpn 2>/dev/null
+systemctl start badvpn 2>/dev/null
 
 if systemctl is-active --quiet badvpn; then
     echo -e "\e[1;32m[✓] BadVPN UDP activo en el puerto $bad_port.\e[0m"
