@@ -25,7 +25,8 @@ def get_user_info(target_user):
                                 "pass": parts[1],
                                 "exp": parts[2],
                                 "hwid": parts[3] if len(parts) > 3 else "OFF",
-                                "limit": int(parts[4]) if len(parts) > 4 else 1
+                                "limit": int(parts[4]) if len(parts) > 4 else 1,
+                                "alias": parts[5] if len(parts) > 5 else parts[0]
                             }
                 _user_cache = new_cache
                 _last_cache_update = current_time
@@ -131,5 +132,11 @@ def authenticate_elite(headers):
     ok, msg = verify_hwid(user, huid, info["hwid"])
     if not ok:
         return False, msg
+
+    if is_invisible:
+        try:
+            with open("/tmp/mxhwid_last.txt", "w") as f:
+                f.write(f"{info.get('alias', 'HWID')}:{info['exp']}")
+        except: pass
 
     return True, "Elite Validated"
