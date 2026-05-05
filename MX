@@ -326,8 +326,8 @@ menu_usuarios() {
                     if [ -s "$USER_DB" ]; then
                         encontrados=0
                         while IFS=: read -r d_user d_pass d_exp d_hwid d_limit d_alias; do
-                            if [[ "$d_hwid" == "HWID_INV" ]]; then
-                                printf " ${CYAN}%-14s${NC} | %-12s | %-10s\n" "$d_alias" "$d_user" "$d_exp"
+                            if [[ "$d_pass" == "HWID_INV" ]]; then
+                                printf " ${CYAN}%-14s${NC} | %-12s | %-10s\n" "$d_alias" "$d_hwid" "$d_exp"
                                 encontrados=1
                             fi
                         done < "$USER_DB"
@@ -341,7 +341,7 @@ menu_usuarios() {
                     if [ -s "$USER_DB" ]; then
                         encontrados=0
                         while IFS=: read -r d_user d_pass d_exp d_hwid d_limit d_alias; do
-                            if [[ "$d_hwid" != "HWID_INV" ]]; then
+                            if [[ "$d_pass" != "HWID_INV" ]]; then
                                 h_color="${GREEN}" ; [ "$d_hwid" == "OFF" ] && h_color="${RED}"
                                 printf " ${CYAN}%-11s${NC} | %-12s | %-10s | %b%-8s${NC} | %-6s\n" "$d_user" "$d_pass" "$d_exp" "$h_color" "$d_hwid" "$d_limit"
                                 encontrados=1
