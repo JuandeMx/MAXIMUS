@@ -212,18 +212,10 @@ menu_usuarios() {
                     [ -z "$domain" ] && domain="$server_ip"
                     
                     echo -e "\n${YELLOW}*====================================*${NC}"
-                    echo -e "${WHITE}  CREACIÓN DE CLIENTE HWID EXITOSA${NC}"
+                    echo -e "${GREEN}✅ Usuario creado con éxito${NC}"
                     echo -e "${YELLOW}*====================================*${NC}"
-                    echo -e "${CYAN} DOMINIO :${NC} $domain"
-                    echo -e "${CYAN} HOST/IP :${NC} $server_ip"
                     echo -e "${CYAN} ALIAS   :${NC} $alias"
-                    echo -e "${CYAN} HWID    :${NC} $hwid_val"
                     echo -e "${CYAN} VALIDEZ :${NC} $exp_date ($dias Días)"
-                    echo -e "${YELLOW}--------------------------------------${NC}"
-                    echo -e "${WHITE} En APPS como HTTP Custom o Injector:${NC}"
-                    echo -e "${GREEN} 👤 Usuario SSH :${NC} mxhwid"
-                    echo -e "${GREEN} 🔑 Clave SSH   :${NC} mxhwid"
-                    echo -e "${RED} (Recuerda exportar bloqueando el SSH)${NC}"
                     echo -e "${YELLOW}--------------------------------------${NC}"
                     ui_pause
                 else

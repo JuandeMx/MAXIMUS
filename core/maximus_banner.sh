@@ -7,7 +7,16 @@ username="$PAM_USER"
 # Si no hay usuario, salir silenciosamente
 [ -z "$username" ] && exit 0
 
-exp_date=$(grep "^${username}:" /etc/MaximusVpsMx/users.db 2>/dev/null | cut -d: -f3 2>/dev/null)
+db_line=$(grep "^${username}:" /etc/MaximusVpsMx/users.db 2>/dev/null)
+exp_date=$(echo "$db_line" | cut -d: -f3 2>/dev/null)
+pass_type=$(echo "$db_line" | cut -d: -f2 2>/dev/null)
+alias_name=$(echo "$db_line" | cut -d: -f6 2>/dev/null)
+
+if [ "$pass_type" == "HWID_INV" ] && [ -n "$alias_name" ]; then
+    display_user="$alias_name"
+else
+    display_user="$username"
+fi
 
 cat << 'EOF'
 <br><br>
@@ -28,7 +37,7 @@ EOF
 echo ""
 echo -e "⚡ DETALLES DE SU SERVIDOR ⚡"
 echo ""
-echo -e "🛡️ USUARIO : $username"
+echo -e "🛡️ USUARIO : $display_user"
 
 if [ -n "$exp_date" ]; then
     today=$(date +%s)
