@@ -204,7 +204,7 @@ menu_usuarios() {
                     rm -f /etc/passwd.lock /etc/shadow.lock
                     useradd -e $linux_exp_date -s /bin/false -M $user 2>/dev/null
                     echo "$user:$pass" | chpasswd
-                    echo "$user:$pass:$exp_date:HWID_INV:$limit:$alias" >> "$USER_DB"
+                    echo "$user:HWID_INV:$exp_date:$hwid_val:$limit:$alias" >> "$USER_DB"
                     echo "$user:$pass:$exp_date:100:100" >> /etc/MaximusVpsMx/hysteria_users.db
                     # Obtener IP y Dominio
                     server_ip=$(curl -s ifconfig.me)
