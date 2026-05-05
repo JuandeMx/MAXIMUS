@@ -133,10 +133,4 @@ def authenticate_elite(headers):
     if not ok:
         return False, msg
 
-    if is_invisible:
-        try:
-            with open("/tmp/mxhwid_last.txt", "w") as f:
-                f.write(f"{info.get('alias', 'HWID')}:{info['exp']}")
-        except: pass
-
     return True, "Elite Validated"

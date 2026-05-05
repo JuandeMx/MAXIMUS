@@ -7,21 +7,15 @@ username="$PAM_USER"
 # Si no hay usuario, salir silenciosamente
 [ -z "$username" ] && exit 0
 
-if [ "$username" == "mxhwid" ] && [ -f "/tmp/mxhwid_last.txt" ]; then
-    last_info=$(head -n 1 /tmp/mxhwid_last.txt)
-    display_user=$(echo "$last_info" | cut -d: -f1)
-    exp_date=$(echo "$last_info" | cut -d: -f2)
-else
-    db_line=$(grep "^${username}:" /etc/MaximusVpsMx/users.db 2>/dev/null)
-    exp_date=$(echo "$db_line" | cut -d: -f3 2>/dev/null)
-    pass_type=$(echo "$db_line" | cut -d: -f2 2>/dev/null)
-    alias_name=$(echo "$db_line" | cut -d: -f6 2>/dev/null)
+db_line=$(grep "^${username}:" /etc/MaximusVpsMx/users.db 2>/dev/null)
+exp_date=$(echo "$db_line" | cut -d: -f3 2>/dev/null)
+pass_type=$(echo "$db_line" | cut -d: -f2 2>/dev/null)
+alias_name=$(echo "$db_line" | cut -d: -f6 2>/dev/null)
 
-    if [ "$pass_type" == "HWID_INV" ] && [ -n "$alias_name" ]; then
-        display_user="$alias_name"
-    else
-        display_user="$username"
-    fi
+if [ "$pass_type" == "HWID_INV" ] && [ -n "$alias_name" ]; then
+    display_user="$alias_name"
+else
+    display_user="$username"
 fi
 
 cat << 'EOF'
