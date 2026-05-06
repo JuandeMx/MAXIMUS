@@ -32,6 +32,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             hwid = data.get('hwid', '').lower()
             alias = data.get('alias', 'WhatsappUser').replace(' ', '_').replace(':', '')
             days = data.get('days', 4)
+            is_extend = data.get('extend', False)
 
             if not hwid or not hwid.isalnum():
                 self.send_response(400)
@@ -39,7 +40,27 @@ class RequestHandler(BaseHTTPRequestHandler):
                 self.wfile.write(b'{"status": "error", "message": "Invalid HWID"}')
                 return
 
-            exp_date = (datetime.datetime.now() + datetime.timedelta(days=days)).strftime("%Y-%m-%d")
+            current_exp = None
+            if is_extend and os.path.exists(USER_DB):
+                with open(USER_DB, "r") as f:
+                    for line in f:
+                        parts = line.strip().split(':')
+                        if len(parts) >= 6 and parts[0] == hwid:
+                            current_exp = parts[2]
+                            alias = parts[5] # Keep original alias
+                            break
+            
+            if current_exp:
+                try:
+                    base_date = datetime.datetime.strptime(current_exp, "%Y-%m-%d")
+                    if base_date < datetime.datetime.now():
+                        base_date = datetime.datetime.now()
+                except:
+                    base_date = datetime.datetime.now()
+            else:
+                base_date = datetime.datetime.now()
+
+            exp_date = (base_date + datetime.timedelta(days=days)).strftime("%Y-%m-%d")
 
             # Execute bash commands to create linux user securely
             subprocess.run(["useradd", "-M", "-s", "/bin/false", hwid], stderr=subprocess.DEVNULL)
