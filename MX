@@ -1142,9 +1142,11 @@ sub_optimizacion() {
 
 sub_zombies() {
     ui_header "ESCANER DE HILOS ZOMBIS"
-    echo -e " ${CYAN}Analizando sockets colgados (CLOSE_WAIT / TIME_WAIT)...${NC}"
+    echo -e " ${CYAN}Analizando sockets colgados (CLOSE_WAIT)...${NC}"
     
-    local zombies=$(netstat -an | grep -E 'CLOSE_WAIT|TIME_WAIT|FIN_WAIT' | wc -l)
+    # Solo CLOSE_WAIT son verdaderos zombis (fugas de memoria).
+    # TIME_WAIT es un estado temporal normal del kernel de Linux.
+    local zombies=$(netstat -an | grep -E 'CLOSE_WAIT' | wc -l)
     
     if [ "$zombies" -gt 50 ]; then
         echo -e "\n ${RED}⚠️ ¡ALERTA! Se detectaron $zombies conexiones zombis retenidas.${NC}"
