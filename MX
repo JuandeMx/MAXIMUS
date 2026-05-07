@@ -1164,7 +1164,7 @@ sub_zombies() {
     read opt_z
     if [ "$opt_z" == "1" ]; then
         echo -e "\n${YELLOW}▶ Ejecutando limpieza profunda de túneles...${NC}"
-        systemctl restart dropbear stunnel4 maximus-pdirect maximus-wsepro >/dev/null 2>&1
+        systemctl restart dropbear stunnel4 mx-proxy ws-epro >/dev/null 2>&1
         sync; echo 3 > /proc/sys/vm/drop_caches
         echo -e "${GREEN}✅ ¡Zombis eliminados exitosamente! Servidor al 100%.${NC}"
         sleep 2
