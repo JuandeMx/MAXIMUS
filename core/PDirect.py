@@ -135,8 +135,9 @@ class ConnectionHandler(threading.Thread):
             # --- RELAY BIDIRECCIONAL SELECT ENGINE ---
             sockets = [self.client, target]
             while True:
-                r, _, e = select.select(sockets, [], sockets, 60)
-                if e: break
+                # Timeout de inactividad de 3600s para evitar hilos zombis y memory leaks
+                r, _, e = select.select(sockets, [], sockets, 3600)
+                if not r or e: break
                 for sock in r:
                     data = sock.recv(BUFLEN)
                     if not data: return
@@ -146,10 +147,14 @@ class ConnectionHandler(threading.Thread):
         except:
             pass
         finally:
-            try: self.client.close()
+            try: 
+                self.client.shutdown(socket.SHUT_RDWR)
+                self.client.close()
             except: pass
             try: 
-                if target: target.close()
+                if target: 
+                    target.shutdown(socket.SHUT_RDWR)
+                    target.close()
             except: pass
 
 if __name__ == '__main__':

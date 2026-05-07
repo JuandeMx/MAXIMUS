@@ -1140,6 +1140,35 @@ sub_optimizacion() {
     done
 }
 
+sub_zombies() {
+    ui_header "ESCANER DE HILOS ZOMBIS"
+    echo -e " ${CYAN}Analizando sockets colgados (CLOSE_WAIT / TIME_WAIT)...${NC}"
+    
+    local zombies=$(netstat -an | grep -E 'CLOSE_WAIT|TIME_WAIT|FIN_WAIT' | wc -l)
+    
+    if [ "$zombies" -gt 50 ]; then
+        echo -e "\n ${RED}⚠️ ¡ALERTA! Se detectaron $zombies conexiones zombis retenidas.${NC}"
+        echo -e " Esto puede saturar la memoria y causar errores EOF Reached."
+    elif [ "$zombies" -gt 0 ]; then
+        echo -e "\n ${YELLOW}⚠️ Se detectaron $zombies conexiones colgadas (zombis).${NC}"
+        echo -e " Es un nivel bajo, el sistema puede auto-purgarlas poco a poco."
+    else
+        echo -e "\n ${GREEN}✅ El sistema está limpio. 0 conexiones zombis encontradas.${NC}"
+    fi
+
+    echo -e "\n ${CYAN}[1]>${WHITE} Purgar Zombis ahora (Reinicia los túneles y libera RAM)${NC}"
+    echo -e " ${CYAN}[0]>${WHITE} Volver${NC}"
+    ui_prompt "Opción: "
+    read opt_z
+    if [ "$opt_z" == "1" ]; then
+        echo -e "\n${YELLOW}▶ Ejecutando limpieza profunda de túneles...${NC}"
+        systemctl restart dropbear stunnel4 maximus-pdirect maximus-wsepro >/dev/null 2>&1
+        sync; echo 3 > /proc/sys/vm/drop_caches
+        echo -e "${GREEN}✅ ¡Zombis eliminados exitosamente! Servidor al 100%.${NC}"
+        sleep 2
+    fi
+}
+
 # --- SUBMENÚ DE SISTEMA ---
 menu_sistema() {
     while true; do
@@ -1157,6 +1186,7 @@ menu_sistema() {
         echo -e "  ${CYAN} [5]>${WHITE} Firewall UFW Config          | $fw_st${NC}"
         echo -e "  ${CYAN} [6]>${WHITE} CLOUDFLARE DDNS              | $cf_st${NC}"
         echo -e "  ${CYAN} [7]>${GREEN} TELEGRAM BOT (Elite Edition) | $tg_st${NC}"
+        echo -e "  ${CYAN} [8]>${WHITE} Escanear y Purgar Hilos Zombis${NC}"
         ui_hr
         echo -e "  ${WHITE}[0] VOLVER AL MENÚ PRINCIPAL${NC}"
         ui_hr
@@ -1196,6 +1226,7 @@ CFEOF
                     3) crontab -l 2>/dev/null | grep -v "cloudflare-ddns" | crontab -; echo -e "${RED}⚠️ Desactivado.${NC}"; sleep 0.1 ;;
                 esac ;;
             7) bash /etc/MaximusVpsMx/modules/bot_manager.sh ;;
+            8) sub_zombies ;;
             0) return ;;
             *) continue ;;
         esac
