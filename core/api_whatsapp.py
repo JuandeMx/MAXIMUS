@@ -3,7 +3,7 @@ import json
 import subprocess
 import datetime
 import os
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 API_SECRET = "MaximusSecret2026!"
 USER_DB = "/etc/MaximusVpsMx/users.db"
@@ -92,8 +92,8 @@ class RequestHandler(BaseHTTPRequestHandler):
 
 if __name__ == '__main__':
     port = 8085
-    server = HTTPServer(('0.0.0.0', port), RequestHandler)
-    print(f"🚀 Maximus API Iniciada en el puerto {port}")
+    server = ThreadingHTTPServer(('0.0.0.0', port), RequestHandler)
+    print(f"🚀 Maximus API Iniciada en el puerto {port} (Multi-hilo)")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
