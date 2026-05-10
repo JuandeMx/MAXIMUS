@@ -7,15 +7,30 @@ username="$PAM_USER"
 # Si no hay usuario, salir silenciosamente
 [ -z "$username" ] && exit 0
 
-db_line=$(grep "^${username}:" /etc/MaximusVpsMx/users.db 2>/dev/null)
-exp_date=$(echo "$db_line" | cut -d: -f3 2>/dev/null)
-pass_type=$(echo "$db_line" | cut -d: -f2 2>/dev/null)
-alias_name=$(echo "$db_line" | cut -d: -f6 2>/dev/null)
-
-if [ "$pass_type" == "HWID_INV" ] && [ -n "$alias_name" ]; then
-    display_user="$alias_name"
+# Excepción para el root
+if [ "$username" == "root" ]; then
+    display_user="root"
 else
-    display_user="$username"
+    db_line=$(grep "^${username}:" /etc/MaximusVpsMx/users.db 2>/dev/null)
+    
+    # SI NO ESTÁ EN LA DB, ES UN USUARIO FANTASMA (Orphan) -> DESCONECTAR INMEDIATAMENTE
+    if [ -z "$db_line" ]; then
+        echo -e "\n\n❌ ERROR: Cuenta no registrada o eliminada de la Base de Datos."
+        echo -e "Por favor, contacte a su administrador."
+        # Matar el proceso padre (SSH) para desconectar al intruso
+        kill -9 $PPID 2>/dev/null
+        exit 0
+    fi
+    
+    exp_date=$(echo "$db_line" | cut -d: -f3 2>/dev/null)
+    pass_type=$(echo "$db_line" | cut -d: -f2 2>/dev/null)
+    alias_name=$(echo "$db_line" | cut -d: -f6 2>/dev/null)
+    
+    if [ "$pass_type" == "HWID_INV" ] && [ -n "$alias_name" ]; then
+        display_user="$alias_name"
+    else
+        display_user="$username"
+    fi
 fi
 
 cat << 'EOF'
