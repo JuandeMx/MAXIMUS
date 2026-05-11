@@ -1171,6 +1171,48 @@ sub_zombies() {
     fi
 }
 
+# --- DIAGNÓSTICO DE CONEXIÓN CON BOT WHATSAPP ---
+check_bot_connection() {
+    ui_header "DIAGNÓSTICO: CONEXIÓN BOT WA"
+    echo -e " ${CYAN}Verificando servicios locales...${NC}\n"
+    
+    # 1. Verificar si el servidor API de Python está corriendo
+    if pgrep -f api_whatsapp.py > /dev/null; then
+        echo -e " ${GREEN}✅ API Python Maximus : [CORRIENDO]${NC}"
+    else
+        echo -e " ${RED}❌ API Python Maximus : [DETENIDA]${NC}"
+        echo -e " ${YELLOW}👉 Intentando iniciar API ahora...${NC}"
+        # Intentar iniciar la API en segundo plano
+        if [ -f /etc/MaximusVpsMx/core/api_whatsapp.py ]; then
+            screen -dmS maximus_api python3 /etc/MaximusVpsMx/core/api_whatsapp.py
+            sleep 2
+            pgrep -f api_whatsapp.py > /dev/null && echo -e " ${GREEN}✅ API Iniciada con éxito.${NC}" || echo -e " ${RED}❌ Falló al iniciar.${NC}"
+        else
+            echo -e " ${RED}❌ No se encontró /etc/MaximusVpsMx/core/api_whatsapp.py${NC}"
+        fi
+    fi
+
+    # 2. Verificar puerto 8085 (Donde escucha la API)
+    if netstat -tuln | grep :8085 > /dev/null; then
+        echo -e " ${GREEN}✅ Puerto 8085        : [ABIERTO / OK]${NC}"
+    else
+        echo -e " ${RED}❌ Puerto 8085        : [CERRADO / ERROR]${NC}"
+        echo -e " ${YELLOW}⚠️  Revisa si el Firewall UFW está bloqueando el puerto.${NC}"
+    fi
+
+    # 3. Prueba de conectividad (Ping al exterior para descartar red del VPS)
+    if ping -c 1 8.8.8.8 > /dev/null 2>&1; then
+        echo -e " ${GREEN}✅ Red Externa VPS    : [ESTABLE]${NC}"
+    else
+        echo -e " ${RED}❌ Red Externa VPS    : [CAÍDA / SIN INTERNET]${NC}"
+    fi
+    
+    ui_hr
+    echo -e " ${WHITE}Si todo está verde y el bot sigue sin conectar,${NC}"
+    echo -e " ${WHITE}revisa el archivo 'config.js' en tu computadora.${NC}"
+    ui_pause
+}
+
 # --- SUBMENÚ DE SISTEMA ---
 menu_sistema() {
     while true; do
@@ -1189,6 +1231,7 @@ menu_sistema() {
         echo -e "  ${CYAN} [6]>${WHITE} CLOUDFLARE DDNS              | $cf_st${NC}"
         echo -e "  ${CYAN} [7]>${GREEN} TELEGRAM BOT (Elite Edition) | $tg_st${NC}"
         echo -e "  ${CYAN} [8]>${WHITE} Escanear y Purgar Hilos Zombis${NC}"
+        echo -e "  ${CYAN} [9]>${YELLOW} Diagnóstico de Conexión Bot WA${NC}"
         ui_hr
         echo -e "  ${WHITE}[0] VOLVER AL MENÚ PRINCIPAL${NC}"
         ui_hr
@@ -1229,6 +1272,7 @@ CFEOF
                 esac ;;
             7) bash /etc/MaximusVpsMx/modules/bot_manager.sh ;;
             8) sub_zombies ;;
+            9) check_bot_connection ;;
             0) return ;;
             *) continue ;;
         esac
