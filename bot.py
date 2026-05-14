@@ -61,46 +61,18 @@ def safe_delete(chat_id, message_id):
 
 # --- SISTEMA DE CREACIÓN INTERACTIVA (BOTONES SOLAMENTE) ---
 
-@bot.callback_query_handler(func=lambda call: call.data == "admin_crear")
-def callback_admin_crear_inicio(call):
-    if not is_admin(call.from_user.id, call.message.chat.id): return
-    kb = types.InlineKeyboardMarkup()
-    kb.row(
-        types.InlineKeyboardButton("📅 7 Días", callback_data="creardias_7"),
-        types.InlineKeyboardButton("📅 30 Días", callback_data="creardias_30")
-    )
-    kb.add(types.InlineKeyboardButton("⬅️ Volver", callback_data="back_vip"))
-    bot.edit_message_text("⏳ *PASO 1:* Selecciona la duración de la cuenta:", 
-                         call.message.chat.id, call.message.message_id, 
-                         parse_mode="Markdown", reply_markup=kb)
-
-@bot.callback_query_handler(func=lambda call: call.data.startswith("creardias_"))
-def callback_admin_crear_tipo(call):
-    if not is_admin(call.from_user.id, call.message.chat.id): return
-    days = int(call.data.split("_")[1])
-    user_creation_states[call.from_user.id] = {'days': days}
-    
-    kb = types.InlineKeyboardMarkup()
-    kb.row(
-        types.InlineKeyboardButton("🔓 Dropbear (Clásico)", callback_data="creartype_ssh"),
-        types.InlineKeyboardButton("🛡️ HWID (Invisible)", callback_data="creartype_hwid")
-    )
-    kb.add(types.InlineKeyboardButton("⬅️ Volver", callback_data="admin_crear"))
-    bot.edit_message_text(f"⏳ *Duración:* {days} días\n\n*PASO 2:* Seleccione el tipo de servicio:", 
-                         call.message.chat.id, call.message.message_id, 
-                         parse_mode="Markdown", reply_markup=kb)
-
-@bot.callback_query_handler(func=lambda call: call.data.startswith("creartype_"))
-def callback_admin_crear_nombre(call):
-    if not is_admin(call.from_user.id, call.message.chat.id): return
-    u_type = call.data.split("_")[1]
-    user_id = call.from_user.id
-    user_creation_states[user_id]['type'] = u_type
-    
-    label = "Nombre de Usuario" if u_type == "ssh" else "Nombre/Alias para el HWID"
-    bot.edit_message_text(f"✅ *Configuración:* {user_creation_states[user_id]['days']} días | {u_type.upper()}\n\n✍️ *Escribe el {label}:*", 
-                         call.message.chat.id, call.message.message_id, parse_mode="Markdown")
-    bot.register_next_step_handler(call.message, process_ask_name, user_id)
+def finalize_creation(chat_id, success, result, user, val, type):
+    if success:
+        ip = config.HOST_DOMAIN if config.HOST_DOMAIN else manager.get_server_ip()
+        
+        if type == "ssh":
+            msg = f"✅ *Usuario Dropbear Creado*\n\n🌐 IP: `{ip}`\n👤 User: `{user}`\n🔑 Pass: `{val}`\n📅 Vence: `{result}`"
+        else:
+            msg = f"✅ *Usuario HWID Creado*\n\n🌐 IP: `{ip}`\n👤 Alias: `{user}`\n🛡️ HWID: `{val}`\n📅 Vence: `{result}`"
+            
+        bot.send_message(chat_id, msg, parse_mode="Markdown")
+    else:
+        bot.send_message(chat_id, f"❌ *Error al crear:* {result}", parse_mode="Markdown")
 
 def process_ask_name(message, user_id):
     if message.from_user.id != user_id:
@@ -146,20 +118,6 @@ def process_ask_hwid(message, user_id):
     success, result = manager.create_hwid_user(alias, hwid, days=days)
     finalize_creation(message.chat.id, success, result, alias, hwid, "hwid")
     del user_creation_states[user_id]
-
-def finalize_creation(chat_id, success, result, user, val, type):
-    if success:
-        ip = config.HOST_DOMAIN if config.HOST_DOMAIN else manager.get_server_ip()
-        active_ports = get_active_service_ports()
-        
-        if type == "ssh":
-            msg = f"✅ *Usuario Dropbear Creado*\n\n🌐 IP: `{ip}`\n👤 User: `{user}`\n🔑 Pass: `{val}`\n📅 Vence: `{result}`"
-        else:
-            msg = f"✅ *Usuario HWID Creado*\n\n🌐 IP: `{ip}`\n👤 Alias: `{user}`\n🛡️ HWID: `{val}`\n📅 Vence: `{result}`"
-            
-        bot.send_message(chat_id, msg, parse_mode="Markdown")
-    else:
-        bot.send_message(chat_id, f"❌ *Error al crear:* {result}", parse_mode="Markdown")
 
 # --- FUNCIONES DE ADMINISTRADOR ---
 
@@ -343,9 +301,41 @@ def cmd_vip_menu(message):
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_handler(call):
+    if not is_admin(call.from_user.id, call.message.chat.id): return
+
     if call.data == "admin_crear":
-        if is_admin(call.from_user.id, call.message.chat.id):
-            cmd_crear_interactivo(call.message)
+        kb = types.InlineKeyboardMarkup()
+        kb.row(
+            types.InlineKeyboardButton("📅 7 Días", callback_data="creardias_7"),
+            types.InlineKeyboardButton("📅 30 Días", callback_data="creardias_30")
+        )
+        kb.add(types.InlineKeyboardButton("⬅️ Volver", callback_data="back_vip"))
+        bot.edit_message_text("⏳ *PASO 1:* Selecciona la duración de la cuenta:", 
+                             call.message.chat.id, call.message.message_id, 
+                             parse_mode="Markdown", reply_markup=kb)
+
+    elif call.data.startswith("creardias_"):
+        days = int(call.data.split("_")[1])
+        user_creation_states[call.from_user.id] = {'days': days}
+        kb = types.InlineKeyboardMarkup()
+        kb.row(
+            types.InlineKeyboardButton("🔓 Dropbear (Clásico)", callback_data="creartype_ssh"),
+            types.InlineKeyboardButton("🛡️ HWID (Invisible)", callback_data="creartype_hwid")
+        )
+        kb.add(types.InlineKeyboardButton("⬅️ Volver", callback_data="admin_crear"))
+        bot.edit_message_text(f"⏳ *Duración:* {days} días\n\n*PASO 2:* Seleccione el tipo de servicio:", 
+                             call.message.chat.id, call.message.message_id, 
+                             parse_mode="Markdown", reply_markup=kb)
+
+    elif call.data.startswith("creartype_"):
+        u_type = call.data.split("_")[1]
+        user_id = call.from_user.id
+        user_creation_states[user_id]['type'] = u_type
+        label = "Nombre de Usuario" if u_type == "ssh" else "Nombre/Alias para el HWID"
+        bot.edit_message_text(f"✅ *Configuración:* {user_creation_states[user_id]['days']} días | {u_type.upper()}\n\n✍️ *Escribe el {label}:*", 
+                             call.message.chat.id, call.message.message_id, parse_mode="Markdown")
+        bot.register_next_step_handler(call.message, process_ask_name, user_id)
+
     elif call.data == "admin_eliminar":
         if is_admin(call.from_user.id, call.message.chat.id):
             handle_admin_eliminar(call.message, call.from_user.id)
