@@ -59,124 +59,107 @@ def safe_delete(chat_id, message_id):
 
 # --- SISTEMA DE CREACIÓN INTERACTIVA (GRUPO) ---
 
-# Diccionario para almacenar el estado de la conversación
-user_creation_states = {}
+# --- SISTEMA DE CREACIÓN INTERACTIVA (BOTONES SOLAMENTE) ---
 
-@bot.message_handler(commands=['crear'])
-def cmd_crear_interactivo(message):
+@bot.callback_query_handler(func=lambda call: call.data == "admin_crear")
+def callback_admin_crear_inicio(call):
+    if not is_admin(call.from_user.id, call.message.chat.id): return
     kb = types.InlineKeyboardMarkup()
-    kb.add(types.InlineKeyboardButton("🎟️ Cuenta 7 Días", callback_data="crear_7"))
-    kb.add(types.InlineKeyboardButton("💎 Cuenta 30 Días", callback_data="crear_30"))
-    
-    bot.reply_to(message, "🛠️ *MENÚ DE CREACIÓN PREMIUM*\n\nSeleccione la duración de la cuenta:", parse_mode="Markdown", reply_markup=kb)
+    kb.row(
+        types.InlineKeyboardButton("📅 7 Días", callback_data="creardias_7"),
+        types.InlineKeyboardButton("📅 30 Días", callback_data="creardias_30")
+    )
+    kb.add(types.InlineKeyboardButton("⬅️ Volver", callback_data="back_vip"))
+    bot.edit_message_text("⏳ *PASO 1:* Selecciona la duración de la cuenta:", 
+                         call.message.chat.id, call.message.message_id, 
+                         parse_mode="Markdown", reply_markup=kb)
 
-@bot.callback_query_handler(func=lambda call: call.data in ["crear_7", "crear_30"])
-def callback_crear_dias(call):
-    days = 7 if call.data == "crear_7" else 30
+@bot.callback_query_handler(func=lambda call: call.data.startswith("creardias_"))
+def callback_admin_crear_tipo(call):
+    if not is_admin(call.from_user.id, call.message.chat.id): return
+    days = int(call.data.split("_")[1])
+    user_creation_states[call.from_user.id] = {'days': days}
+    
+    kb = types.InlineKeyboardMarkup()
+    kb.row(
+        types.InlineKeyboardButton("🔓 Dropbear (Clásico)", callback_data="creartype_ssh"),
+        types.InlineKeyboardButton("🛡️ HWID (Invisible)", callback_data="creartype_hwid")
+    )
+    kb.add(types.InlineKeyboardButton("⬅️ Volver", callback_data="admin_crear"))
+    bot.edit_message_text(f"⏳ *Duración:* {days} días\n\n*PASO 2:* Seleccione el tipo de servicio:", 
+                         call.message.chat.id, call.message.message_id, 
+                         parse_mode="Markdown", reply_markup=kb)
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("creartype_"))
+def callback_admin_crear_nombre(call):
+    if not is_admin(call.from_user.id, call.message.chat.id): return
+    u_type = call.data.split("_")[1]
     user_id = call.from_user.id
-    chat_id = call.message.chat.id
-    username_tg = call.from_user.username or call.from_user.first_name
+    user_creation_states[user_id]['type'] = u_type
     
-    # Escapar caracteres conflictivos para Markdown
-    if username_tg:
-        username_tg = str(username_tg).replace("_", "\\_").replace("*", "\\*").replace("`", "\\`")
-    
-    # Iniciar estado para este usuario
-    user_creation_states[user_id] = {'days': days, 'chat_id': chat_id}
-    
-    msg = bot.send_message(chat_id, f"👤 @{username_tg} Has elegido {days} días.\n\n✍️ *Responde a este mensaje con el NOMBRE de usuario deseado:*", parse_mode="Markdown")
-    user_creation_states[user_id]['prompt_msg_id'] = msg.message_id
-    bot.register_next_step_handler(msg, process_ask_name, user_id)
+    label = "Nombre de Usuario" if u_type == "ssh" else "Nombre/Alias para el HWID"
+    bot.edit_message_text(f"✅ *Configuración:* {user_creation_states[user_id]['days']} días | {u_type.upper()}\n\n✍️ *Escribe el {label}:*", 
+                         call.message.chat.id, call.message.message_id, parse_mode="Markdown")
+    bot.register_next_step_handler(call.message, process_ask_name, user_id)
 
 def process_ask_name(message, user_id):
-    # Validar que responde la persona correcta en el grupo
     if message.from_user.id != user_id:
         bot.register_next_step_handler(message, process_ask_name, user_id)
         return
         
     if not message.text:
-        msg = bot.reply_to(message, "❌ *Por favor envía un texto válido.*\nEscribe el NOMBRE de usuario deseado:", parse_mode="Markdown")
+        msg = bot.reply_to(message, "❌ *Texto inválido.* Escribe el nombre:", parse_mode="Markdown")
         bot.register_next_step_handler(msg, process_ask_name, user_id)
         return
         
     username = message.text.strip().replace(" ", "")
+    user_creation_states[user_id]['username'] = username
+    u_type = user_creation_states[user_id]['type']
     
-    if user_id in user_creation_states:
-        user_creation_states[user_id]['username'] = username
-        safe_delete(message.chat.id, user_creation_states[user_id].get('prompt_msg_id'))
-        
     safe_delete(message.chat.id, message.message_id)
     
-    msg = bot.send_message(message.chat.id, f"👤 Seleccionado: `{username}`\n\n🔑 *Ahora responde a este mensaje con la CONTRASEÑA:*", parse_mode="Markdown")
-    if user_id in user_creation_states:
-        user_creation_states[user_id]['prompt_msg_id'] = msg.message_id
-        
-    bot.register_next_step_handler(msg, process_ask_pass, user_id)
+    if u_type == "ssh":
+        msg = bot.send_message(message.chat.id, f"👤 Usuario: `{username}`\n\n🔑 *Ahora escribe la CONTRASEÑA:*", parse_mode="Markdown")
+        bot.register_next_step_handler(msg, process_ask_pass, user_id)
+    else:
+        msg = bot.send_message(message.chat.id, f"👤 Alias: `{username}`\n\n🛡️ *Ahora escribe el CÓDIGO HWID:*", parse_mode="Markdown")
+        bot.register_next_step_handler(msg, process_ask_hwid, user_id)
 
 def process_ask_pass(message, user_id):
-    if message.from_user.id != user_id:
-        bot.register_next_step_handler(message, process_ask_pass, user_id)
-        return
-        
-    if not message.text:
-        msg = bot.reply_to(message, "❌ *Por favor envía un texto válido.*\nEscribe la CONTRASEÑA deseada:", parse_mode="Markdown")
-        bot.register_next_step_handler(msg, process_ask_pass, user_id)
-        return
-        
+    if message.from_user.id != user_id: return
     password = message.text.strip().replace(" ", "")
-    
-    if user_id not in user_creation_states:
-        bot.send_message(message.chat.id, f"❌ *La sesión ha expirado.* Por favor, vuelve a intentar con /{config.BOT_COMMAND}", parse_mode="Markdown")
-        return
-        
-    safe_delete(message.chat.id, user_creation_states[user_id].get('prompt_msg_id'))
-    safe_delete(message.chat.id, message.message_id)
-        
     days = user_creation_states[user_id]['days']
     username = user_creation_states[user_id]['username']
     
     bot.send_chat_action(message.chat.id, 'typing')
     success, result = manager.create_ssh_user(username, password, days=days)
+    finalize_creation(message.chat.id, success, result, username, password, "ssh")
+    del user_creation_states[user_id]
+
+def process_ask_hwid(message, user_id):
+    if message.from_user.id != user_id: return
+    hwid = message.text.strip().replace(" ", "")
+    days = user_creation_states[user_id]['days']
+    alias = user_creation_states[user_id]['username']
     
+    bot.send_chat_action(message.chat.id, 'typing')
+    success, result = manager.create_hwid_user(alias, hwid, days=days)
+    finalize_creation(message.chat.id, success, result, alias, hwid, "hwid")
+    del user_creation_states[user_id]
+
+def finalize_creation(chat_id, success, result, user, val, type):
     if success:
         ip = config.HOST_DOMAIN if config.HOST_DOMAIN else manager.get_server_ip()
         active_ports = get_active_service_ports()
         
-        final_msg = f"""✅ *Usuario Premium creado con exito*
-
-🌐 *IP:* `{ip}`
-👤 *USER:* `{username}`
-🔑 *PASS:* `{password}`
-📅 *VENCE:* `{result}`
-
-📋 *Para copiar directamente:*
-
-🛡️ *SSL:*
-`{ip}:443@{username}:{password}`
-
-🌐 *SSH 80:*
-`{ip}:80@{username}:{password}`
-
-📡 *UDP Custom:*
-`{ip}:{config.UDP_RANGE}@{username}:{password}`
-
-🇦🇷 *Host Personal Argentina:*
-1. `emailmarketing.personal.com.ar:80@{username}:{password}`
-2. `Sat24.com:80@{username}:{password}`
-3. `wap.renxo.com:80@{username}:{password}`
-4. `recargas.personal.com.ar:80@{username}:{password}`
-5. `mipersonaluat2.personal.com.ar:80@{username}:{password}`
-
-⚡ *Todos los puertos que estén activos:*
-{active_ports}
-"""
-        bot.send_message(message.chat.id, final_msg, parse_mode="Markdown")
+        if type == "ssh":
+            msg = f"✅ *Usuario Dropbear Creado*\n\n🌐 IP: `{ip}`\n👤 User: `{user}`\n🔑 Pass: `{val}`\n📅 Vence: `{result}`"
+        else:
+            msg = f"✅ *Usuario HWID Creado*\n\n🌐 IP: `{ip}`\n👤 Alias: `{user}`\n🛡️ HWID: `{val}`\n📅 Vence: `{result}`"
+            
+        bot.send_message(chat_id, msg, parse_mode="Markdown")
     else:
-        bot.send_message(message.chat.id, f"❌ *Error al crear:* {result}", parse_mode="Markdown")
-        
-    # Limpiar estado
-    if user_id in user_creation_states:
-        del user_creation_states[user_id]
+        bot.send_message(chat_id, f"❌ *Error al crear:* {result}", parse_mode="Markdown")
 
 # --- FUNCIONES DE ADMINISTRADOR ---
 
