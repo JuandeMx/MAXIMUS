@@ -21,17 +21,21 @@ if [ -z "$MAXIMUS_UPDATED" ]; then
         
         # Si NO hay MASTER_IP, es directo desde GitHub
         if [ -z "$MASTER_IP" ]; then
-            echo -e "\e[1;36m[+] Instalación directa desde Repositorio detectada.\e[0m"
-            read -p "¿Deseas instalar este VPS como el NODO MAESTRO (Vendedor)? [s/n]: " is_master
-            if [[ "$is_master" == "s" || "$is_master" == "S" ]]; then
-                echo -e "\e[1;32m[+] Configurando como Nodo Maestro...\e[0m"
-                mkdir -p /etc/MaximusVpsMx
-                touch /etc/MaximusVpsMx/.master_node
+            if [ -f "/etc/MaximusVpsMx/.master_node" ]; then
+                echo -e "\e[1;36m[+] Actualización de Nodo Maestro detectada automáticamente.\e[0m"
             else
-                echo -e "\e[1;33m[!] Instalación de cliente. Necesitas una Key y la IP de tu proveedor.\e[0m"
-                read -p "Ingresa la IP del Servidor Maestro: " MASTER_IP
-                read -p "Ingresa tu Licencia (Key): " CLIENT_KEY
-                MASTER_PORT="6767"
+                echo -e "\e[1;36m[+] Instalación directa desde Repositorio detectada.\e[0m"
+                read -p "¿Deseas instalar este VPS como el NODO MAESTRO (Vendedor)? [s/n]: " is_master
+                if [[ "$is_master" == "s" || "$is_master" == "S" ]]; then
+                    echo -e "\e[1;32m[+] Configurando como Nodo Maestro...\e[0m"
+                    mkdir -p /etc/MaximusVpsMx
+                    touch /etc/MaximusVpsMx/.master_node
+                else
+                    echo -e "\e[1;33m[!] Instalación de cliente. Necesitas una Key y la IP de tu proveedor.\e[0m"
+                    read -p "Ingresa la IP del Servidor Maestro: " MASTER_IP
+                    read -p "Ingresa tu Licencia (Key): " CLIENT_KEY
+                    MASTER_PORT="6767"
+                fi
             fi
         fi
 
