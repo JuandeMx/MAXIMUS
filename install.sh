@@ -47,6 +47,9 @@ if [ -z "$MAXIMUS_UPDATED" ]; then
                 read -p "🔑 Ingresa tu Licencia (Key): " CLIENT_KEY
             fi
             
+            # Limpiar espacios o caracteres invisibles que se copian por error
+            CLIENT_KEY=$(echo "$CLIENT_KEY" | tr -d '\r' | tr -d ' ')
+            
             # Preparar MASTER_URL
             if [ -z "$MASTER_URL" ]; then
                 MASTER_URL="http://$MASTER_IP:$MASTER_PORT"
@@ -66,6 +69,8 @@ if [ -z "$MAXIMUS_UPDATED" ]; then
                 sleep 2
             else
                  echo -e "\e[1;31m[!] ERROR: Licencia expirada, bloqueada o IP inválida.\e[0m"
+                 echo -e "\e[1;33m[DEBUG] Conectado a: $MASTER_URL/check?key=$CLIENT_KEY\e[0m"
+                 echo -e "\e[1;33m[DEBUG] El servidor respondió: $LIC_STATUS\e[0m"
                  exit 1
             fi
 
