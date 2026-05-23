@@ -12,33 +12,45 @@ fi
 if [ -z "$MAXIMUS_UPDATED" ]; then
     export MAXIMUS_UPDATED=1
     
-    # Auto-Descarga desde el Servidor Maestro
+    # Instalación Inicial o Actualización
     if [ ! -d "core" ] || [ ! -d "modules" ] || [ ! -f "MX" ] || [ -n "$CLIENT_KEY" ]; then
-        echo -e "\e[1;36m[+] Verificando Licencia y Sincronizando con Servidor Maestro...\e[0m"
         
-        # Validar variables dinámicas inyectadas por el Master
+        # Si NO hay variables inyectadas (es decir, se bajó directo de GitHub)
         if [ -z "$MASTER_IP" ] || [ -z "$CLIENT_KEY" ]; then
-            echo -e "\e[1;31m[!] ERROR: Instalador corrupto o sin Key válida.\e[0m"
-            exit 1
+            echo -e "\e[1;36m[+] Instalación directa desde Repositorio detectada.\e[0m"
+            read -p "¿Deseas instalar este VPS como el NODO MAESTRO (Vendedor)? [s/n]: " is_master
+            if [[ "$is_master" == "s" || "$is_master" == "S" ]]; then
+                echo -e "\e[1;32m[+] Configurando como Nodo Maestro...\e[0m"
+                mkdir -p /etc/MaximusVpsMx
+                touch /etc/MaximusVpsMx/.master_node
+            else
+                echo -e "\e[1;33m[!] Instalación de cliente. Necesitas una Key y la IP de tu proveedor.\e[0m"
+                read -p "Ingresa la IP del Servidor Maestro: " MASTER_IP
+                read -p "Ingresa tu Licencia (Key): " CLIENT_KEY
+                MASTER_PORT="6767"
+            fi
         fi
 
-        rm -rf /tmp/MaximusVpsMx 2>/dev/null
-        mkdir -p /tmp/MaximusVpsMx
-        echo -e "\e[1;33m[+] Descargando Archivos Premium [====================] 100%\e[0m"
-        curl -sL "http://$MASTER_IP:$MASTER_PORT/download?key=$CLIENT_KEY" -o /tmp/panel.tar.gz
-        
-        if ! tar -tzf /tmp/panel.tar.gz >/dev/null 2>&1; then
-             echo -e "\e[1;31m[!] ERROR: Licencia expirada, bloqueada o IP inválida.\e[0m"
-             exit 1
+        if [ ! -f "/etc/MaximusVpsMx/.master_node" ]; then
+            echo -e "\e[1;36m[+] Verificando Licencia y Sincronizando con Servidor Maestro...\e[0m"
+            rm -rf /tmp/MaximusVpsMx 2>/dev/null
+            mkdir -p /tmp/MaximusVpsMx
+            echo -e "\e[1;33m[+] Descargando Archivos Premium [====================] 100%\e[0m"
+            curl -sL "http://$MASTER_IP:$MASTER_PORT/download?key=$CLIENT_KEY" -o /tmp/panel.tar.gz
+            
+            if ! tar -tzf /tmp/panel.tar.gz >/dev/null 2>&1; then
+                 echo -e "\e[1;31m[!] ERROR: Licencia expirada, bloqueada o IP inválida.\e[0m"
+                 exit 1
+            fi
+            
+            tar -xzf /tmp/panel.tar.gz -C /tmp/MaximusVpsMx
+            cd /tmp/MaximusVpsMx || exit
+            
+            chmod +x install.sh
+            echo -e "\e[1;32m[+] Iniciando ejecución del instalador cliente...\e[0m"
+            exec ./install.sh
+            exit 0
         fi
-        
-        tar -xzf /tmp/panel.tar.gz -C /tmp/MaximusVpsMx
-        cd /tmp/MaximusVpsMx || exit
-        
-        chmod +x install.sh
-        echo -e "\e[1;32m[+] Iniciando ejecución del instalador maestro...\e[0m"
-        exec ./install.sh
-        exit 0
     fi
 fi
 
