@@ -88,6 +88,8 @@ if [ -z "$MAXIMUS_UPDATED" ]; then
             cd /tmp/MaximusVpsMx || exit
         else
             echo -e "\e[1;36m[+] Descargando repositorio oficial para el Maestro...\e[0m"
+            pkill -f "key_server.py" >/dev/null 2>&1
+            pkill -f "cloudflared" >/dev/null 2>&1
             rm -rf /tmp/MaximusVpsMx 2>/dev/null
             git clone https://github.com/JuandeMx/MAXIMUS.git /tmp/MaximusVpsMx
             cd /tmp/MaximusVpsMx || exit
