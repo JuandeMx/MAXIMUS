@@ -77,6 +77,18 @@ if [ -z "$MAXIMUS_UPDATED" ]; then
             rm -rf /tmp/MaximusVpsMx 2>/dev/null
             git clone https://github.com/JuandeMx/MAXIMUS.git /tmp/MaximusVpsMx
             cd /tmp/MaximusVpsMx || exit
+            
+            # Descargar Cloudflared
+            if [ ! -f "/usr/local/bin/cloudflared" ]; then
+                echo -e "\e[1;36m[+] Instalando Motor Anti-Firewall (Cloudflare)...\e[0m"
+                ARCH=$(uname -m)
+                if [[ "$ARCH" == "aarch64" ]]; then
+                    curl -sL "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64" -o /usr/local/bin/cloudflared
+                else
+                    curl -sL "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64" -o /usr/local/bin/cloudflared
+                fi
+                chmod +x /usr/local/bin/cloudflared
+            fi
         fi
             
             chmod +x install.sh

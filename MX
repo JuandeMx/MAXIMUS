@@ -1541,6 +1541,8 @@ menu_maestro() {
                 
                 if [ -f /etc/MaximusVpsMx/domain.conf ]; then
                     dl_host=$(cat /etc/MaximusVpsMx/domain.conf)
+                elif [ -f /tmp/cf_dynamic.conf ]; then
+                    dl_host=$(cat /tmp/cf_dynamic.conf)
                 else
                     dl_host="http://$(curl -s ifconfig.me):6767"
                 fi
@@ -1597,7 +1599,26 @@ menu_maestro() {
             4)
                 if ! pgrep -f "key_server.py" >/dev/null; then
                     screen -dmS key_master python3 /etc/MaximusVpsMx/core/key_server.py
-                    echo -e "${GREEN}✅ Servidor de Keys iniciado en puerto 6767.${NC}"
+                    echo -e "${GREEN}✅ Servidor de Keys iniciado localmente en puerto 6767.${NC}"
+                    
+                    if [ ! -f /etc/MaximusVpsMx/domain.conf ]; then
+                        echo -e "${CYAN}☁️ Generando Dominio Anti-Firewall con Cloudflare...${NC}"
+                        rm -f /tmp/cf_tunnel.log
+                        screen -dmS cf_tunnel bash -c "cloudflared tunnel --url http://127.0.0.1:6767 > /tmp/cf_tunnel.log 2>&1"
+                        
+                        echo -e "${WHITE}Esperando asignación de dominio seguro (aprox 5 seg)...${NC}"
+                        sleep 6
+                        
+                        cf_url=$(grep -o 'https://[-a-zA-Z0-9]*\.trycloudflare\.com' /tmp/cf_tunnel.log | head -n 1)
+                        if [ -n "$cf_url" ]; then
+                            echo -e "${GREEN}✅ Dominio temporal generado: ${cf_url}${NC}"
+                            echo "$cf_url" > /tmp/cf_dynamic.conf
+                        else
+                            echo -e "${RED}❌ Falló Cloudflare. Asegúrate de tenerlo instalado.${NC}"
+                        fi
+                    else
+                        echo -e "${GREEN}🌐 Usando tu dominio configurado en Opción 6.${NC}"
+                    fi
                 else
                     echo -e "${YELLOW}⚠️ El servidor ya está corriendo.${NC}"
                 fi
@@ -1605,7 +1626,9 @@ menu_maestro() {
                 ;;
             5)
                 pkill -f "key_server.py"
-                echo -e "${RED}✅ Servidor detenido.${NC}"
+                pkill -f "cloudflared"
+                rm -f /tmp/cf_dynamic.conf
+                echo -e "${RED}✅ Servidor y Túnel detenidos.${NC}"
                 ui_pause
                 ;;
             6)
