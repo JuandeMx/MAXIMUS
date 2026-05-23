@@ -22,3 +22,11 @@ users.db
 .DS_Store
 Thumbs.db
 .env
+
+# Bot config and data
+bot_config.json
+*.txt
+!README.md
+!MAXIMUS.txt
+!ascii-text-art.txt
+

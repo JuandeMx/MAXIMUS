@@ -147,11 +147,34 @@ menu_usuarios() {
         case $opt_user in
             1)
                 echo -e "\n${YELLOW}▶ MODO DE CREACIÓN${NC}"
-                echo -e "  ${CYAN}[1]${NC} Usuario Normal (Clásico)"
-                echo -e "  ${CYAN}[2]${NC} Usuario Hardware ID (Invisible)"
+                echo -e "  ${CYAN}[1]${NC} Usuario Temporal (Horas)"
+                echo -e "  ${CYAN}[2]${NC} Usuario VIP (Días)"
+                echo -e "  ${CYAN}[3]${NC} Usuario HWID (Invisible)"
                 read -p " Opción: " tipo_creacion
 
-                if [[ "$tipo_creacion" == "2" ]]; then
+                if [[ "$tipo_creacion" == "1" ]]; then
+                    echo -e "\n${YELLOW}▶ Crear Usuario Temporal (Horas)${NC}"
+                    read -p " Nombre del Usuario: " user
+                    [ -z "$user" ] && continue
+                    grep -qw "$user" "$USER_DB" && { echo -e "${RED}❌ Error: Usuario ya existe.${NC}"; sleep 0.1; continue; }
+                    read -p " Contraseña: " pass
+                    read -p " Horas de Duración: " horas
+                    [ -z "$horas" ] && horas=1
+                    read -p " Límite de Conexiones (Por defecto 1): " limit
+                    [ -z "$limit" ] && limit=1
+                    
+                    epoch_sec=$(date -d "+$horas hours" +%s)
+                    exp_date="@$epoch_sec"
+                    linux_exp_date=$(date -d "+1 days" +%Y-%m-%d)
+                    
+                    rm -f /etc/passwd.lock /etc/shadow.lock
+                    useradd -e $linux_exp_date -s /bin/false -M $user 2>/dev/null
+                    echo "$user:$pass" | chpasswd
+                    echo "$user:$pass:$exp_date:OFF:$limit" >> "$USER_DB"
+                    echo "$user:$pass:$exp_date:100:100" >> /etc/MaximusVpsMx/hysteria_users.db
+                    echo -e "${GREEN}✅ Usuario temporal $user creado por $horas horas.${NC}"
+                    ui_pause
+                elif [[ "$tipo_creacion" == "3" ]]; then
                     echo -e "\n${YELLOW}▶ Crear Cliente Hardware ID${NC}"
                     read -p " Nombre/Alias (Ej: Juan): " alias
                     [ -z "$alias" ] && continue
@@ -187,14 +210,15 @@ menu_usuarios() {
                     echo -e "${YELLOW}--------------------------------------${NC}"
                     ui_pause
                 else
-                    echo -e "\n${YELLOW}▶ Crear Usuario Premium${NC}"
+                    echo -e "\n${YELLOW}▶ Crear Usuario VIP (Días)${NC}"
                     read -p " Nombre del Usuario: " user
                     [ -z "$user" ] && continue
                     grep -qw "$user" "$USER_DB" && { echo -e "${RED}❌ Error: Usuario ya existe.${NC}"; sleep 0.1; continue; }
                     read -p " Contraseña: " pass
                     read -p " Días de Duración: " dias
                     [ -z "$dias" ] && dias=30
-                    limit=1
+                    read -p " Límite de Conexiones (Por defecto 1): " limit
+                    [ -z "$limit" ] && limit=1
                     
                     echo -e "${CYAN} ¿Activar Bloqueo por HUID? (s/n)${NC}"
                     read -p " Opción: " h_opt
