@@ -85,7 +85,6 @@ if [ -z "$MAXIMUS_UPDATED" ]; then
             exit 0
         fi
     fi
-fi
 
 echo -e "\n\e[1;36m=========================================================\e[0m"
 echo -e "\e[1;33m          MAXIMUS ELITE PANEL - MASTER INSTALLER         \e[0m"
