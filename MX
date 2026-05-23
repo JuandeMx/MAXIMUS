@@ -1613,8 +1613,11 @@ menu_maestro() {
                 echo -e "Ejemplo: https://midominio.com (o http://192.168.1.1:6767)"
                 read -p "Ingresa tu Dominio/IP Base: " new_domain
                 if [ -n "$new_domain" ]; then
+                    if [[ "$new_domain" != http://* ]] && [[ "$new_domain" != https://* ]]; then
+                        new_domain="http://$new_domain"
+                    fi
                     echo "$new_domain" > /etc/MaximusVpsMx/domain.conf
-                    echo -e "${GREEN}✅ Dominio configurado exitosamente.${NC}"
+                    echo -e "${GREEN}✅ Dominio configurado exitosamente: $new_domain${NC}"
                 else
                     rm -f /etc/MaximusVpsMx/domain.conf
                     echo -e "${YELLOW}⚠️ Dominio reseteado a la IP por defecto.${NC}"
