@@ -30,3 +30,7 @@ bot_config.json
 !MAXIMUS.txt
 !ascii-text-art.txt
 
+
+.master_node
+keys.db
+license.key

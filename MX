@@ -8,6 +8,42 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
+# --- LICENSE CHECK ---
+if [ ! -f /etc/MaximusVpsMx/.master_node ]; then
+    if [ -f /etc/MaximusVpsMx/license.key ]; then
+        source /etc/MaximusVpsMx/license.key
+        if [ -n "$MASTER_IP" ] && [ -n "$MASTER_PORT" ] && [ -n "$CLIENT_KEY" ]; then
+            LIC_STATUS=$(curl -sL --max-time 5 "http://$MASTER_IP:$MASTER_PORT/check?key=$CLIENT_KEY" 2>/dev/null)
+            if [ "$LIC_STATUS" != "OK" ]; then
+                clear
+                echo -e "\033[1;31m=========================================\033[0m"
+                echo -e "\033[1;31m   [!] LICENCIA EXPIRADA O INVÁLIDA  \033[0m"
+                echo -e "\033[1;31m=========================================\033[0m"
+                echo -e "Su acceso ha sido bloqueado por el servidor maestro."
+                while true; do
+                    read -p "Ingrese su nueva Key: " new_key
+                    if [ -n "$new_key" ]; then
+                        NEW_STATUS=$(curl -sL --max-time 5 "http://$MASTER_IP:$MASTER_PORT/check?key=$new_key" 2>/dev/null)
+                        if [ "$NEW_STATUS" == "OK" ]; then
+                             curl -sL "http://$MASTER_IP:$MASTER_PORT/activate?key=$new_key" >/dev/null 2>&1
+                             sed -i "s/CLIENT_KEY=.*/CLIENT_KEY='$new_key'/g" /etc/MaximusVpsMx/license.key
+                             echo -e "\033[1;32mLicencia renovada exitosamente. Cargando panel...\033[0m"
+                             sleep 2
+                             break
+                        else
+                             echo -e "\033[1;31mKey inválida o bloqueada. Intente de nuevo.\033[0m"
+                        fi
+                    fi
+                done
+            fi
+        fi
+    else
+        clear
+        echo -e "\033[1;31mLicencia no encontrada. Contacte a su proveedor.\033[0m"
+        exit 1
+    fi
+fi
+
 # --- COLORES GLOBALES ---
 RED='\033[1;31m'
 GREEN='\033[1;32m'
@@ -1457,6 +1493,89 @@ menu_mantenimiento() {
 
 
 # --- MENÚ PRINCIPAL ---
+# --- MENÚ MAESTRO (VENTA Y KEYS) ---
+menu_maestro() {
+    while true; do
+        ui_header "P A N E L   M A E S T R O"
+        
+        # Check if server is running
+        if pgrep -f "key_server.py" >/dev/null; then
+            srv_st="${GREEN}[EN LÍNEA]${NC}"
+        else
+            srv_st="${RED}[APAGADO]${NC}"
+        fi
+        
+        echo -e "  ${CYAN}[1]>${WHITE} Generar Nueva Key (30 Días)${NC}"
+        echo -e "  ${CYAN}[2]>${WHITE} Listar Keys Activas / Usadas${NC}"
+        echo -e "  ${CYAN}[3]>${WHITE} Eliminar una Key${NC}"
+        ui_subhr
+        echo -e "  ${CYAN}[4]>${WHITE} Iniciar Servidor de Keys | $srv_st${NC}"
+        echo -e "  ${CYAN}[5]>${WHITE} Detener Servidor de Keys${NC}"
+        ui_hr
+        echo -e "  ${WHITE}[0] VOLVER AL MENÚ PRINCIPAL${NC}"
+        ui_hr
+        ui_prompt " Selecciona: "
+        read m_opt
+        
+        case $m_opt in
+            1)
+                new_key="MAX-$(tr -dc A-Z0-9 </dev/urandom | head -c 4)-$(tr -dc A-Z0-9 </dev/urandom | head -c 4)-$(tr -dc A-Z0-9 </dev/urandom | head -c 4)"
+                epoch=$(date +%s)
+                echo "$new_key:UNUSED:0:NONE:$epoch" >> /etc/MaximusVpsMx/keys.db
+                master_ip=$(curl -s ifconfig.me)
+                echo -e "\n${GREEN}✅ KEY CREADA CON ÉXITO: ${WHITE}$new_key${NC}"
+                echo -e "\n${YELLOW}Envía este comando de instalación a tu cliente:${NC}"
+                echo -e "${CYAN}bash <(curl -sL http://${master_ip}:6767/install?key=$new_key)${NC}"
+                ui_pause
+                ;;
+            2)
+                ui_header "KEYS EN EL SISTEMA"
+                if [ ! -f /etc/MaximusVpsMx/keys.db ] || [ ! -s /etc/MaximusVpsMx/keys.db ]; then
+                    echo -e "  No hay keys registradas."
+                else
+                    printf "  %-20s %-8s %-16s %-20s\n" "KEY" "ESTADO" "IP CLIENTE" "EXPIRA"
+                    echo -e "  ------------------------------------------------------------------"
+                    while IFS=':' read -r key stat exp ip crea; do
+                        [ -z "$key" ] && continue
+                        if [ "$stat" == "UNUSED" ]; then
+                            exp_date="N/A (No usada)"
+                        else
+                            exp_date=$(date -d "@$exp" +"%d/%m/%Y" 2>/dev/null || echo "$exp")
+                        fi
+                        printf "  %-20s %-8s %-16s %-20s\n" "$key" "$stat" "$ip" "$exp_date"
+                    done < /etc/MaximusVpsMx/keys.db
+                fi
+                ui_pause
+                ;;
+            3)
+                read -p " Ingrese la Key a eliminar: " del_key
+                if grep -q "$del_key" /etc/MaximusVpsMx/keys.db; then
+                    sed -i "/^$del_key:/d" /etc/MaximusVpsMx/keys.db
+                    echo -e "${GREEN}✅ Key $del_key eliminada.${NC}"
+                else
+                    echo -e "${RED}❌ Key no encontrada.${NC}"
+                fi
+                ui_pause
+                ;;
+            4)
+                if ! pgrep -f "key_server.py" >/dev/null; then
+                    screen -dmS key_master python3 /etc/MaximusVpsMx/core/key_server.py
+                    echo -e "${GREEN}✅ Servidor de Keys iniciado en puerto 6767.${NC}"
+                else
+                    echo -e "${YELLOW}⚠️ El servidor ya está corriendo.${NC}"
+                fi
+                ui_pause
+                ;;
+            5)
+                pkill -f "key_server.py"
+                echo -e "${RED}✅ Servidor detenido.${NC}"
+                ui_pause
+                ;;
+            0) return ;;
+        esac
+    done
+}
+
 # --- MENÚ PRINCIPAL ---
 main_menu() {
     while true; do
@@ -1478,6 +1597,12 @@ main_menu() {
         echo -e "  ${CYAN}[3]>${WHITE} AJUSTES DEL SISTEMA / FIREWALL${NC}"
         ui_subhr
         echo -e "  ${CYAN}[4]>${GREEN} MANTENIMIENTO (Actualizar o Desinstalar)${NC}"
+        
+        if [ -f /etc/MaximusVpsMx/.master_node ]; then
+            ui_subhr
+            echo -e "  ${CYAN}[5]>${YELLOW} PANEL MAESTRO (Venta y Keys)${NC}"
+        fi
+        
         ui_hr
         echo -e "  ${WHITE}[0] SALIR DEL VPS     [7] SALIR SCRIPT    [8] REINICIAR${NC}"
         ui_hr
@@ -1485,13 +1610,15 @@ main_menu() {
         read main_opt
 
         case $main_opt in
-            1) menu_cuentas ;;
+            1) menu_usuarios ;;
             2) menu_protocolos ;;
             3) menu_sistema ;;
             4) menu_mantenimiento ;;
-            7) clear; exit ;;
-            8) echo -e "${YELLOW}🔄 Reiniciando VPS...${NC}"; reboot ;;
-            0) clear; exit ;;
+            5) [ -f /etc/MaximusVpsMx/.master_node ] && menu_maestro ;;
+            0) clear ; exit 0 ;;
+            7) exit 0 ;;
+            8) clear ; read -p "¿Seguro que deseas reiniciar el Servidor? (S/N): " r
+               if [[ "$r" == "S" || "$r" == "s" ]]; then reboot; fi ;;
             *) continue ;;
         esac
     done

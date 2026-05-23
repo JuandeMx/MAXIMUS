@@ -12,20 +12,28 @@ fi
 if [ -z "$MAXIMUS_UPDATED" ]; then
     export MAXIMUS_UPDATED=1
     
-    # Auto-clonado o Actualización Forzada
-    if [ ! -d "core" ] || [ ! -d "modules" ] || [ ! -f "MX" ] || [ -d ".git" ]; then
-        echo -e "\e[1;36m[+] Sincronizando repositorio MaximusVpsMx (Hotfix v2.3)...\e[0m"
-        apt-get install -y git >/dev/null 2>&1
+    # Auto-Descarga desde el Servidor Maestro
+    if [ ! -d "core" ] || [ ! -d "modules" ] || [ ! -f "MX" ] || [ -n "$CLIENT_KEY" ]; then
+        echo -e "\e[1;36m[+] Verificando Licencia y Sincronizando con Servidor Maestro...\e[0m"
         
-        if [ -d ".git" ]; then
-            git fetch --all >/dev/null 2>&1
-            git reset --hard origin/main >/dev/null 2>&1
-        else
-            rm -rf /tmp/MaximusVpsMx
-            echo -e "\e[1;32m[+] Clonando repositorio limpio...\e[0m"
-            git clone --depth=1 https://github.com/JuandeMx/MAXIMUS.git /tmp/MaximusVpsMx
-            cd /tmp/MaximusVpsMx || exit
+        # Validar variables dinámicas inyectadas por el Master
+        if [ -z "$MASTER_IP" ] || [ -z "$CLIENT_KEY" ]; then
+            echo -e "\e[1;31m[!] ERROR: Instalador corrupto o sin Key válida.\e[0m"
+            exit 1
         fi
+
+        rm -rf /tmp/MaximusVpsMx 2>/dev/null
+        mkdir -p /tmp/MaximusVpsMx
+        echo -e "\e[1;33m[+] Descargando Archivos Premium [====================] 100%\e[0m"
+        curl -sL "http://$MASTER_IP:$MASTER_PORT/download?key=$CLIENT_KEY" -o /tmp/panel.tar.gz
+        
+        if ! tar -tzf /tmp/panel.tar.gz >/dev/null 2>&1; then
+             echo -e "\e[1;31m[!] ERROR: Licencia expirada, bloqueada o IP inválida.\e[0m"
+             exit 1
+        fi
+        
+        tar -xzf /tmp/panel.tar.gz -C /tmp/MaximusVpsMx
+        cd /tmp/MaximusVpsMx || exit
         
         chmod +x install.sh
         echo -e "\e[1;32m[+] Iniciando ejecución del instalador maestro...\e[0m"
@@ -195,10 +203,17 @@ chown -R root:root /etc/MaximusVpsMx
 
 
 
+# Activación de la Key y Guardado
+if [ -n "$CLIENT_KEY" ]; then
+    echo -e "MASTER_IP='$MASTER_IP'\nMASTER_PORT='$MASTER_PORT'\nCLIENT_KEY='$CLIENT_KEY'" > /etc/MaximusVpsMx/license.key
+    chmod 600 /etc/MaximusVpsMx/license.key
+    # Activar permanentemente
+    curl -sL "http://$MASTER_IP:$MASTER_PORT/activate?key=$CLIENT_KEY" >/dev/null 2>&1
+fi
+
 # Fin de Instalación
 echo -e "\n\e[1;36m=========================================================\e[0m"
-echo -e "\e[1;32m   [+] INSTALACIÓN DE MAXIMUS ELITE v5.0 COMPLETADA.    \e[0m"
+echo -e "\e[1;32m   [+] INSTALACIÓN DE MAXIMUS ELITE PANEL COMPLETADA.    \e[0m"
 echo -e "\e[1;33m   [!] CONFIGURACIÓN BOT: MX -> Sistema -> Telegram Bot\e[0m"
-echo -e "\e[1;34m   [!] REPOSITORIO: https://github.com/JuandeMx/MAXIMUS \e[0m"
 echo -e "\e[1;36m=========================================================\e[0m\n"
 
