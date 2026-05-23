@@ -1523,9 +1523,24 @@ menu_maestro() {
                 epoch=$(date +%s)
                 echo "$new_key:UNUSED:0:NONE:$epoch" >> /etc/MaximusVpsMx/keys.db
                 master_ip=$(curl -s ifconfig.me)
-                echo -e "\n${GREEN}✅ KEY CREADA CON ÉXITO: ${WHITE}$new_key${NC}"
-                echo -e "\n${YELLOW}Envía este comando de instalación a tu cliente:${NC}"
-                echo -e "${CYAN}bash <(curl -sL http://${master_ip}:6767/install?key=$new_key)${NC}"
+                id_random=$RANDOM$RANDOM
+                clear
+                echo -e " ••••••••••••••••••••••••••••••••••••••••••••••••••••••••••"
+                echo -e " KEY { $new_key } DE @MAXIMUS con ID: $id_random "
+                echo -e " ⚠️ VENCE EN 30 DIAS DESPUÉS DE SER USADA ⚠️"
+                echo -e " ••••••••••••••••••••••••••••••••••••••••••••••••••••••••••"
+                echo -e " 🛡️ SloganKEY 🛡️ : ● MAXIMUS ELITE PANEL ●"
+                echo -e " ••••••••••••••••••••••••••••••••••••••••••••••••••••••••••"
+                echo -e " 🗝️ $new_key 🗝️"
+                echo -e " ••••••••••••••••••••••••••••••••••••••••••••••••••••••••••"
+                echo -e " 🛡️ 𝙸𝚗𝚜𝚝𝚊𝚕𝚊𝚍𝚘𝚛 𝙾𝚏𝚒𝚌𝚒𝚊𝚕 V5.0 🔐 "
+                echo -e " ••••••••••••••••••••••••••••••••••••••••••••••••••••••••••"
+                echo -e "bash <(curl -sL http://${master_ip}:6767/install?key=$new_key)"
+                echo -e " ••••••••••••••••••••••••••••••••••••••••••••••••••••••••••"
+                echo -e " 𝙍𝙚𝙘𝙤𝙢𝙚𝙣𝙙𝙖𝙙𝙤 𝙐𝙗𝙪𝙣𝙩𝙪 20.04 LTS "
+                echo -e " 🧬🧬 S.O Ubuntu 18.04 a 24.04 X64(x86|ARM) 🧬🧬 "
+                echo -e " Debian 8 a 12 (x64) "
+                echo -e " ••••••••••••••••••••••••••••••••••••••••••••••••••••••••••"
                 ui_pause
                 ;;
             2)
