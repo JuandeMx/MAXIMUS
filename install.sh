@@ -19,8 +19,8 @@ if [ -z "$MAXIMUS_UPDATED" ]; then
     # Instalación Inicial o Actualización
     if [ ! -d "core" ] || [ ! -d "modules" ] || [ ! -f "MX" ] || [ -n "$CLIENT_KEY" ]; then
         
-        # Si NO hay variables inyectadas (es decir, se bajó directo de GitHub)
-        if [ -z "$MASTER_IP" ] || [ -z "$CLIENT_KEY" ]; then
+        # Si NO hay MASTER_IP, es directo desde GitHub
+        if [ -z "$MASTER_IP" ]; then
             echo -e "\e[1;36m[+] Instalación directa desde Repositorio detectada.\e[0m"
             read -p "¿Deseas instalar este VPS como el NODO MAESTRO (Vendedor)? [s/n]: " is_master
             if [[ "$is_master" == "s" || "$is_master" == "S" ]]; then
@@ -36,14 +36,37 @@ if [ -z "$MAXIMUS_UPDATED" ]; then
         fi
 
         if [ ! -f "/etc/MaximusVpsMx/.master_node" ]; then
-            echo -e "\e[1;36m[+] Verificando Licencia y Sincronizando con Servidor Maestro...\e[0m"
+            
+            # Pedir Key si no se pasó por argumento
+            if [ -z "$CLIENT_KEY" ]; then
+                echo -e ""
+                read -p "🔑 Ingresa tu Licencia (Key): " CLIENT_KEY
+            fi
+            
+            echo -e "\e[1;36m[+] Verificando Licencia...\e[0m"
+            LIC_STATUS=$(curl -sL "http://$MASTER_IP:$MASTER_PORT/check?key=$CLIENT_KEY" 2>/dev/null)
+            
+            if [[ "$LIC_STATUS" == OK* ]]; then
+                LIC_TYPE=$(echo "$LIC_STATUS" | cut -d':' -f2)
+                echo -e "\e[1;32m✅ Key validada exitosamente.\e[0m"
+                if [ "$LIC_TYPE" == "ILIMITED" ]; then
+                    echo -e "\e[1;36m[⭐] Licencia asignada: ILIMITADA\e[0m"
+                else
+                    echo -e "\e[1;36m[⏳] Licencia asignada: 30 DÍAS\e[0m"
+                fi
+                sleep 2
+            else
+                 echo -e "\e[1;31m[!] ERROR: Licencia expirada, bloqueada o IP inválida.\e[0m"
+                 exit 1
+            fi
+
             rm -rf /tmp/MaximusVpsMx 2>/dev/null
             mkdir -p /tmp/MaximusVpsMx
             echo -e "\e[1;33m[+] Descargando Archivos Premium [====================] 100%\e[0m"
             curl -sL "http://$MASTER_IP:$MASTER_PORT/download?key=$CLIENT_KEY" -o /tmp/panel.tar.gz
             
             if ! tar -tzf /tmp/panel.tar.gz >/dev/null 2>&1; then
-                 echo -e "\e[1;31m[!] ERROR: Licencia expirada, bloqueada o IP inválida.\e[0m"
+                 echo -e "\e[1;31m[!] ERROR al extraer archivos del servidor maestro.\e[0m"
                  exit 1
             fi
             

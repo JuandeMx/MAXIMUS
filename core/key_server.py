@@ -30,19 +30,20 @@ def read_keys():
         for line in f:
             parts = line.strip().split(':')
             if len(parts) >= 5:
-                # Format: KEY:STATUS:ACTIVATION_EPOCH:IP:CREATED_EPOCH
+                # Format: KEY:STATUS:ACTIVATION_EPOCH:IP:CREATED_EPOCH[:TYPE]
                 keys[parts[0]] = {
                     'status': parts[1],
                     'activation_epoch': int(parts[2]),
                     'ip': parts[3],
-                    'created_epoch': int(parts[4])
+                    'created_epoch': int(parts[4]),
+                    'type': parts[5] if len(parts) >= 6 else '30D'
                 }
     return keys
 
 def save_keys(keys):
     with open(KEYS_FILE, 'w') as f:
         for k, v in keys.items():
-            f.write(f"{k}:{v['status']}:{v['activation_epoch']}:{v['ip']}:{v['created_epoch']}\n")
+            f.write(f"{k}:{v['status']}:{v['activation_epoch']}:{v['ip']}:{v['created_epoch']}:{v.get('type', '30D')}\n")
 
 class KeyHandler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
@@ -121,8 +122,11 @@ class KeyHandler(http.server.SimpleHTTPRequestHandler):
                 if kdata['status'] == 'UNUSED':
                     kdata['status'] = 'USED'
                     kdata['ip'] = client_ip
-                    # 30 días = 2592000
-                    kdata['activation_epoch'] = current_time + 2592000
+                    if kdata.get('type') == 'ILIMITED':
+                        kdata['activation_epoch'] = 0
+                    else:
+                        # 30 días = 2592000
+                        kdata['activation_epoch'] = current_time + 2592000
                     save_keys(keys)
                     
                 self.send_response(200)
@@ -131,10 +135,11 @@ class KeyHandler(http.server.SimpleHTTPRequestHandler):
                 self.wfile.write(b"ACTIVATED")
                 
             elif path == "/check":
+                ktype = kdata.get('type', '30D')
                 self.send_response(200)
                 self.send_header('Content-type', 'text/plain')
                 self.end_headers()
-                self.wfile.write(b"OK")
+                self.wfile.write(f"OK:{ktype}".encode('utf-8'))
         elif path == "/setup":
             # Devolver el instalador modificando SOLO MASTER_IP y MASTER_PORT (la Key viene por argumento)
             install_path = os.path.join(PANEL_DIR, "install.sh")

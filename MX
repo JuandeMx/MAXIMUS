@@ -1505,7 +1505,7 @@ menu_maestro() {
             srv_st="${RED}[APAGADO]${NC}"
         fi
         
-        echo -e "  ${CYAN}[1]>${WHITE} Generar Nueva Key (30 Días)${NC}"
+        echo -e "  ${CYAN}[1]>${WHITE} Generar Nueva Key (30 Días o Ilimitada)${NC}"
         echo -e "  ${CYAN}[2]>${WHITE} Listar Keys Activas / Usadas${NC}"
         echo -e "  ${CYAN}[3]>${WHITE} Eliminar una Key${NC}"
         ui_subhr
@@ -1520,9 +1520,25 @@ menu_maestro() {
         
         case $m_opt in
             1)
-                new_key="MAX-$(tr -dc A-Z0-9 </dev/urandom | head -c 4)-$(tr -dc A-Z0-9 </dev/urandom | head -c 4)-$(tr -dc A-Z0-9 </dev/urandom | head -c 4)"
+                ui_header "GENERADOR DE KEYS"
+                echo -e "  ${CYAN}[1]${WHITE} Key de 30 Días"
+                echo -e "  ${CYAN}[2]${WHITE} Key ILIMITADA"
+                echo -n "  Selecciona el tipo: "
+                read k_type
+                
+                if [ "$k_type" == "2" ]; then
+                    new_key="MAX-UNL-$(tr -dc A-Z0-9 </dev/urandom | head -c 8)"
+                    db_type="ILIMITED"
+                    msg_exp="⚠️ KEY ILIMITADA (NO CADUCA) ⚠️"
+                else
+                    new_key="MAX-30D-$(tr -dc A-Z0-9 </dev/urandom | head -c 8)"
+                    db_type="30D"
+                    msg_exp="⚠️ VENCE EN 30 DIAS DESPUÉS DE SER USADA ⚠️"
+                fi
+                
                 epoch=$(date +%s)
-                echo "$new_key:UNUSED:0:NONE:$epoch" >> /etc/MaximusVpsMx/keys.db
+                echo "$new_key:UNUSED:0:NONE:$epoch:$db_type" >> /etc/MaximusVpsMx/keys.db
+                
                 if [ -f /etc/MaximusVpsMx/domain.conf ]; then
                     dl_host=$(cat /etc/MaximusVpsMx/domain.conf)
                 else
@@ -1533,7 +1549,7 @@ menu_maestro() {
                 clear
                 echo -e " ••••••••••••••••••••••••••••••••••••••••••••••••••••••••••"
                 echo -e " KEY { $new_key } DE @MAXIMUS con ID: $id_random "
-                echo -e " ⚠️ VENCE EN 30 DIAS DESPUÉS DE SER USADA ⚠️"
+                echo -e " $msg_exp"
                 echo -e " ••••••••••••••••••••••••••••••••••••••••••••••••••••••••••"
                 echo -e " 🛡️ SloganKEY 🛡️ : ● MAXIMUS ELITE PANEL ●"
                 echo -e " ••••••••••••••••••••••••••••••••••••••••••••••••••••••••••"
@@ -1541,7 +1557,7 @@ menu_maestro() {
                 echo -e " ••••••••••••••••••••••••••••••••••••••••••••••••••••••••••"
                 echo -e " 🛡️ 𝙸𝚗𝚜𝚝𝚊𝚕𝚊𝚍𝚘𝚛 𝙾𝚏𝚒𝚌𝚒𝚊𝚕 V5.0 🔐 "
                 echo -e " ••••••••••••••••••••••••••••••••••••••••••••••••••••••••••"
-                echo -e "apt update -y; apt upgrade -y; wget -q $dl_host/setup; chmod 777 setup; ./setup --$new_key"
+                echo -e "apt update -y; apt upgrade -y; wget -q $dl_host/setup; chmod 777 setup; ./setup"
                 echo -e " ••••••••••••••••••••••••••••••••••••••••••••••••••••••••••"
                 echo -e " 𝙍𝙚𝙘𝙤𝙢𝙚𝙣𝙙𝙖𝙙𝙤 𝙐𝙗𝙪𝙣𝙩𝙪 20.04 LTS "
                 echo -e " 🧬🧬 S.O Ubuntu 18.04 a 24.04 X64(x86|ARM) 🧬🧬 "
