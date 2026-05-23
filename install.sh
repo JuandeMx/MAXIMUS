@@ -9,6 +9,10 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 # Evitar bucle infinito en la actualización
+if [[ "$1" == --* ]]; then
+    CLIENT_KEY="${1#--}"
+fi
+
 if [ -z "$MAXIMUS_UPDATED" ]; then
     export MAXIMUS_UPDATED=1
     

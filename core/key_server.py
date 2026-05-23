@@ -135,6 +135,28 @@ class KeyHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_header('Content-type', 'text/plain')
                 self.end_headers()
                 self.wfile.write(b"OK")
+        elif path == "/setup":
+            # Devolver el instalador modificando SOLO MASTER_IP y MASTER_PORT (la Key viene por argumento)
+            install_path = os.path.join(PANEL_DIR, "install.sh")
+            if not os.path.exists(install_path):
+                self.send_error(404, "Installer not found")
+                return
+            
+            with open(install_path, 'r') as f:
+                content = f.read()
+            
+            master_ip = self.headers.get('Host', '').split(':')[0]
+            if not master_ip:
+                master_ip = "127.0.0.1"
+            
+            injection = f"\nMASTER_IP='{master_ip}'\nMASTER_PORT='{PORT}'\n"
+            content = content.replace("#!/bin/bash", "#!/bin/bash" + injection)
+            
+            self.send_response(200)
+            self.send_header('Content-type', 'text/plain')
+            self.end_headers()
+            self.wfile.write(content.encode('utf-8'))
+            
         else:
             self.send_error(404, "Not Found")
 

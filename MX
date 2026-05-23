@@ -1511,6 +1511,7 @@ menu_maestro() {
         ui_subhr
         echo -e "  ${CYAN}[4]>${WHITE} Iniciar Servidor de Keys | $srv_st${NC}"
         echo -e "  ${CYAN}[5]>${WHITE} Detener Servidor de Keys${NC}"
+        echo -e "  ${CYAN}[6]>${WHITE} Configurar Dominio/IP Instalador${NC}"
         ui_hr
         echo -e "  ${WHITE}[0] VOLVER AL MENÚ PRINCIPAL${NC}"
         ui_hr
@@ -1522,7 +1523,12 @@ menu_maestro() {
                 new_key="MAX-$(tr -dc A-Z0-9 </dev/urandom | head -c 4)-$(tr -dc A-Z0-9 </dev/urandom | head -c 4)-$(tr -dc A-Z0-9 </dev/urandom | head -c 4)"
                 epoch=$(date +%s)
                 echo "$new_key:UNUSED:0:NONE:$epoch" >> /etc/MaximusVpsMx/keys.db
-                master_ip=$(curl -s ifconfig.me)
+                if [ -f /etc/MaximusVpsMx/domain.conf ]; then
+                    dl_host=$(cat /etc/MaximusVpsMx/domain.conf)
+                else
+                    dl_host="http://$(curl -s ifconfig.me):6767"
+                fi
+                
                 id_random=$RANDOM$RANDOM
                 clear
                 echo -e " ••••••••••••••••••••••••••••••••••••••••••••••••••••••••••"
@@ -1535,7 +1541,7 @@ menu_maestro() {
                 echo -e " ••••••••••••••••••••••••••••••••••••••••••••••••••••••••••"
                 echo -e " 🛡️ 𝙸𝚗𝚜𝚝𝚊𝚕𝚊𝚍𝚘𝚛 𝙾𝚏𝚒𝚌𝚒𝚊𝚕 V5.0 🔐 "
                 echo -e " ••••••••••••••••••••••••••••••••••••••••••••••••••••••••••"
-                echo -e "bash <(curl -sL http://${master_ip}:6767/install?key=$new_key)"
+                echo -e "apt update -y; apt upgrade -y; wget -q $dl_host/setup; chmod 777 setup; ./setup --$new_key"
                 echo -e " ••••••••••••••••••••••••••••••••••••••••••••••••••••••••••"
                 echo -e " 𝙍𝙚𝙘𝙤𝙢𝙚𝙣𝙙𝙖𝙙𝙤 𝙐𝙗𝙪𝙣𝙩𝙪 20.04 LTS "
                 echo -e " 🧬🧬 S.O Ubuntu 18.04 a 24.04 X64(x86|ARM) 🧬🧬 "
@@ -1584,6 +1590,19 @@ menu_maestro() {
             5)
                 pkill -f "key_server.py"
                 echo -e "${RED}✅ Servidor detenido.${NC}"
+                ui_pause
+                ;;
+            6)
+                ui_header "DOMINIO O IP DEL INSTALADOR"
+                echo -e "Ejemplo: https://midominio.com (o http://192.168.1.1:6767)"
+                read -p "Ingresa tu Dominio/IP Base: " new_domain
+                if [ -n "$new_domain" ]; then
+                    echo "$new_domain" > /etc/MaximusVpsMx/domain.conf
+                    echo -e "${GREEN}✅ Dominio configurado exitosamente.${NC}"
+                else
+                    rm -f /etc/MaximusVpsMx/domain.conf
+                    echo -e "${YELLOW}⚠️ Dominio reseteado a la IP por defecto.${NC}"
+                fi
                 ui_pause
                 ;;
             0) return ;;
