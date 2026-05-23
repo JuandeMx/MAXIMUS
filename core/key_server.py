@@ -146,23 +146,43 @@ class KeyHandler(http.server.SimpleHTTPRequestHandler):
             if not os.path.exists(install_path):
                 self.send_error(404, "Installer not found")
                 return
-            
-            with open(install_path, 'r') as f:
-                content = f.read()
-            
-            master_ip = self.headers.get('Host', '').split(':')[0]
-            if not master_ip:
-                master_ip = "127.0.0.1"
-            
-            injection = f"\nMASTER_IP='{master_ip}'\nMASTER_PORT='{PORT}'\n"
-            content = content.replace("#!/bin/bash", "#!/bin/bash" + injection)
-            
-            self.send_response(200)
-            self.send_header('Content-type', 'text/plain')
-            self.end_headers()
-            self.wfile.write(content.encode('utf-8'))
-            
-        else:
+            try:
+                with open(install_path, "r", encoding="utf-8") as f:
+                    content = f.read()
+
+                # El dominio puede ser el de CF o la IP
+                domain_file = os.path.join(PANEL_DIR, "domain.conf")
+                dyn_domain_file = "/tmp/cf_dynamic.conf"
+                
+                if os.path.exists(domain_file):
+                    with open(domain_file, "r") as f:
+                        host_url = f.read().strip()
+                elif os.path.exists(dyn_domain_file):
+                    with open(dyn_domain_file, "r") as f:
+                        host_url = f.read().strip()
+                else:
+                    import urllib.request
+                    try:
+                        public_ip = urllib.request.urlopen('https://ifconfig.me').read().decode('utf8').strip()
+                    except:
+                        public_ip = "127.0.0.1"
+                    host_url = f"http://{public_ip}:6767"
+
+                # Inyectar MASTER_URL para evitar problemas con puertos https implícitos (443)
+                injection = f"\nMASTER_URL='{host_url}'\n"
+                content = content.replace("#!/bin/bash", "#!/bin/bash" + injection)
+                
+                # Por compatibilidad, limpiamos MASTER_IP
+                master_ip_raw = host_url.replace("https://", "").replace("http://", "").split(":")[0]
+                content = re.sub(r'MASTER_IP=".*?"', f'MASTER_IP="{master_ip_raw}"', content, count=1)
+                content = re.sub(r'MASTER_PORT=".*?"', f'MASTER_PORT="80"', content, count=1)
+                
+                self.send_response(200)
+                self.send_header("Content-type", "text/x-shellscript")
+                self.end_headers()
+                self.wfile.write(content.encode("utf-8"))
+            except Exception as e:
+                self.send_error(500, str(e))
             self.send_error(404, "Not Found")
 
 def run_server():
