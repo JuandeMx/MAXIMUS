@@ -72,6 +72,12 @@ if [ -z "$MAXIMUS_UPDATED" ]; then
             
             tar -xzf /tmp/panel.tar.gz -C /tmp/MaximusVpsMx
             cd /tmp/MaximusVpsMx || exit
+        else
+            echo -e "\e[1;36m[+] Descargando repositorio oficial para el Maestro...\e[0m"
+            rm -rf /tmp/MaximusVpsMx 2>/dev/null
+            git clone https://github.com/JuandeMx/MAXIMUS.git /tmp/MaximusVpsMx
+            cd /tmp/MaximusVpsMx || exit
+        fi
             
             chmod +x install.sh
             echo -e "\e[1;32m[+] Iniciando ejecución del instalador cliente...\e[0m"
