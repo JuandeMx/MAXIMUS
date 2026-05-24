@@ -281,7 +281,14 @@ if [ -n "$CLIENT_KEY" ]; then
     echo -e "MASTER_IP='$MASTER_IP'\nMASTER_PORT='$MASTER_PORT'\nCLIENT_KEY='$CLIENT_KEY'" > /etc/MaximusVpsMx/license.key
     chmod 600 /etc/MaximusVpsMx/license.key
     # Activar permanentemente
-    curl -sL "http://$MASTER_IP:$MASTER_PORT/activate?key=$CLIENT_KEY" >/dev/null 2>&1
+    curl -4 -sL "http://$MASTER_IP:$MASTER_PORT/activate?key=$CLIENT_KEY" >/dev/null 2>&1
+fi
+
+# Iniciar servidor Python si es maestro
+if [ -f "/etc/MaximusVpsMx/.master_node" ]; then
+    echo -e "\e[1;36m[+] Iniciando Servidor de Licencias localmente...\e[0m"
+    pkill -f "key_server.py" >/dev/null 2>&1
+    nohup python3 /etc/MaximusVpsMx/core/key_server.py > /tmp/key_server.log 2>&1 &
 fi
 
 # Fin de Instalación
