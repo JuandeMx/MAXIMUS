@@ -138,10 +138,12 @@ class KeyHandler(http.server.SimpleHTTPRequestHandler):
                 
             elif path == "/check":
                 ktype = kdata.get('type', '30D')
+                response_str = f"OK:{ktype}"
                 self.send_response(200)
                 self.send_header('Content-type', 'text/plain')
+                self.send_header('Content-Length', str(len(response_str)))
                 self.end_headers()
-                self.wfile.write(f"OK:{ktype}".encode('utf-8'))
+                self.wfile.write(response_str.encode('utf-8'))
             return
             
         elif path == "/setup":
@@ -158,13 +160,22 @@ class KeyHandler(http.server.SimpleHTTPRequestHandler):
                 domain_file = os.path.join(PANEL_DIR, "domain.conf")
                 cf_domain_file = os.path.join(PANEL_DIR, "cloudflare.conf")
                 
+                host_url = None
                 if os.path.exists(domain_file):
                     with open(domain_file, "r") as f:
                         host_url = f.read().strip()
                 elif os.path.exists(cf_domain_file):
                     with open(cf_domain_file, "r") as f:
                         host_url = f.read().strip()
-                else:
+                
+                # Foolproof fallback: read directly from the cloudflare log
+                if not host_url and os.path.exists("/tmp/cf_tunnel.log"):
+                    with open("/tmp/cf_tunnel.log", "r") as f:
+                        match = re.search(r'https://[-a-zA-Z0-9]*\.trycloudflare\.com', f.read())
+                        if match:
+                            host_url = match.group(0)
+
+                if not host_url:
                     try:
                         public_ip = urllib.request.urlopen('https://ifconfig.me').read().decode('utf8').strip()
                     except:
