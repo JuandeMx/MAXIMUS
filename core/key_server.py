@@ -2,6 +2,7 @@
 import http.server
 import socketserver
 import urllib.parse
+import urllib.request
 import os
 import time
 import tarfile
@@ -164,7 +165,6 @@ class KeyHandler(http.server.SimpleHTTPRequestHandler):
                     with open(dyn_domain_file, "r") as f:
                         host_url = f.read().strip()
                 else:
-                    import urllib.request
                     try:
                         public_ip = urllib.request.urlopen('https://ifconfig.me').read().decode('utf8').strip()
                     except:
