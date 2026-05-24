@@ -1476,6 +1476,7 @@ menu_mantenimiento() {
                     cd /tmp/MaximusVpsMx && chmod +x install.sh && bash install.sh
                     exec "$0" ; exit
                 fi
+                ;;
             4)
                 echo -e "\n${RED}================ ¡¡PELIGRO!! ================${NC}"
                 read -p "¿Estás 100% seguro de destruir MaximusVpsMx? [S/N]: " desc
