@@ -7,9 +7,9 @@ username="$PAM_USER"
 # Si no hay usuario, salir silenciosamente
 [ -z "$username" ] && exit 0
 
-# Excepción para el root
-if [ "$username" == "root" ]; then
-    display_user="root"
+# Excepción para el root y usuarios administradores (sudoers)
+if [ "$username" == "root" ] || id -nG "$username" 2>/dev/null | grep -qw "sudo"; then
+    display_user="$username (Admin)"
 else
     db_line=$(grep "^${username}:" /etc/MaximusVpsMx/users.db 2>/dev/null)
     
