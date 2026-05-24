@@ -1559,7 +1559,7 @@ menu_maestro() {
                 echo -e " ••••••••••••••••••••••••••••••••••••••••••••••••••••••••••"
                 echo -e " 🛡️ 𝙸𝚗𝚜𝚝𝚊𝚕𝚊𝚍𝚘𝚛 𝙾𝚏𝚒𝚌𝚒𝚊𝚕 V5.0 🔐 "
                 echo -e " ••••••••••••••••••••••••••••••••••••••••••••••••••••••••••"
-                echo -e "apt update -y; apt upgrade -y; wget -q $dl_host/setup; chmod 777 setup; ./setup"
+                echo -e "apt update -y; apt upgrade -y; rm -f setup; wget -qO setup --user-agent=\"Mozilla/5.0\" $dl_host/setup; chmod +x setup; ./setup"
                 echo -e " ••••••••••••••••••••••••••••••••••••••••••••••••••••••••••"
                 echo -e " 𝙍𝙚𝙘𝙤𝙢𝙚𝙣𝙙𝙖𝙙𝙤 𝙐𝙗𝙪𝙣𝙩𝙪 20.04 LTS "
                 echo -e " 🧬🧬 S.O Ubuntu 18.04 a 24.04 X64(x86|ARM) 🧬🧬 "
