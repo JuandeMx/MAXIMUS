@@ -1379,37 +1379,12 @@ menu_mantenimiento() {
                 echo -e "${CYAN}[+] Descargando código fresco desde GitHub...${NC}"
                 rm -rf "$TEMP_DIR" 2>/dev/null
                 cd /root || exit
-                if git clone --depth=1 -q "$URL_REPO" "$TEMP_DIR"; then
-                    echo -e "${GREEN}[OK] Descarga exitosa. Inyectando cambios...${NC}"
-                    cp -rf $TEMP_DIR/* /etc/MaximusVpsMx/
-                    chmod +x /etc/MaximusVpsMx/MX
-                    chmod +x /etc/MaximusVpsMx/modules/*.sh
-                    chmod +x /etc/MaximusVpsMx/core/*.sh
-                    systemctl restart mx-proxy ws-epro stunnel4 maximus-bot 2>/dev/null
-
-                    rm -rf "$TEMP_DIR"
-                    echo -e "${GREEN}✅ ACTUALIZACIÓN RÁPIDA COMPLETADA.${NC}"
-                    echo -e "${WHITE}Nota: Todos los servicios han sido reiniciados con el código nuevo.${NC}"
-                else
-                    echo -e "${RED}❌ ERROR: No se pudo conectar con GitHub.${NC}"
-                fi
-                ui_pause ; return ;;
-            2)
+                        2)
                 echo -e "\n${YELLOW}▶ Iniciando Actualización Inteligente...${NC}"
                 URL_REPO="https://github.com/JuandeMx/MAXIMUS.git"
                 TEMP_DIR="/tmp/MaximusVpsMx_temp"
-                echo -e "${CYAN}[+] Descargando última versión de GitHub...${NC}"
-                rm -rf "$TEMP_DIR" 2>/dev/null
-                # Asegurar directorio de trabajo estable
-                cd /root || exit
-                if git clone --depth=1 "$URL_REPO" "$TEMP_DIR"; then
-                    echo -e "${GREEN}[OK] Descarga exitosa.${NC}"
-                else
-                    echo -e "${RED}❌ ERROR: No se pudo conectar con GitHub.${NC}"
-                    ui_pause ; return
-                fi
 
-                echo -e "${CYAN}[+] Creando respaldo de datos vitales...${NC}"
+                echo -e "${CYAN}[+] Creando respaldo de datos vitales (Usuarios, Keys, IPs)...${NC}"
                 mkdir -p /tmp/MX_BACKUP
                 [ -f /etc/MaximusVpsMx/users.db ] && cp /etc/MaximusVpsMx/users.db /tmp/MX_BACKUP/
                 [ -f /etc/MaximusVpsMx/bot_config.json ] && cp /etc/MaximusVpsMx/bot_config.json /tmp/MX_BACKUP/
@@ -1418,11 +1393,32 @@ menu_mantenimiento() {
                 [ -f /etc/MaximusVpsMx/slowdns/ns-domain.conf ] && cp /etc/MaximusVpsMx/slowdns/ns-domain.conf /tmp/MX_BACKUP/
                 [ -f /etc/stunnel/stunnel.pem ] && cp /etc/stunnel/stunnel.pem /tmp/MX_BACKUP/
                 [ -f /etc/default/dropbear ] && cp /etc/default/dropbear /tmp/MX_BACKUP/
+                # Archivos clave del Maestro
+                [ -f /etc/MaximusVpsMx/.master_node ] && cp /etc/MaximusVpsMx/.master_node /tmp/MX_BACKUP/
+                [ -f /etc/MaximusVpsMx/keys.db ] && cp /etc/MaximusVpsMx/keys.db /tmp/MX_BACKUP/
+                [ -f /etc/MaximusVpsMx/domain.conf ] && cp /etc/MaximusVpsMx/domain.conf /tmp/MX_BACKUP/
+                [ -f /etc/MaximusVpsMx/license.key ] && cp /etc/MaximusVpsMx/license.key /tmp/MX_BACKUP/
+
+                echo -e "${RED}[!] Deteniendo todos los servicios y procesos vivos...${NC}"
+                systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot 2>/dev/null
+                killall -9 badvpn-udpgw hysteria udp-custom python3 stunnel4 2>/dev/null
+                pkill -f "key_server.py" >/dev/null 2>&1
+                pkill -f "cloudflared" >/dev/null 2>&1
+
+                echo -e "${CYAN}[+] Descargando última versión de GitHub...${NC}"
+                rm -rf "$TEMP_DIR" 2>/dev/null
+                cd /tmp || exit
+                if git clone --depth=1 -q "$URL_REPO" "$TEMP_DIR"; then
+                    echo -e "${GREEN}[OK] Descarga exitosa.${NC}"
+                else
+                    echo -e "${RED}❌ ERROR: No se pudo conectar con GitHub.${NC}"
+                    ui_pause ; return
+                fi
 
                 echo -e "${CYAN}[+] Reemplazando archivos del sistema...${NC}"
-                systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns 2>/dev/null
                 rm -rf /etc/MaximusVpsMx
                 rm -f /usr/local/bin/MX
+                rm -f /root/setup 2>/dev/null
 
                 echo -e "${CYAN}[+] Ejecutando instalador...${NC}"
                 cd "$TEMP_DIR" && chmod +x install.sh && bash install.sh
@@ -1432,39 +1428,52 @@ menu_mantenimiento() {
                 [ -f /tmp/MX_BACKUP/bot_config.json ] && cp /tmp/MX_BACKUP/bot_config.json /etc/MaximusVpsMx/
                 [ -f /tmp/MX_BACKUP/hysteria_users.db ] && cp /tmp/MX_BACKUP/hysteria_users.db /etc/MaximusVpsMx/
                 [ -f /tmp/MX_BACKUP/cloudflare.conf ] && cp /tmp/MX_BACKUP/cloudflare.conf /etc/MaximusVpsMx/
+                mkdir -p /etc/MaximusVpsMx/slowdns
                 [ -f /tmp/MX_BACKUP/ns-domain.conf ] && cp /tmp/MX_BACKUP/ns-domain.conf /etc/MaximusVpsMx/slowdns/
                 [ -f /tmp/MX_BACKUP/stunnel.pem ] && cp /tmp/MX_BACKUP/stunnel.pem /etc/stunnel/
                 [ -f /tmp/MX_BACKUP/dropbear ] && cp /tmp/MX_BACKUP/dropbear /etc/default/
+                # Restaurar Archivos clave del Maestro
+                [ -f /tmp/MX_BACKUP/.master_node ] && cp /tmp/MX_BACKUP/.master_node /etc/MaximusVpsMx/
+                [ -f /tmp/MX_BACKUP/keys.db ] && cp /tmp/MX_BACKUP/keys.db /etc/MaximusVpsMx/
+                [ -f /tmp/MX_BACKUP/domain.conf ] && cp /tmp/MX_BACKUP/domain.conf /etc/MaximusVpsMx/
+                [ -f /tmp/MX_BACKUP/license.key ] && cp /tmp/MX_BACKUP/license.key /etc/MaximusVpsMx/
 
                 rm -rf "$TEMP_DIR" /tmp/MX_BACKUP
-                echo -e "\n${GREEN}✅ ACTUALIZACIÓN COMPLETADA EXITOSAMENTE.${NC}"
+                echo -e "\n${GREEN}✅ ACTUALIZACIÓN INTELIGENTE COMPLETADA EXITOSAMENTE.${NC}"
                 read -p "Presiona Enter para reiniciar el panel..." ; exec "$0" ; exit
                 ;;
             3)
                 echo -e "\n${RED}⚠️ REINSTALACION LIMPIA SELECCIONADA${NC}"
-                read -p "¿Estás 100% seguro de borrar TODO? [S/N]: " conf_clean
+                read -p "¿Estás 100% seguro de borrar TODO (Usuarios, Keys, Base de Datos)? [S/N]: " conf_clean
                 if [[ "$conf_clean" == "S" || "$conf_clean" == "s" ]]; then
-                    echo -e "${RED}🔥 INICIANDO LIMPIEZA TOTAL...${NC}"
-                    systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns 2>/dev/null
+                    echo -e "${RED}🔥 INICIANDO LIMPIEZA TOTAL Y MATANDO PROCESOS...${NC}"
+                    systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot 2>/dev/null
+                    killall -9 badvpn-udpgw hysteria udp-custom python3 stunnel4 2>/dev/null
+                    pkill -f "key_server.py" >/dev/null 2>&1
+                    pkill -f "cloudflared" >/dev/null 2>&1
                     rm -rf /etc/MaximusVpsMx
                     rm -f /usr/local/bin/MX
+                    rm -f /root/setup 2>/dev/null
                     
                     cd /tmp || exit
                     rm -rf /tmp/MaximusVpsMx
-                    git clone --depth=1 https://github.com/JuandeMx/MAXIMUS.git /tmp/MaximusVpsMx
+                    git clone --depth=1 -q https://github.com/JuandeMx/MAXIMUS.git /tmp/MaximusVpsMx
                     cd /tmp/MaximusVpsMx && chmod +x install.sh && bash install.sh
                     exec "$0" ; exit
                 fi
-                ;;
             4)
                 echo -e "\n${RED}================ ¡¡PELIGRO!! ================${NC}"
                 read -p "¿Estás 100% seguro de destruir MaximusVpsMx? [S/N]: " desc
                 if [[ "$desc" == "S" || "$desc" == "s" ]]; then
                     echo -e "${RED}🔥 INICIANDO PURGA MASIVA Y LIMPIEZA TOTAL...${NC}"
-                    # Detener y deshabilitar servicios complejos
-                    systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns 2>/dev/null
-                    systemctl stop x-ui openvpn-server@server hysteria udp-custom ws-epro 2>/dev/null
+                    # Detener y deshabilitar servicios complejos y matar todo
+                    systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot 2>/dev/null
+                    systemctl stop x-ui openvpn-server@server 2>/dev/null
                     systemctl disable x-ui openvpn-server@server hysteria udp-custom ws-epro 2>/dev/null
+                    killall -9 badvpn-udpgw hysteria udp-custom python3 stunnel4 2>/dev/null
+                    pkill -f "key_server.py" >/dev/null 2>&1
+                    pkill -f "cloudflared" >/dev/null 2>&1
+                    rm -f /root/setup 2>/dev/null
                     
                     # Eliminar directorios y binarios externos
                     rm -rf /usr/local/x-ui /etc/x-ui /usr/bin/x-ui 2>/dev/null
