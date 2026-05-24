@@ -1413,24 +1413,51 @@ menu_mantenimiento() {
         case $mant_opt in
             1)
                 echo -e "\n${YELLOW}▶ Iniciando Actualización Rápida Express...${NC}"
-                URL_REPO="https://github.com/JuandeMx/MAXIMUS.git"
                 TEMP_DIR="/tmp/MaximusVpsMx_fast"
-                echo -e "${CYAN}[+] Descargando código fresco desde GitHub...${NC}"
                 rm -rf "$TEMP_DIR" 2>/dev/null
-                cd /root || exit
-                if git clone --depth=1 -q "$URL_REPO" "$TEMP_DIR"; then
-                    echo -e "${GREEN}[OK] Descarga exitosa. Inyectando cambios...${NC}"
-                    cp -rf $TEMP_DIR/* /etc/MaximusVpsMx/
-                    chmod +x /etc/MaximusVpsMx/MX
-                    chmod +x /etc/MaximusVpsMx/modules/*.sh
-                    chmod +x /etc/MaximusVpsMx/core/*.sh
-                    systemctl restart mx-proxy ws-epro stunnel4 maximus-bot 2>/dev/null
-
-                    rm -rf "$TEMP_DIR"
-                    echo -e "${GREEN}✅ ACTUALIZACIÓN RÁPIDA COMPLETADA.${NC}"
-                    echo -e "${WHITE}Nota: Todos los servicios han sido reiniciados con el código nuevo.${NC}"
+                
+                if [ -f /etc/MaximusVpsMx/.master_node ]; then
+                    echo -e "${CYAN}[MAESTRO] Descargando código fresco desde GitHub...${NC}"
+                    URL_REPO="https://github.com/JuandeMx/MAXIMUS.git"
+                    cd /root || exit
+                    if git clone --depth=1 -q "$URL_REPO" "$TEMP_DIR"; then
+                        echo -e "${GREEN}[OK] Descarga exitosa. Inyectando cambios...${NC}"
+                        cp -rf $TEMP_DIR/* /etc/MaximusVpsMx/
+                        chmod +x /etc/MaximusVpsMx/MX
+                        chmod +x /etc/MaximusVpsMx/modules/*.sh
+                        chmod +x /etc/MaximusVpsMx/core/*.sh
+                        systemctl restart mx-proxy ws-epro stunnel4 maximus-bot 2>/dev/null
+                        
+                        echo -e "${CYAN}[+] Generando nuevos binarios para los clientes...${NC}"
+                        if [ -f /etc/MaximusVpsMx/compilar.sh ]; then
+                            cd /etc/MaximusVpsMx && bash compilar.sh >/dev/null 2>&1
+                        fi
+                        
+                        rm -rf "$TEMP_DIR"
+                        echo -e "${GREEN}✅ ACTUALIZACIÓN MAESTRA COMPLETADA.${NC}"
+                    else
+                        echo -e "${RED}❌ ERROR: No se pudo conectar con GitHub.${NC}"
+                    fi
                 else
-                    echo -e "${RED}❌ ERROR: No se pudo conectar con GitHub.${NC}"
+                    echo -e "${CYAN}[CLIENTE] Descargando actualización compilada desde el Maestro...${NC}"
+                    source /etc/MaximusVpsMx/license.key
+                    if [ -z "$MASTER_URL" ]; then
+                        MASTER_URL="http://$MASTER_IP:$MASTER_PORT"
+                    fi
+                    
+                    curl -4 -sL "$MASTER_URL/download?key=$CLIENT_KEY" -o /tmp/payload.run
+                    if [ -s /tmp/payload.run ]; then
+                        echo -e "${GREEN}[OK] Binario recibido. Instalando...${NC}"
+                        chmod +x /tmp/payload.run
+                        cd /tmp && ./payload.run --target /tmp/MaximusVpsMx_fast >/dev/null 2>&1
+                        cp -rf /tmp/MaximusVpsMx_fast/* /etc/MaximusVpsMx/
+                        chmod +x /etc/MaximusVpsMx/MX /etc/MaximusVpsMx/core/*.sh 2>/dev/null
+                        systemctl restart mx-proxy ws-epro stunnel4 maximus-bot 2>/dev/null
+                        rm -rf /tmp/MaximusVpsMx_fast /tmp/payload.run
+                        echo -e "${GREEN}✅ ACTUALIZACIÓN CLIENTE COMPLETADA.${NC}"
+                    else
+                        echo -e "${RED}❌ ERROR: No se pudo descargar la actualización del Maestro.${NC}"
+                    fi
                 fi
                 ui_pause ; return ;;
             2)
@@ -1443,50 +1470,72 @@ menu_mantenimiento() {
                 [ -f /etc/MaximusVpsMx/users.db ] && cp /etc/MaximusVpsMx/users.db /tmp/MX_BACKUP/
                 [ -f /etc/MaximusVpsMx/bot_config.json ] && cp /etc/MaximusVpsMx/bot_config.json /tmp/MX_BACKUP/
                 [ -f /etc/MaximusVpsMx/hysteria_users.db ] && cp /etc/MaximusVpsMx/hysteria_users.db /tmp/MX_BACKUP/
-                [ -f /etc/MaximusVpsMx/cloudflare.conf ] && cp /etc/MaximusVpsMx/cloudflare.conf /tmp/MX_BACKUP/
-                [ -f /etc/MaximusVpsMx/slowdns/ns-domain.conf ] && cp /etc/MaximusVpsMx/slowdns/ns-domain.conf /tmp/MX_BACKUP/
-                [ -f /etc/stunnel/stunnel.pem ] && cp /etc/stunnel/stunnel.pem /tmp/MX_BACKUP/
-                [ -f /etc/default/dropbear ] && cp /etc/default/dropbear /tmp/MX_BACKUP/
-                # Archivos clave del Maestro
-                [ -f /etc/MaximusVpsMx/.master_node ] && cp /etc/MaximusVpsMx/.master_node /tmp/MX_BACKUP/
-                [ -f /etc/MaximusVpsMx/keys.db ] && cp /etc/MaximusVpsMx/keys.db /tmp/MX_BACKUP/
-                [ -f /etc/MaximusVpsMx/domain.conf ] && cp /etc/MaximusVpsMx/domain.conf /tmp/MX_BACKUP/
-                [ -f /etc/MaximusVpsMx/license.key ] && cp /etc/MaximusVpsMx/license.key /tmp/MX_BACKUP/
-
-                echo -e "${RED}[!] Deteniendo todos los servicios y procesos vivos...${NC}"
+                 echo -e "${RED}[!] Deteniendo todos los servicios y procesos vivos...${NC}"
                 systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot 2>/dev/null
                 killall -9 badvpn-udpgw hysteria udp-custom python3 stunnel4 2>/dev/null
                 pkill -f "key_server.py" >/dev/null 2>&1
                 pkill -f "cloudflared" >/dev/null 2>&1
 
-                echo -e "${CYAN}[+] Descargando última versión de GitHub...${NC}"
                 rm -rf "$TEMP_DIR" 2>/dev/null
                 cd /tmp || exit
-                if git clone --depth=1 -q "$URL_REPO" "$TEMP_DIR"; then
-                    echo -e "${GREEN}[OK] Descarga exitosa.${NC}"
+                
+                if [ -f /etc/MaximusVpsMx/.master_node ]; then
+                    echo -e "${CYAN}[MAESTRO] Descargando última versión de GitHub...${NC}"
+                    if git clone --depth=1 -q "$URL_REPO" "$TEMP_DIR"; then
+                        echo -e "${GREEN}[OK] Descarga exitosa.${NC}"
+                        echo -e "${CYAN}[+] Reemplazando archivos del sistema...${NC}"
+                        rm -rf /etc/MaximusVpsMx
+                        rm -f /usr/local/bin/MX
+                        rm -f /root/setup 2>/dev/null
+
+                        echo -e "${CYAN}[+] Ejecutando instalador Maestro...${NC}"
+                        cd "$TEMP_DIR" && chmod +x install.sh && bash install.sh
+                        
+                        echo -e "${CYAN}[+] Generando nuevos binarios para los clientes...${NC}"
+                        if [ -f /etc/MaximusVpsMx/compilar.sh ]; then
+                            cd /etc/MaximusVpsMx && bash compilar.sh >/dev/null 2>&1
+                        fi
+                    else
+                        echo -e "${RED}❌ ERROR: No se pudo conectar con GitHub.${NC}"
+                        ui_pause ; return
+                    fi
                 else
-                    echo -e "${RED}❌ ERROR: No se pudo conectar con GitHub.${NC}"
-                    ui_pause ; return
+                    echo -e "${CYAN}[CLIENTE] Descargando actualización compilada desde el Maestro...${NC}"
+                    source /etc/MaximusVpsMx/license.key
+                    if [ -z "$MASTER_URL" ]; then
+                        MASTER_URL="http://$MASTER_IP:$MASTER_PORT"
+                    fi
+                    
+                    curl -4 -sL "$MASTER_URL/download?key=$CLIENT_KEY" -o /tmp/payload.run
+                    if [ -s /tmp/payload.run ]; then
+                        echo -e "${GREEN}[OK] Binario recibido. Ejecutando instalación ciega...${NC}"
+                        chmod +x /tmp/payload.run
+                        rm -rf /etc/MaximusVpsMx
+                        rm -f /usr/local/bin/MX
+                        
+                        ./payload.run --target /etc/MaximusVpsMx >/dev/null 2>&1
+                        chmod +x /etc/MaximusVpsMx/MX /etc/MaximusVpsMx/core/*.sh 2>/dev/null
+                        ln -sf /etc/MaximusVpsMx/MX /usr/local/bin/MX 2>/dev/null
+                        ln -sf /etc/MaximusVpsMx/MX /usr/local/bin/menu 2>/dev/null
+                        
+                        # Simular el final de install.sh para el cliente
+                        echo -e "${CYAN}[+] Reconfigurando servicios básicos del Cliente...${NC}"
+                        bash /etc/MaximusVpsMx/core/speed_optimize.sh >/dev/null 2>&1
+                    else
+                        echo -e "${RED}❌ ERROR: No se pudo descargar la actualización del Maestro.${NC}"
+                        ui_pause ; return
+                    fi
                 fi
-
-                echo -e "${CYAN}[+] Reemplazando archivos del sistema...${NC}"
-                rm -rf /etc/MaximusVpsMx
-                rm -f /usr/local/bin/MX
-                rm -f /root/setup 2>/dev/null
-
-                echo -e "${CYAN}[+] Ejecutando instalador...${NC}"
-                cd "$TEMP_DIR" && chmod +x install.sh && bash install.sh
 
                 echo -e "${CYAN}[+] Restaurando respaldo de datos...${NC}"
                 [ -f /tmp/MX_BACKUP/users.db ] && cp /tmp/MX_BACKUP/users.db /etc/MaximusVpsMx/
                 [ -f /tmp/MX_BACKUP/bot_config.json ] && cp /tmp/MX_BACKUP/bot_config.json /etc/MaximusVpsMx/
                 [ -f /tmp/MX_BACKUP/hysteria_users.db ] && cp /tmp/MX_BACKUP/hysteria_users.db /etc/MaximusVpsMx/
                 [ -f /tmp/MX_BACKUP/cloudflare.conf ] && cp /tmp/MX_BACKUP/cloudflare.conf /etc/MaximusVpsMx/
-                mkdir -p /etc/MaximusVpsMx/slowdns
-                [ -f /tmp/MX_BACKUP/ns-domain.conf ] && cp /tmp/MX_BACKUP/ns-domain.conf /etc/MaximusVpsMx/slowdns/
-                [ -f /tmp/MX_BACKUP/stunnel.pem ] && cp /tmp/MX_BACKUP/stunnel.pem /etc/stunnel/
+                [ -d /etc/MaximusVpsMx/slowdns ] && [ -f /tmp/MX_BACKUP/ns-domain.conf ] && cp /tmp/MX_BACKUP/ns-domain.conf /etc/MaximusVpsMx/slowdns/
+                [ -d /etc/stunnel ] && [ -f /tmp/MX_BACKUP/stunnel.pem ] && cp /tmp/MX_BACKUP/stunnel.pem /etc/stunnel/
                 [ -f /tmp/MX_BACKUP/dropbear ] && cp /tmp/MX_BACKUP/dropbear /etc/default/
-                # Restaurar Archivos clave del Maestro
+                # Restaurar archivos clave del Maestro
                 [ -f /tmp/MX_BACKUP/.master_node ] && cp /tmp/MX_BACKUP/.master_node /etc/MaximusVpsMx/
                 [ -f /tmp/MX_BACKUP/keys.db ] && cp /tmp/MX_BACKUP/keys.db /etc/MaximusVpsMx/
                 [ -f /tmp/MX_BACKUP/domain.conf ] && cp /tmp/MX_BACKUP/domain.conf /etc/MaximusVpsMx/

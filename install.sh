@@ -280,10 +280,14 @@ chown -R root:root /etc/MaximusVpsMx
 
 # Activación de la Key y Guardado
 if [ -n "$CLIENT_KEY" ]; then
-    echo -e "MASTER_IP='$MASTER_IP'\nMASTER_PORT='$MASTER_PORT'\nCLIENT_KEY='$CLIENT_KEY'" > /etc/MaximusVpsMx/license.key
+    echo -e "MASTER_URL='$MASTER_URL'\nMASTER_IP='$MASTER_IP'\nMASTER_PORT='$MASTER_PORT'\nCLIENT_KEY='$CLIENT_KEY'" > /etc/MaximusVpsMx/license.key
     chmod 600 /etc/MaximusVpsMx/license.key
-    # Activar permanentemente
-    curl -4 -sL "http://$MASTER_IP:$MASTER_PORT/activate?key=$CLIENT_KEY" >/dev/null 2>&1
+    # Activar permanentemente a través del túnel seguro
+    if [ -n "$MASTER_URL" ]; then
+        curl -4 -sL "$MASTER_URL/activate?key=$CLIENT_KEY" >/dev/null 2>&1
+    else
+        curl -4 -sL "http://$MASTER_IP:$MASTER_PORT/activate?key=$CLIENT_KEY" >/dev/null 2>&1
+    fi
 fi
 
 # Iniciar servidor Python si es maestro
