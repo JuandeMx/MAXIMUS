@@ -184,7 +184,6 @@ class KeyHandler(http.server.SimpleHTTPRequestHandler):
                 self.wfile.write(content.encode("utf-8"))
             except Exception as e:
                 self.send_error(500, str(e))
-            self.send_error(404, "Not Found")
 
 def run_server():
     server_address = ('0.0.0.0', PORT)
