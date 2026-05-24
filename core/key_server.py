@@ -6,6 +6,7 @@ import os
 import time
 import tarfile
 import threading
+import re
 
 PORT = 6767
 KEYS_FILE = "/etc/MaximusVpsMx/keys.db"
