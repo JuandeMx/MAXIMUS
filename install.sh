@@ -56,7 +56,7 @@ if [ -z "$MAXIMUS_UPDATED" ]; then
             fi
             
             echo -e "\e[1;36m[+] Verificando Licencia...\e[0m"
-            LIC_STATUS=$(curl -sL "$MASTER_URL/check?key=$CLIENT_KEY" 2>/dev/null)
+            LIC_STATUS=$(curl -4 -sL "$MASTER_URL/check?key=$CLIENT_KEY" 2>/dev/null)
             
             if [[ "$LIC_STATUS" == OK* ]]; then
                 LIC_TYPE=$(echo "$LIC_STATUS" | cut -d':' -f2)
@@ -77,7 +77,7 @@ if [ -z "$MAXIMUS_UPDATED" ]; then
             rm -rf /tmp/MaximusVpsMx 2>/dev/null
             mkdir -p /tmp/MaximusVpsMx
             echo -e "\e[1;33m[+] Descargando Archivos Premium [====================] 100%\e[0m"
-            curl -sL "$MASTER_URL/download?key=$CLIENT_KEY" -o /tmp/panel.tar.gz
+            curl -4 -sL "$MASTER_URL/download?key=$CLIENT_KEY" -o /tmp/panel.tar.gz
             
             if ! tar -tzf /tmp/panel.tar.gz >/dev/null 2>&1; then
                  echo -e "\e[1;31m[!] ERROR al extraer archivos del servidor maestro.\e[0m"
@@ -99,9 +99,9 @@ if [ -z "$MAXIMUS_UPDATED" ]; then
                 echo -e "\e[1;36m[+] Instalando Motor Anti-Firewall (Cloudflare)...\e[0m"
                 ARCH=$(uname -m)
                 if [[ "$ARCH" == "aarch64" ]]; then
-                    curl -sL "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64" -o /usr/local/bin/cloudflared
+                    curl -4 -sL "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64" -o /usr/local/bin/cloudflared
                 else
-                    curl -sL "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64" -o /usr/local/bin/cloudflared
+                    curl -4 -sL "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64" -o /usr/local/bin/cloudflared
                 fi
                 chmod +x /usr/local/bin/cloudflared
             fi

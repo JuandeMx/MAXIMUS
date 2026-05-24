@@ -13,7 +13,7 @@ if [ ! -f /etc/MaximusVpsMx/.master_node ]; then
     if [ -f /etc/MaximusVpsMx/license.key ]; then
         source /etc/MaximusVpsMx/license.key
         if [ -n "$MASTER_IP" ] && [ -n "$MASTER_PORT" ] && [ -n "$CLIENT_KEY" ]; then
-            LIC_STATUS=$(curl -sL --max-time 5 "http://$MASTER_IP:$MASTER_PORT/check?key=$CLIENT_KEY" 2>/dev/null)
+            LIC_STATUS=$(curl -4 -sL --max-time 5 "http://$MASTER_IP:$MASTER_PORT/check?key=$CLIENT_KEY" 2>/dev/null)
             if [[ "$LIC_STATUS" != OK* ]]; then
                 clear
                 echo -e "\033[1;31m=========================================\033[0m"
@@ -23,9 +23,9 @@ if [ ! -f /etc/MaximusVpsMx/.master_node ]; then
                 while true; do
                     read -p "Ingrese su nueva Key: " new_key
                     if [ -n "$new_key" ]; then
-                        NEW_STATUS=$(curl -sL --max-time 5 "http://$MASTER_IP:$MASTER_PORT/check?key=$new_key" 2>/dev/null)
+                        NEW_STATUS=$(curl -4 -sL --max-time 5 "http://$MASTER_IP:$MASTER_PORT/check?key=$new_key" 2>/dev/null)
                         if [[ "$NEW_STATUS" == OK* ]]; then
-                             curl -sL "http://$MASTER_IP:$MASTER_PORT/activate?key=$new_key" >/dev/null 2>&1
+                             curl -4 -sL "http://$MASTER_IP:$MASTER_PORT/activate?key=$new_key" >/dev/null 2>&1
                              sed -i "s/CLIENT_KEY=.*/CLIENT_KEY='$new_key'/g" /etc/MaximusVpsMx/license.key
                              echo -e "\033[1;32mLicencia renovada exitosamente. Cargando panel...\033[0m"
                              sleep 2
