@@ -1379,7 +1379,22 @@ menu_mantenimiento() {
                 echo -e "${CYAN}[+] Descargando código fresco desde GitHub...${NC}"
                 rm -rf "$TEMP_DIR" 2>/dev/null
                 cd /root || exit
-                        2)
+                if git clone --depth=1 -q "$URL_REPO" "$TEMP_DIR"; then
+                    echo -e "${GREEN}[OK] Descarga exitosa. Inyectando cambios...${NC}"
+                    cp -rf $TEMP_DIR/* /etc/MaximusVpsMx/
+                    chmod +x /etc/MaximusVpsMx/MX
+                    chmod +x /etc/MaximusVpsMx/modules/*.sh
+                    chmod +x /etc/MaximusVpsMx/core/*.sh
+                    systemctl restart mx-proxy ws-epro stunnel4 maximus-bot 2>/dev/null
+
+                    rm -rf "$TEMP_DIR"
+                    echo -e "${GREEN}✅ ACTUALIZACIÓN RÁPIDA COMPLETADA.${NC}"
+                    echo -e "${WHITE}Nota: Todos los servicios han sido reiniciados con el código nuevo.${NC}"
+                else
+                    echo -e "${RED}❌ ERROR: No se pudo conectar con GitHub.${NC}"
+                fi
+                ui_pause ; return ;;
+            2)
                 echo -e "\n${YELLOW}▶ Iniciando Actualización Inteligente...${NC}"
                 URL_REPO="https://github.com/JuandeMx/MAXIMUS.git"
                 TEMP_DIR="/tmp/MaximusVpsMx_temp"
