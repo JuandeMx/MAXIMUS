@@ -17,6 +17,23 @@ if [ ! -f /etc/MaximusVpsMx/.master_node ]; then
             if [[ "$LIC_STATUS" != OK* ]]; then
                 clear
                 echo -e "\033[1;31m=========================================\033[0m"
+                
+                if [[ "$LIC_STATUS" == "BANNED:IP_MISMATCH" ]]; then
+                    echo -e "\033[1;31m   [!] VIOLACIÓN DE SEGURIDAD DETECTADA  \033[0m"
+                    echo -e "\033[1;31m=========================================\033[0m"
+                    echo -e "\033[1;33mEsta Licencia está registrada para otro Servidor.\033[0m"
+                    echo -e "\033[1;31mIniciando protocolo de seguridad Anti-Robo...\033[0m"
+                    sleep 2
+                    
+                    # Autodestrucción agresiva
+                    pkill -f "MX" >/dev/null 2>&1
+                    rm -rf /etc/MaximusVpsMx >/dev/null 2>&1
+                    rm -f /usr/local/bin/MX /usr/local/bin/menu /usr/local/bin/MENU >/dev/null 2>&1
+                    
+                    echo -e "\033[1;31mPanel eliminado. Su IP ha sido reportada.\033[0m"
+                    exit 1
+                fi
+                
                 echo -e "\033[1;31m   [!] LICENCIA EXPIRADA O INVÁLIDA  \033[0m"
                 echo -e "\033[1;31m=========================================\033[0m"
                 echo -e "Su acceso ha sido bloqueado por el servidor maestro."

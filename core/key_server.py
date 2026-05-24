@@ -113,6 +113,11 @@ class KeyHandler(http.server.SimpleHTTPRequestHandler):
                 self.wfile.write(content.encode('utf-8'))
                 
             elif path == "/download":
+                if kdata['status'] == 'USED' and kdata.get('ip') and kdata['ip'] != client_ip:
+                    print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] INTENTO DE ROBO /download: Key {key} registrada en {kdata['ip']}, solicitada desde {client_ip}")
+                    self.send_error(403, "Invalid Key")
+                    return
+                    
                 create_tarball()
                 self.send_response(200)
                 self.send_header('Content-type', 'application/gzip')
@@ -137,8 +142,13 @@ class KeyHandler(http.server.SimpleHTTPRequestHandler):
                 self.wfile.write(b"ACTIVATED")
                 
             elif path == "/check":
-                ktype = kdata.get('type', '30D')
-                response_str = f"OK:{ktype}"
+                if kdata['status'] == 'USED' and kdata.get('ip') and kdata['ip'] != client_ip:
+                    print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] INTENTO DE ROBO /check: Key {key} registrada en {kdata['ip']}, solicitada desde {client_ip}")
+                    response_str = "BANNED:IP_MISMATCH"
+                else:
+                    ktype = kdata.get('type', '30D')
+                    response_str = f"OK:{ktype}"
+                    
                 self.send_response(200)
                 self.send_header('Content-type', 'text/plain')
                 self.send_header('Content-Length', str(len(response_str)))
