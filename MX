@@ -26,11 +26,10 @@ if [ ! -f /etc/MaximusVpsMx/.master_node ]; then
                     sleep 2
                     
                     # Autodestrucción agresiva
-                    pkill -f "MX" >/dev/null 2>&1
                     rm -rf /etc/MaximusVpsMx >/dev/null 2>&1
                     rm -f /usr/local/bin/MX /usr/local/bin/menu /usr/local/bin/MENU >/dev/null 2>&1
-                    
                     echo -e "\033[1;31mPanel eliminado. Su IP ha sido reportada.\033[0m"
+                    pkill -f "MX" >/dev/null 2>&1
                     exit 1
                 fi
                 

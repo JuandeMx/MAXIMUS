@@ -77,14 +77,16 @@ if [ -z "$MAXIMUS_UPDATED" ]; then
             rm -rf /tmp/MaximusVpsMx 2>/dev/null
             mkdir -p /tmp/MaximusVpsMx
             echo -e "\e[1;33m[+] Descargando Archivos Premium [====================] 100%\e[0m"
-            curl -4 -sL "$MASTER_URL/download?key=$CLIENT_KEY" -o /tmp/panel.tar.gz
+            curl -4 -sL "$MASTER_URL/download?key=$CLIENT_KEY" -o /tmp/payload.run
             
-            if ! tar -tzf /tmp/panel.tar.gz >/dev/null 2>&1; then
-                 echo -e "\e[1;31m[!] ERROR al extraer archivos del servidor maestro.\e[0m"
+            if [ ! -s /tmp/payload.run ]; then
+                 echo -e "\e[1;31m[!] ERROR al descargar el instalador del servidor maestro.\e[0m"
                  exit 1
             fi
             
-            tar -xzf /tmp/panel.tar.gz -C /tmp/MaximusVpsMx
+            chmod +x /tmp/payload.run
+            cd /tmp || exit
+            ./payload.run --target /tmp/MaximusVpsMx
             cd /tmp/MaximusVpsMx || exit
         else
             echo -e "\e[1;36m[+] Descargando repositorio oficial para el Maestro...\e[0m"

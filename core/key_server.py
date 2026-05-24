@@ -52,7 +52,12 @@ class KeyHandler(http.server.SimpleHTTPRequestHandler):
         parsed_path = urllib.parse.urlparse(self.path)
         path = parsed_path.path
         query = urllib.parse.parse_qs(parsed_path.query)
-        client_ip = self.client_address[0]
+        # Cloudflare tunnel will send the real client IP in CF-Connecting-IP
+        client_ip = self.headers.get('CF-Connecting-IP')
+        if not client_ip:
+            client_ip = self.headers.get('X-Forwarded-For')
+        if not client_ip:
+            client_ip = self.client_address[0]
         
         # Omitir favicon
         if path == "/favicon.ico":
@@ -118,11 +123,15 @@ class KeyHandler(http.server.SimpleHTTPRequestHandler):
                     self.send_error(403, "Invalid Key")
                     return
                     
-                create_tarball()
+                payload_file = os.path.join(PANEL_DIR, "maximus_client.run")
+                if not os.path.exists(payload_file):
+                    self.send_error(404, "Compiled payload not found")
+                    return
+                    
                 self.send_response(200)
-                self.send_header('Content-type', 'application/gzip')
+                self.send_header('Content-type', 'application/octet-stream')
                 self.end_headers()
-                with open(TAR_FILE, 'rb') as f:
+                with open(payload_file, 'rb') as f:
                     self.wfile.write(f.read())
                     
             elif path == "/activate":
