@@ -1666,8 +1666,8 @@ menu_maestro() {
                         pkill -f "cloudflared" >/dev/null 2>&1
                         screen -dmS cf_tunnel bash -c "cloudflared tunnel --url http://127.0.0.1:6767 > /tmp/cf_tunnel.log 2>&1"
                         
-                        echo -e "${WHITE}Esperando asignación de dominio seguro (aprox 5 seg)...${NC}"
-                        sleep 6
+                        echo -e "${WHITE}Esperando asignación de dominio seguro (aprox 10 seg)...${NC}"
+                        sleep 10
                         
                         cf_url=$(grep -o 'https://[-a-zA-Z0-9]*\.trycloudflare\.com' /tmp/cf_tunnel.log | head -n 1)
                         if [ -n "$cf_url" ]; then
