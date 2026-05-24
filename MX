@@ -192,12 +192,35 @@ menu_usuarios() {
         echo -e "  ${CYAN}[12]>${WHITE} BACKUP DE BASE DE DATOS${NC}"
         echo -e "  ${CYAN}[15]>${YELLOW} 🛡️ GESTIÓN DE HUID / TOKEN${NC}"
         ui_hr
+        echo -e "  ${RED}[99]>${WHITE} 💀 ACTIVAR AUTODESTRUCCIÓN DEL PANEL (KILL)${NC}"
+        ui_hr
         echo -e "  ${WHITE}[0] VOLVER AL MENÚ ANTERIOR${NC}"
         ui_hr
         ui_prompt " Selecciona una opción: "
         read opt_user
 
         case $opt_user in
+            99)
+                echo -e "\n${RED}====================================================${NC}"
+                echo -e "${RED}   ¡PELIGRO! ESTÁS A PUNTO DE ELIMINAR EL PANEL   ${NC}"
+                echo -e "${RED}====================================================${NC}"
+                echo -e "${YELLOW}Esta acción borrará permanentemente MaximusVpsMx,${NC}"
+                echo -e "${YELLOW}todas sus bases de datos, usuarios y archivos del sistema.${NC}"
+                echo -e "${YELLOW}¡ESTO NO SE PUEDE DESHACER!${NC}\n"
+                read -p " Escribe 'ELIMINAR' para confirmar: " confirmar_kill
+                if [[ "$confirmar_kill" == "ELIMINAR" ]]; then
+                    echo -e "\n${RED}Iniciando secuencia de autodestrucción...${NC}"
+                    sleep 2
+                    pkill -f "MX" >/dev/null 2>&1
+                    rm -rf /etc/MaximusVpsMx >/dev/null 2>&1
+                    rm -f /usr/local/bin/MX /usr/local/bin/menu /usr/local/bin/MENU >/dev/null 2>&1
+                    echo -e "${GREEN}Panel eliminado por completo.${NC}"
+                    exit 0
+                else
+                    echo -e "\n${GREEN}Autodestrucción abortada.${NC}"
+                    ui_pause
+                fi
+                ;;
             1)
                 echo -e "\n${YELLOW}▶ MODO DE CREACIÓN${NC}"
                 echo -e "  ${CYAN}[1]${NC} Usuario Temporal (Horas)"
