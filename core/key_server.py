@@ -156,13 +156,13 @@ class KeyHandler(http.server.SimpleHTTPRequestHandler):
 
                 # El dominio puede ser el de CF o la IP
                 domain_file = os.path.join(PANEL_DIR, "domain.conf")
-                dyn_domain_file = "/tmp/cf_dynamic.conf"
+                cf_domain_file = os.path.join(PANEL_DIR, "cloudflare.conf")
                 
                 if os.path.exists(domain_file):
                     with open(domain_file, "r") as f:
                         host_url = f.read().strip()
-                elif os.path.exists(dyn_domain_file):
-                    with open(dyn_domain_file, "r") as f:
+                elif os.path.exists(cf_domain_file):
+                    with open(cf_domain_file, "r") as f:
                         host_url = f.read().strip()
                 else:
                     try:
