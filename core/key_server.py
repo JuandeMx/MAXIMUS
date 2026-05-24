@@ -185,6 +185,7 @@ class KeyHandler(http.server.SimpleHTTPRequestHandler):
 
 def run_server():
     server_address = ('0.0.0.0', PORT)
+    socketserver.TCPServer.allow_reuse_address = True
     httpd = socketserver.TCPServer(server_address, KeyHandler)
     print(f"Master Key Server running on port {PORT}")
     httpd.serve_forever()
