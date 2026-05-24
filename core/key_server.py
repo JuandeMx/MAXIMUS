@@ -141,6 +141,8 @@ class KeyHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_header('Content-type', 'text/plain')
                 self.end_headers()
                 self.wfile.write(f"OK:{ktype}".encode('utf-8'))
+            return
+            
         elif path == "/setup":
             # Devolver el instalador modificando SOLO MASTER_IP y MASTER_PORT (la Key viene por argumento)
             install_path = os.path.join(PANEL_DIR, "install.sh")
