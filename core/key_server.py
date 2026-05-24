@@ -172,13 +172,9 @@ class KeyHandler(http.server.SimpleHTTPRequestHandler):
                     host_url = f"http://{public_ip}:6767"
 
                 # Inyectar MASTER_URL para evitar problemas con puertos https implícitos (443)
-                injection = f"\nMASTER_URL='{host_url}'\n"
-                content = content.replace("#!/bin/bash", "#!/bin/bash" + injection)
-                
-                # Por compatibilidad, limpiamos MASTER_IP
                 master_ip_raw = host_url.replace("https://", "").replace("http://", "").split(":")[0]
-                content = re.sub(r'MASTER_IP=".*?"', f'MASTER_IP="{master_ip_raw}"', content, count=1)
-                content = re.sub(r'MASTER_PORT=".*?"', f'MASTER_PORT="80"', content, count=1)
+                injection = f"\nMASTER_URL='{host_url}'\nMASTER_IP='{master_ip_raw}'\nMASTER_PORT='80'\n"
+                content = content.replace("#!/bin/bash", "#!/bin/bash" + injection)
                 
                 self.send_response(200)
                 self.send_header("Content-type", "text/x-shellscript")
