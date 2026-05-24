@@ -136,6 +136,12 @@ done
 
 # Matar procesos por nombre (Limpieza Nuclear)
 killall -9 badvpn-udpgw hysteria udp-custom python3 stunnel4 2>/dev/null
+pkill -9 -f "key_server.py" >/dev/null 2>&1
+pkill -9 -f "cloudflared" >/dev/null 2>&1
+# Liberar puertos por la fuerza bruta si quedaron zombies
+fuser -k 6767/tcp >/dev/null 2>&1
+fuser -k 80/tcp >/dev/null 2>&1
+fuser -k 443/tcp >/dev/null 2>&1
 systemctl daemon-reload
 
 
@@ -290,11 +296,16 @@ if [ -n "$CLIENT_KEY" ]; then
     fi
 fi
 
-# Iniciar servidor Python si es maestro
+# Iniciar servidor Python y compilar automáticamente si es maestro
 if [ -f "/etc/MaximusVpsMx/.master_node" ]; then
     echo -e "\e[1;36m[+] Iniciando Servidor de Licencias localmente...\e[0m"
     pkill -f "key_server.py" >/dev/null 2>&1
     nohup python3 /etc/MaximusVpsMx/core/key_server.py > /tmp/key_server.log 2>&1 &
+    
+    echo -e "\e[1;36m[+] Compilando paquete binario para los Clientes...\e[0m"
+    if [ -f /etc/MaximusVpsMx/compilar.sh ]; then
+        cd /etc/MaximusVpsMx && bash compilar.sh >/dev/null 2>&1
+    fi
 fi
 
 # Fin de Instalación

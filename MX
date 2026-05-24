@@ -1552,8 +1552,11 @@ menu_mantenimiento() {
                     echo -e "${RED}🔥 INICIANDO LIMPIEZA TOTAL Y MATANDO PROCESOS...${NC}"
                     systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot 2>/dev/null
                     killall -9 badvpn-udpgw hysteria udp-custom python3 stunnel4 2>/dev/null
-                    pkill -f "key_server.py" >/dev/null 2>&1
-                    pkill -f "cloudflared" >/dev/null 2>&1
+                    pkill -9 -f "key_server.py" >/dev/null 2>&1
+                    pkill -9 -f "cloudflared" >/dev/null 2>&1
+                    fuser -k 6767/tcp >/dev/null 2>&1
+                    fuser -k 80/tcp >/dev/null 2>&1
+                    fuser -k 443/tcp >/dev/null 2>&1
                     rm -rf /etc/MaximusVpsMx
                     rm -f /usr/local/bin/MX
                     rm -f /root/setup 2>/dev/null
@@ -1575,8 +1578,11 @@ menu_mantenimiento() {
                     systemctl stop x-ui openvpn-server@server 2>/dev/null
                     systemctl disable x-ui openvpn-server@server hysteria udp-custom ws-epro 2>/dev/null
                     killall -9 badvpn-udpgw hysteria udp-custom python3 stunnel4 2>/dev/null
-                    pkill -f "key_server.py" >/dev/null 2>&1
-                    pkill -f "cloudflared" >/dev/null 2>&1
+                    pkill -9 -f "key_server.py" >/dev/null 2>&1
+                    pkill -9 -f "cloudflared" >/dev/null 2>&1
+                    fuser -k 6767/tcp >/dev/null 2>&1
+                    fuser -k 80/tcp >/dev/null 2>&1
+                    fuser -k 443/tcp >/dev/null 2>&1
                     rm -f /root/setup 2>/dev/null
                     
                     # Eliminar directorios y binarios externos
@@ -1622,9 +1628,8 @@ menu_maestro() {
         echo -e "  ${CYAN}[2]>${WHITE} Listar Keys Activas / Usadas${NC}"
         echo -e "  ${CYAN}[3]>${WHITE} Eliminar una Key${NC}"
         ui_subhr
-        echo -e "  ${CYAN}[4]>${WHITE} Iniciar Servidor de Keys | $srv_st${NC}"
-        echo -e "  ${CYAN}[5]>${WHITE} Detener Servidor de Keys${NC}"
-        echo -e "  ${CYAN}[6]>${WHITE} Configurar Dominio/IP Instalador${NC}"
+        echo -e "  ${CYAN}[4]>${WHITE} Detener Servidor de Keys | $srv_st${NC}"
+        echo -e "  ${CYAN}[5]>${WHITE} Configurar Dominio/IP Instalador (Auto-Inicia Servidor)${NC}"
         ui_hr
         echo -e "  ${WHITE}[0] VOLVER AL MENÚ PRINCIPAL${NC}"
         ui_hr
@@ -1710,24 +1715,22 @@ menu_maestro() {
                 ui_pause
                 ;;
             4)
-                if ! pgrep -f "key_server.py" >/dev/null; then
-                    screen -dmS key_master python3 /etc/MaximusVpsMx/core/key_server.py
-                    echo -e "${GREEN}✅ Servidor de Keys iniciado localmente en puerto 6767.${NC}"
-                    echo -e "${CYAN}Info: Si requieres Cloudflare Tunnel, inícialo desde la Opción 6.${NC}"
-                else
-                    echo -e "${YELLOW}⚠️ El servidor ya está corriendo.${NC}"
-                fi
-                ui_pause
-                ;;
-            5)
                 pkill -f "key_server.py"
                 pkill -f "cloudflared"
                 rm -f /tmp/cf_dynamic.conf
                 echo -e "${RED}✅ Servidor y Túnel detenidos.${NC}"
                 ui_pause
                 ;;
-            6)
+            5)
                 ui_header "CONFIGURAR DOMINIO O CLOUDFLARE"
+                
+                # Auto-Iniciar Servidor Python si está apagado
+                if ! pgrep -f "key_server.py" >/dev/null; then
+                    echo -e "${CYAN}[+] Iniciando Servidor Python en segundo plano...${NC}"
+                    screen -dmS key_master python3 /etc/MaximusVpsMx/core/key_server.py
+                    sleep 2
+                fi
+                
                 echo -e "  ${CYAN}[1]${WHITE} Ingresar Dominio/IP Personalizado"
                 echo -e "  ${CYAN}[2]${WHITE} Generar Dominio Automático (Cloudflare Tunnel)"
                 echo -e "  ${CYAN}[3]${WHITE} Limpiar Configuración (Usar IP Pública)"
@@ -1744,28 +1747,24 @@ menu_maestro() {
                         echo "$new_domain" > /etc/MaximusVpsMx/domain.conf
                         rm -f /tmp/cf_dynamic.conf
                         pkill -f "cloudflared" >/dev/null 2>&1
-                        echo -e "${GREEN}✅ Dominio configurado exitosamente: $new_domain${NC}"
+                        echo -e "${GREEN}✅ Dominio configurado y Servidor Activo en: $new_domain${NC}"
                     fi
                 elif [ "$d_opt" == "2" ]; then
-                    if pgrep -f "key_server.py" >/dev/null; then
-                        echo -e "${CYAN}☁️ Generando Dominio Anti-Firewall con Cloudflare...${NC}"
-                        rm -f /tmp/cf_tunnel.log
-                        rm -f /etc/MaximusVpsMx/domain.conf
-                        pkill -f "cloudflared" >/dev/null 2>&1
-                        screen -dmS cf_tunnel bash -c "cloudflared tunnel --url http://127.0.0.1:6767 > /tmp/cf_tunnel.log 2>&1"
-                        
-                        echo -e "${WHITE}Esperando asignación de dominio seguro (aprox 10 seg)...${NC}"
-                        sleep 10
-                        
-                        cf_url=$(grep -o 'https://[-a-zA-Z0-9]*\.trycloudflare\.com' /tmp/cf_tunnel.log | head -n 1)
-                        if [ -n "$cf_url" ]; then
-                            echo -e "${GREEN}✅ Dominio generado: ${cf_url}${NC}"
-                            echo "$cf_url" > /tmp/cf_dynamic.conf
-                        else
-                            echo -e "${RED}❌ Falló Cloudflare. Asegúrate de tenerlo instalado.${NC}"
-                        fi
+                    echo -e "${CYAN}☁️ Generando Dominio Anti-Firewall con Cloudflare...${NC}"
+                    rm -f /tmp/cf_tunnel.log
+                    rm -f /etc/MaximusVpsMx/domain.conf
+                    pkill -f "cloudflared" >/dev/null 2>&1
+                    screen -dmS cf_tunnel bash -c "cloudflared tunnel --url http://127.0.0.1:6767 > /tmp/cf_tunnel.log 2>&1"
+                    
+                    echo -e "${WHITE}Esperando asignación de dominio seguro (aprox 10 seg)...${NC}"
+                    sleep 10
+                    
+                    cf_url=$(grep -o 'https://[-a-zA-Z0-9]*\.trycloudflare\.com' /tmp/cf_tunnel.log | head -n 1)
+                    if [ -n "$cf_url" ]; then
+                        echo -e "${GREEN}✅ Dominio generado: ${cf_url}${NC}"
+                        echo "$cf_url" > /tmp/cf_dynamic.conf
                     else
-                        echo -e "${RED}❌ El Servidor de Keys (Opción 4) debe estar INICIADO primero.${NC}"
+                        echo -e "${RED}❌ Falló Cloudflare. Asegúrate de tenerlo instalado.${NC}"
                     fi
                 elif [ "$d_opt" == "3" ]; then
                     rm -f /etc/MaximusVpsMx/domain.conf
