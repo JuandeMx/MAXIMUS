@@ -1541,7 +1541,7 @@ menu_maestro() {
                 
                 if [ -f /etc/MaximusVpsMx/domain.conf ]; then
                     dl_host=$(cat /etc/MaximusVpsMx/domain.conf)
-                elif [ -f /tmp/cf_dynamic.conf ]; then
+                elif [ -f /tmp/cf_dynamic.conf ] && pgrep -f "cloudflared" >/dev/null; then
                     dl_host=$(cat /tmp/cf_dynamic.conf)
                 else
                     dl_host="http://$(curl -s ifconfig.me):6767"
