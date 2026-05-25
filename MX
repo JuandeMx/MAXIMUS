@@ -1,5 +1,5 @@
 #!/bin/bash
-# MaximusVpsMx - Super Panel v11.0.0 (Premium)
+# MaximusVpsMx - Super Panel v11.1.0 (Premium)
 # Modificado para Submenús y Funciones Avanzadas + Hysteria v2 Manager
 
 # SEGURIDAD: Solo root puede ejecutar este panel
@@ -60,6 +60,9 @@ if [ ! -f /etc/MaximusVpsMx/.master_node ]; then
     fi
 fi
 
+# --- PANEL VERSION ---
+PANEL_VERSION="v11.1.0"
+
 # --- COLORES GLOBALES ---
 RED='\033[1;31m'
 GREEN='\033[1;32m'
@@ -103,6 +106,12 @@ draw_banner() {
 ui_header() {
     local title="$1"
     draw_banner
+    ui_hr
+    if [ -f "/etc/MaximusVpsMx/.master_node" ]; then
+        echo -e "  ${CYAN}TIPO: ${YELLOW}MAESTRO ${CYAN}   VERSIÓN: ${GREEN}${PANEL_VERSION}${NC}"
+    else
+        echo -e "  ${CYAN}TIPO: ${YELLOW}CLIENTE ${CYAN}   VERSIÓN: ${GREEN}${PANEL_VERSION}${NC}"
+    fi
     ui_hr
     if [ -n "$title" ]; then
         echo -e "${YELLOW}           $title${NC}"
