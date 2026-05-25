@@ -303,9 +303,28 @@ fi
 
 # Iniciar servidor Python y compilar automáticamente si es maestro
 if [ -f "/etc/MaximusVpsMx/.master_node" ]; then
-    echo -e "\e[1;36m[+] Iniciando Servidor de Licencias localmente...\e[0m"
-    pkill -f "key_server.py" >/dev/null 2>&1
-    nohup python3 /etc/MaximusVpsMx/core/key_server.py > /tmp/key_server.log 2>&1 &
+    echo -e "\e[1;36m[+] Instalando y configurando Servidor de Keys como Servicio (Systemd)...\e[0m"
+    
+    # Detener servicios antiguos si existen
+    systemctl stop maximus-tunnel 2>/dev/null
+    systemctl stop maximus-keyserver 2>/dev/null
+    
+    # Copiar definiciones de servicios
+    cp /etc/MaximusVpsMx/core/maximus-keyserver.service /etc/systemd/system/ 2>/dev/null
+    cp /etc/MaximusVpsMx/core/maximus-tunnel.service /etc/systemd/system/ 2>/dev/null
+    systemctl daemon-reload
+    
+    # Asegurar permisos en script de tunnel
+    chmod +x /etc/MaximusVpsMx/core/maximus_tunnel.sh 2>/dev/null
+    
+    # Habilitar e iniciar Keyserver
+    systemctl enable maximus-keyserver 2>/dev/null
+    systemctl start maximus-keyserver 2>/dev/null
+    
+    # Iniciar túnel si estaba habilitado
+    if systemctl is-enabled --quiet maximus-tunnel 2>/dev/null; then
+        systemctl start maximus-tunnel 2>/dev/null
+    fi
     
     echo -e "\e[1;36m[+] Compilando paquete binario para los Clientes...\e[0m"
     if [ -f /etc/MaximusVpsMx/compilar.sh ]; then

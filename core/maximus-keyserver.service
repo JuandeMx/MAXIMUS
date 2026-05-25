@@ -1,0 +1,13 @@
+[Unit]
+Description=Maximus VPS Master Key Server
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /etc/MaximusVpsMx/core/key_server.py
+Restart=always
+RestartSec=3
+WorkingDirectory=/etc/MaximusVpsMx
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,14 @@
+[Unit]
+Description=Maximus VPS Cloudflare Tunnel
+After=network.target maximus-keyserver.service
+Requires=maximus-keyserver.service
+
+[Service]
+Type=simple
+ExecStart=/bin/bash /etc/MaximusVpsMx/core/maximus_tunnel.sh
+Restart=always
+RestartSec=5
+WorkingDirectory=/etc/MaximusVpsMx
+
+[Install]
+WantedBy=multi-user.target

@@ -1,5 +1,5 @@
 #!/bin/bash
-# MaximusVpsMx - Super Panel v11.1.0 (Premium)
+# MaximusVpsMx - Super Panel v11.2.0 (Premium)
 # Modificado para Submenús y Funciones Avanzadas + Hysteria v2 Manager
 
 # SEGURIDAD: Solo root puede ejecutar este panel
@@ -61,7 +61,7 @@ if [ ! -f /etc/MaximusVpsMx/.master_node ]; then
 fi
 
 # --- PANEL VERSION ---
-PANEL_VERSION="v11.1.0"
+PANEL_VERSION="v11.2.0"
 
 # --- COLORES GLOBALES ---
 RED='\033[1;31m'
@@ -1435,9 +1435,12 @@ menu_mantenimiento() {
                         chmod +x /etc/MaximusVpsMx/MX
                         chmod +x /etc/MaximusVpsMx/modules/*.sh
                         chmod +x /etc/MaximusVpsMx/core/*.sh
-                        systemctl restart mx-proxy ws-epro stunnel4 maximus-bot 2>/dev/null
-                        
-                        echo -e "${CYAN}[+] Generando nuevos binarios para los clientes...${NC}"
+                         systemctl restart mx-proxy ws-epro stunnel4 maximus-bot maximus-keyserver 2>/dev/null
+                         if systemctl is-active --quiet maximus-tunnel 2>/dev/null; then
+                             systemctl restart maximus-tunnel 2>/dev/null
+                         fi
+                         
+                         echo -e "${CYAN}[+] Generando nuevos binarios para los clientes...${NC}"
                         if [ -f /etc/MaximusVpsMx/compilar.sh ]; then
                             cd /etc/MaximusVpsMx && bash compilar.sh >/dev/null 2>&1
                         fi
@@ -1724,19 +1727,22 @@ menu_maestro() {
                 ui_pause
                 ;;
             4)
-                pkill -f "key_server.py"
-                pkill -f "cloudflared"
+                systemctl stop maximus-tunnel 2>/dev/null
+                systemctl stop maximus-keyserver 2>/dev/null
+                systemctl disable maximus-tunnel 2>/dev/null
                 rm -f /tmp/cf_dynamic.conf
-                echo -e "${RED}✅ Servidor y Túnel detenidos.${NC}"
+                rm -f /etc/MaximusVpsMx/cf_tunnel.url
+                echo -e "${RED}✅ Servidor y Túnel detenidos (Systemd).${NC}"
                 ui_pause
                 ;;
             5)
                 ui_header "CONFIGURAR DOMINIO O CLOUDFLARE"
                 
                 # Auto-Iniciar Servidor Python si está apagado
-                if ! pgrep -f "key_server.py" >/dev/null; then
-                    echo -e "${CYAN}[+] Iniciando Servidor Python en segundo plano...${NC}"
-                    screen -dmS key_master python3 /etc/MaximusVpsMx/core/key_server.py
+                if ! systemctl is-active --quiet maximus-keyserver; then
+                    echo -e "${CYAN}[+] Iniciando Servidor Python (Systemd)...${NC}"
+                    systemctl enable maximus-keyserver 2>/dev/null
+                    systemctl start maximus-keyserver 2>/dev/null
                     sleep 2
                 fi
                 
@@ -1755,30 +1761,54 @@ menu_maestro() {
                         fi
                         echo "$new_domain" > /etc/MaximusVpsMx/domain.conf
                         rm -f /tmp/cf_dynamic.conf
-                        pkill -f "cloudflared" >/dev/null 2>&1
+                        rm -f /etc/MaximusVpsMx/cf_tunnel.url
+                        systemctl stop maximus-tunnel 2>/dev/null
+                        systemctl disable maximus-tunnel 2>/dev/null
+                        
+                        systemctl start maximus-keyserver 2>/dev/null
                         echo -e "${GREEN}✅ Dominio configurado y Servidor Activo en: $new_domain${NC}"
                     fi
                 elif [ "$d_opt" == "2" ]; then
-                    echo -e "${CYAN}☁️ Generando Dominio Anti-Firewall con Cloudflare...${NC}"
-                    rm -f /tmp/cf_tunnel.log
+                    echo -e "${CYAN}☁️ Generando Dominio Anti-Firewall con Cloudflare (Systemd)...${NC}"
                     rm -f /etc/MaximusVpsMx/domain.conf
-                    pkill -f "cloudflared" >/dev/null 2>&1
-                    screen -dmS cf_tunnel bash -c "cloudflared tunnel --url http://127.0.0.1:6767 > /tmp/cf_tunnel.log 2>&1"
+                    rm -f /etc/MaximusVpsMx/cf_tunnel.url
+                    
+                    # Asegurar Keyserver activo
+                    systemctl start maximus-keyserver 2>/dev/null
+                    
+                    # Copiar definición del servicio si no existe
+                    if [ -f /etc/MaximusVpsMx/core/maximus-tunnel.service ]; then
+                        cp /etc/MaximusVpsMx/core/maximus-tunnel.service /etc/systemd/system/
+                        systemctl daemon-reload
+                    fi
+                    
+                    systemctl enable maximus-tunnel 2>/dev/null
+                    systemctl start maximus-tunnel 2>/dev/null
                     
                     echo -e "${WHITE}Esperando asignación de dominio seguro (aprox 10 seg)...${NC}"
                     sleep 10
                     
-                    cf_url=$(grep -o 'https://[-a-zA-Z0-9]*\.trycloudflare\.com' /tmp/cf_tunnel.log | head -n 1)
+                    cf_url=$(cat /etc/MaximusVpsMx/cf_tunnel.url 2>/dev/null)
                     if [ -n "$cf_url" ]; then
                         echo -e "${GREEN}✅ Dominio generado: ${cf_url}${NC}"
                         echo "$cf_url" > /tmp/cf_dynamic.conf
                     else
-                        echo -e "${RED}❌ Falló Cloudflare. Asegúrate de tenerlo instalado.${NC}"
+                        # Fallback a ver si el log tiene algo
+                        cf_url=$(grep -o 'https://[-a-zA-Z0-9]*\.trycloudflare\.com' /var/log/maximus_tunnel.log 2>/dev/null | head -n 1)
+                        if [ -n "$cf_url" ]; then
+                            echo "$cf_url" > /etc/MaximusVpsMx/cf_tunnel.url
+                            echo "$cf_url" > /tmp/cf_dynamic.conf
+                            echo -e "${GREEN}✅ Dominio generado: ${cf_url}${NC}"
+                        else
+                            echo -e "${RED}❌ Falló Cloudflare. Verifica /var/log/maximus_tunnel.log${NC}"
+                        fi
                     fi
                 elif [ "$d_opt" == "3" ]; then
                     rm -f /etc/MaximusVpsMx/domain.conf
                     rm -f /tmp/cf_dynamic.conf
-                    pkill -f "cloudflared" >/dev/null 2>&1
+                    rm -f /etc/MaximusVpsMx/cf_tunnel.url
+                    systemctl stop maximus-tunnel 2>/dev/null
+                    systemctl disable maximus-tunnel 2>/dev/null
                     echo -e "${YELLOW}⚠️ Dominio reseteado a la IP por defecto.${NC}"
                 fi
                 ui_pause

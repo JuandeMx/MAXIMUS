@@ -178,17 +178,26 @@ class KeyHandler(http.server.SimpleHTTPRequestHandler):
 
                 # El dominio puede ser el de CF o la IP
                 domain_file = os.path.join(PANEL_DIR, "domain.conf")
+                cf_tunnel_file = os.path.join(PANEL_DIR, "cf_tunnel.url")
                 cf_domain_file = os.path.join(PANEL_DIR, "cloudflare.conf")
                 
                 host_url = None
                 if os.path.exists(domain_file):
                     with open(domain_file, "r") as f:
                         host_url = f.read().strip()
+                elif os.path.exists(cf_tunnel_file):
+                    with open(cf_tunnel_file, "r") as f:
+                        host_url = f.read().strip()
                 elif os.path.exists(cf_domain_file):
                     with open(cf_domain_file, "r") as f:
                         host_url = f.read().strip()
                 
-                # Foolproof fallback: read directly from the cloudflare log
+                # Foolproof fallback: read directly from logs
+                if not host_url and os.path.exists("/var/log/maximus_tunnel.log"):
+                    with open("/var/log/maximus_tunnel.log", "r") as f:
+                        match = re.search(r'https://[-a-zA-Z0-9]*\.trycloudflare\.com', f.read())
+                        if match:
+                            host_url = match.group(0)
                 if not host_url and os.path.exists("/tmp/cf_tunnel.log"):
                     with open("/tmp/cf_tunnel.log", "r") as f:
                         match = re.search(r'https://[-a-zA-Z0-9]*\.trycloudflare\.com', f.read())
@@ -207,10 +216,12 @@ class KeyHandler(http.server.SimpleHTTPRequestHandler):
                 injection = f"\nMASTER_URL='{host_url}'\nMASTER_IP='{master_ip_raw}'\nMASTER_PORT='80'\n"
                 content = content.replace("#!/bin/bash", "#!/bin/bash" + injection)
                 
+                response_bytes = content.encode("utf-8")
                 self.send_response(200)
                 self.send_header("Content-type", "text/x-shellscript")
+                self.send_header("Content-Length", str(len(response_bytes)))
                 self.end_headers()
-                self.wfile.write(content.encode("utf-8"))
+                self.wfile.write(response_bytes)
             except Exception as e:
                 self.send_error(500, str(e))
 
