@@ -119,7 +119,11 @@ if [ -z "$MAXIMUS_UPDATED" ]; then
     fi
 
 echo -e "\n\e[1;36m=========================================================\e[0m"
-echo -e "\e[1;33m          MAXIMUS ELITE PANEL - MASTER INSTALLER         \e[0m"
+if [ -f "/etc/MaximusVpsMx/.master_node" ]; then
+    echo -e "\e[1;33m          MAXIMUS ELITE PANEL - MASTER INSTALLER         \e[0m"
+else
+    echo -e "\e[1;33m          MAXIMUS ELITE PANEL - CLIENT INSTALLER         \e[0m"
+fi
 echo -e "\e[1;36m=========================================================\e[0m\n"
 
 # 0. Limpieza y Preparación de Terreno (v6.2 Residual Fix)

@@ -38,13 +38,13 @@ echo -e "\e[1;32m[+] Ofuscando código fuente a binarios...\e[0m"
 cd $WORK_DIR
 
 # Compilar MX (el menú principal)
-shc -f MX
+shc -r -f MX
 mv MX.x MX
 rm MX.x.c MX.x.sh MX.c 2>/dev/null
 
 # Compilar core scripts (opcional, los más críticos)
 if [ -f "core/speed_optimize.sh" ]; then
-    shc -f core/speed_optimize.sh
+    shc -r -f core/speed_optimize.sh
     mv core/speed_optimize.sh.x core/speed_optimize.sh
     rm core/speed_optimize.sh.x.c core/speed_optimize.sh.c 2>/dev/null
 fi
