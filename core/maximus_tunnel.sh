@@ -20,5 +20,17 @@ rm -f "$LOG_FILE" "$URL_FILE"
     done
 ) &
 
+# Encontrar el binario de cloudflared
+CLOUDFLARED_BIN="/usr/local/bin/cloudflared"
+if [ ! -f "$CLOUDFLARED_BIN" ]; then
+    if [ -f "/usr/bin/cloudflared" ]; then
+        CLOUDFLARED_BIN="/usr/bin/cloudflared"
+    elif [ -f "/bin/cloudflared" ]; then
+        CLOUDFLARED_BIN="/bin/cloudflared"
+    else
+        CLOUDFLARED_BIN="cloudflared"
+    fi
+fi
+
 # Exec cloudflared so systemd tracks it directly
-exec /usr/local/bin/cloudflared tunnel --url http://127.0.0.1:6767 > "$LOG_FILE" 2>&1
+exec "$CLOUDFLARED_BIN" tunnel --url http://127.0.0.1:6767 > "$LOG_FILE" 2>&1

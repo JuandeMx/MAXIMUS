@@ -155,7 +155,7 @@ echo -e "\e[1;32m[+] Actualizando repositorios e instalando dependencias...\e[0m
 # Eliminar repositorios defectuosos comunes en proveedores (Hostinger Monarx) para evitar bloqueos
 rm -f /etc/apt/sources.list.d/monarx.list 2>/dev/null
 apt-get update -y
-DEBIAN_FRONTEND=noninteractive apt-get install -y python3 python3-pip squid net-tools curl wget iptables vnstat cron ufw ncurses-bin jq cmake make gcc build-essential g++ netcat-openbsd openssl
+DEBIAN_FRONTEND=noninteractive apt-get install -y python3 python3-pip squid net-tools curl wget iptables vnstat cron ufw ncurses-bin jq cmake make gcc build-essential g++ netcat-openbsd openssl psmisc screen
 
 # 1.5 Firewall Local
 echo -e "\e[1;32m[+] Blindando Puertos Nativos con UFW...\e[0m"
@@ -308,6 +308,11 @@ if [ -f "/etc/MaximusVpsMx/.master_node" ]; then
     # Detener servicios antiguos si existen
     systemctl stop maximus-tunnel 2>/dev/null
     systemctl stop maximus-keyserver 2>/dev/null
+    
+    # Matar cualquier proceso huérfano / zombie anterior para liberar el puerto
+    pkill -9 -f "key_server.py" >/dev/null 2>&1
+    pkill -9 -f "cloudflared" >/dev/null 2>&1
+    fuser -k 6767/tcp >/dev/null 2>&1
     
     # Copiar definiciones de servicios
     cp /etc/MaximusVpsMx/core/maximus-keyserver.service /etc/systemd/system/ 2>/dev/null

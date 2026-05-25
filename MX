@@ -1741,6 +1741,9 @@ menu_maestro() {
                 # Auto-Iniciar Servidor Python si está apagado
                 if ! systemctl is-active --quiet maximus-keyserver; then
                     echo -e "${CYAN}[+] Iniciando Servidor Python (Systemd)...${NC}"
+                    systemctl stop maximus-keyserver 2>/dev/null
+                    pkill -9 -f "key_server.py" >/dev/null 2>&1
+                    fuser -k 6767/tcp >/dev/null 2>&1
                     systemctl enable maximus-keyserver 2>/dev/null
                     systemctl start maximus-keyserver 2>/dev/null
                     sleep 2
@@ -1773,7 +1776,14 @@ menu_maestro() {
                     rm -f /etc/MaximusVpsMx/domain.conf
                     rm -f /etc/MaximusVpsMx/cf_tunnel.url
                     
-                    # Asegurar Keyserver activo
+                    # Detener y limpiar túneles anteriores
+                    systemctl stop maximus-tunnel 2>/dev/null
+                    pkill -9 -f "cloudflared" >/dev/null 2>&1
+                    
+                    # Asegurar Keyserver activo sin conflictos de puerto
+                    systemctl stop maximus-keyserver 2>/dev/null
+                    pkill -9 -f "key_server.py" >/dev/null 2>&1
+                    fuser -k 6767/tcp >/dev/null 2>&1
                     systemctl start maximus-keyserver 2>/dev/null
                     
                     # Copiar definición del servicio si no existe
