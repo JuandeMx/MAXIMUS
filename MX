@@ -1,5 +1,5 @@
 #!/bin/bash
-# MaximusVpsMx - Super Panel v11.2.1 (Premium)
+# MaximusVpsMx - Super Panel v11.2.2 (Premium)
 # Modificado para Submenús y Funciones Avanzadas + Hysteria v2 Manager
 
 # SEGURIDAD: Solo root puede ejecutar este panel
@@ -61,7 +61,7 @@ if [ ! -f /etc/MaximusVpsMx/.master_node ]; then
 fi
 
 # --- PANEL VERSION ---
-PANEL_VERSION="v11.2.1"
+PANEL_VERSION="v11.2.2"
 
 # --- COLORES GLOBALES ---
 RED='\033[1;31m'
@@ -1374,7 +1374,7 @@ menu_sistema() {
             5)
                 read -p "¿Activar Firewall? [1=S, 2=N]: " actf
                 if [ "$actf" == "1" ]; then
-                    ufw allow 22,44,80,443/tcp 2>/dev/null; ufw --force enable
+                    ufw allow 22,44,80,443,6767/tcp 2>/dev/null; ufw --force enable
                     echo -e "${GREEN}✅ Activo.${NC}"
                 else ufw disable; echo -e "${RED}⚠️ Apagado.${NC}"; fi
                 sleep 0.1 ;;
@@ -1759,6 +1759,19 @@ menu_maestro() {
                     echo -e "Ejemplo: https://midominio.com (o http://192.168.1.1:6767)"
                     read -p "Ingresa tu Dominio/IP Base: " new_domain
                     if [ -n "$new_domain" ]; then
+                        # Quitar http:// o https:// temporalmente para analizar el host y puerto
+                        temp_domain=${new_domain#http://}
+                        temp_domain=${temp_domain#https://}
+                        
+                        # Si no contiene ":" (no hay puerto especificado)
+                        if [[ "$temp_domain" != *:* ]]; then
+                            # Si la entrada original no empieza con https:// (que usa 443 implícito)
+                            if [[ "$new_domain" != https://* ]]; then
+                                # Añadir puerto del keyserver
+                                new_domain="${new_domain}:6767"
+                            fi
+                        fi
+                        
                         if [[ "$new_domain" != http://* ]] && [[ "$new_domain" != https://* ]]; then
                             new_domain="http://$new_domain"
                         fi
