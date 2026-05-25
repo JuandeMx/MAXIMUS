@@ -212,8 +212,13 @@ class KeyHandler(http.server.SimpleHTTPRequestHandler):
                     host_url = f"http://{public_ip}:6767"
 
                 # Inyectar MASTER_URL para evitar problemas con puertos https implícitos (443)
-                master_ip_raw = host_url.replace("https://", "").replace("http://", "").split(":")[0]
-                injection = f"\nMASTER_URL='{host_url}'\nMASTER_IP='{master_ip_raw}'\nMASTER_PORT='80'\n"
+                parsed_url = urllib.parse.urlparse(host_url)
+                master_ip_raw = parsed_url.hostname or host_url.replace("https://", "").replace("http://", "").split(":")[0]
+                master_port = parsed_url.port
+                if not master_port:
+                    master_port = 443 if parsed_url.scheme == "https" else 80
+                
+                injection = f"\nMASTER_URL='{host_url}'\nMASTER_IP='{master_ip_raw}'\nMASTER_PORT='{master_port}'\n"
                 content = content.replace("#!/bin/bash", "#!/bin/bash" + injection)
                 
                 response_bytes = content.encode("utf-8")

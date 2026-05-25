@@ -1,5 +1,5 @@
 #!/bin/bash
-# MaximusVpsMx - Super Panel v11.2.2 (Premium)
+# MaximusVpsMx - Super Panel v11.2.3 (Premium)
 # Modificado para Submenús y Funciones Avanzadas + Hysteria v2 Manager
 
 # SEGURIDAD: Solo root puede ejecutar este panel
@@ -12,8 +12,12 @@ fi
 if [ ! -f /etc/MaximusVpsMx/.master_node ]; then
     if [ -f /etc/MaximusVpsMx/license.key ]; then
         source /etc/MaximusVpsMx/license.key
-        if [ -n "$MASTER_IP" ] && [ -n "$MASTER_PORT" ] && [ -n "$CLIENT_KEY" ]; then
-            LIC_STATUS=$(curl -4 -sL --max-time 5 "http://$MASTER_IP:$MASTER_PORT/check?key=$CLIENT_KEY" 2>/dev/null)
+        if { [ -n "$MASTER_IP" ] && [ -n "$MASTER_PORT" ] || [ -n "$MASTER_URL" ]; } && [ -n "$CLIENT_KEY" ]; then
+            if [ -n "$MASTER_URL" ]; then
+                LIC_STATUS=$(curl -4 -sL --max-time 5 "$MASTER_URL/check?key=$CLIENT_KEY" 2>/dev/null)
+            else
+                LIC_STATUS=$(curl -4 -sL --max-time 5 "http://$MASTER_IP:$MASTER_PORT/check?key=$CLIENT_KEY" 2>/dev/null)
+            fi
             if [[ "$LIC_STATUS" != OK* ]]; then
                 clear
                 echo -e "\033[1;31m=========================================\033[0m"
@@ -39,9 +43,17 @@ if [ ! -f /etc/MaximusVpsMx/.master_node ]; then
                 while true; do
                     read -p "Ingrese su nueva Key: " new_key
                     if [ -n "$new_key" ]; then
-                        NEW_STATUS=$(curl -4 -sL --max-time 5 "http://$MASTER_IP:$MASTER_PORT/check?key=$new_key" 2>/dev/null)
+                        if [ -n "$MASTER_URL" ]; then
+                            NEW_STATUS=$(curl -4 -sL --max-time 5 "$MASTER_URL/check?key=$new_key" 2>/dev/null)
+                        else
+                            NEW_STATUS=$(curl -4 -sL --max-time 5 "http://$MASTER_IP:$MASTER_PORT/check?key=$new_key" 2>/dev/null)
+                        fi
                         if [[ "$NEW_STATUS" == OK* ]]; then
-                             curl -4 -sL "http://$MASTER_IP:$MASTER_PORT/activate?key=$new_key" >/dev/null 2>&1
+                             if [ -n "$MASTER_URL" ]; then
+                                 curl -4 -sL "$MASTER_URL/activate?key=$new_key" >/dev/null 2>&1
+                             else
+                                 curl -4 -sL "http://$MASTER_IP:$MASTER_PORT/activate?key=$new_key" >/dev/null 2>&1
+                             fi
                              sed -i "s/CLIENT_KEY=.*/CLIENT_KEY='$new_key'/g" /etc/MaximusVpsMx/license.key
                              echo -e "\033[1;32mLicencia renovada exitosamente. Cargando panel...\033[0m"
                              sleep 2
@@ -61,7 +73,7 @@ if [ ! -f /etc/MaximusVpsMx/.master_node ]; then
 fi
 
 # --- PANEL VERSION ---
-PANEL_VERSION="v11.2.2"
+PANEL_VERSION="v11.2.3"
 
 # --- COLORES GLOBALES ---
 RED='\033[1;31m'
