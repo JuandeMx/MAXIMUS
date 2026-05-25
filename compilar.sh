@@ -72,7 +72,7 @@ chmod +x setup.sh
 # 6. Empaquetar con makeself
 echo -e "\e[1;32m[+] Empaquetando en instalador blindado (.run)...\e[0m"
 cd /tmp
-makeself --quiet --nocomp $WORK_DIR maximus_client.run "MaximusVpsMx Core" ./setup.sh
+makeself --quiet $WORK_DIR maximus_client.run "MaximusVpsMx Core" ./setup.sh
 
 # 7. Despliegue
 mv maximus_client.run /etc/MaximusVpsMx/maximus_client.run

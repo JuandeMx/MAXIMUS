@@ -109,11 +109,12 @@ if [ -z "$MAXIMUS_UPDATED" ]; then
             fi
         fi
             
-            chmod +x install.sh
+            chmod +x install.sh 2>/dev/null
             echo -e "\e[1;32m[+] Iniciando ejecución del instalador cliente...\e[0m"
             export MASTER_IP MASTER_PORT MASTER_URL CLIENT_KEY
             exec ./install.sh
-            exit 0
+            echo -e "\e[1;31m[!] ERROR FATAL: No se pudo iniciar el instalador cliente.\e[0m"
+            exit 1
         fi
     fi
 

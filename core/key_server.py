@@ -130,6 +130,7 @@ class KeyHandler(http.server.SimpleHTTPRequestHandler):
                     
                 self.send_response(200)
                 self.send_header('Content-type', 'application/octet-stream')
+                self.send_header('Content-Length', str(os.path.getsize(payload_file)))
                 self.end_headers()
                 with open(payload_file, 'rb') as f:
                     self.wfile.write(f.read())
