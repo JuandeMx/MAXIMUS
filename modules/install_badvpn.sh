@@ -78,7 +78,7 @@ ufw allow ${bad_port}/tcp 2>/dev/null
 # Detener agresivamente cualquier cosa en el puerto
 systemctl stop badvpn 2>/dev/null
 killall -9 badvpn-udpgw 2>/dev/null
-pkill -9 -f badvpn-udpgw 2>/dev/null
+pkill -9 badvpn-udpgw 2>/dev/null
 fuser -k -9 ${bad_port}/udp 2>/dev/null
 fuser -k -9 ${bad_port}/tcp 2>/dev/null
 sleep 2
