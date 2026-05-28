@@ -38,15 +38,20 @@ esac
 HY_DIR="/etc/hysteria"
 mkdir -p "$HY_DIR"
 
-# Descargar el binario directamente desde la Bóveda de MAXIMUS (Binario blindado estable)
-echo -e "${YELLOW}[+] Descargando Hysteria v2 desde la Bóveda Local Maximus...${NC}"
-LATEST_URL="https://raw.githubusercontent.com/JuandeMx/MAXIMUS/main/bin/hysteria-linux-${BIN_ARCH}"
-
-if curl -sL -f --connect-timeout 10 --max-time 60 -o "$HY_DIR/hysteria" "$LATEST_URL"; then
-    echo -e "${GREEN}[✔] Descarga segura exitosa (Bóveda MAXIMUS).${NC}"
+# Intentar copiar desde la bóveda local del panel para evitar descargas
+if [ -f "/etc/MaximusVpsMx/bin/hysteria-linux-${BIN_ARCH}" ]; then
+    echo -e "${GREEN}[✔] Copiando Hysteria v2 desde la Bóveda Local Maximus...${NC}"
+    cp -f "/etc/MaximusVpsMx/bin/hysteria-linux-${BIN_ARCH}" "$HY_DIR/hysteria"
 else
-    echo -e "${RED}❌ Error: No se pudo conectar a la Bóveda MAXIMUS para Hysteria.${NC}"
-    exit 1
+    # Descargar el binario directamente si no existe localmente
+    echo -e "${YELLOW}[+] Descargando Hysteria v2 desde la Bóveda Remota Maximus...${NC}"
+    LATEST_URL="https://raw.githubusercontent.com/JuandeMx/MAXIMUS/main/bin/hysteria-linux-${BIN_ARCH}"
+    if curl -sL -f --connect-timeout 10 --max-time 60 -o "$HY_DIR/hysteria" "$LATEST_URL"; then
+        echo -e "${GREEN}[✔] Descarga segura exitosa.${NC}"
+    else
+        echo -e "${RED}❌ Error: No se pudo conectar a la Bóveda Remota para Hysteria.${NC}"
+        exit 1
+    fi
 fi
 
 chmod +x "$HY_DIR/hysteria"

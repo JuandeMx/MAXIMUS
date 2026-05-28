@@ -12,7 +12,14 @@ fi
 
 echo -e "\n\e[1;32m[+] Compilando/Configurando BadVPN-udpgw en puerto $bad_port...\e[0m"
 
-# Si no existe el binario, lo instalamos compilándolo o usando el fallback
+# Primero, buscar el binario en la carpeta local del panel para evitar descargas
+if [ -f /etc/MaximusVpsMx/bin/badvpn-udpgw ]; then
+    echo -e "${GREEN}[+] Instalando BadVPN-udpgw desde la bóveda local del panel...${NC}"
+    cp -f /etc/MaximusVpsMx/bin/badvpn-udpgw /usr/local/bin/badvpn-udpgw
+    chmod +x /usr/local/bin/badvpn-udpgw
+fi
+
+# Si no existe el binario (ej: borrado manual), intentamos compilarlo o usar el fallback de descarga
 if [ ! -f /usr/local/bin/badvpn-udpgw ]; then
     echo -e "${YELLOW}[+] Instalando dependencias de compilación...${NC}"
     DEBIAN_FRONTEND=noninteractive apt-get install -y cmake make gcc g++ build-essential git libssl-dev libnss3-dev pkg-config 2>/dev/null

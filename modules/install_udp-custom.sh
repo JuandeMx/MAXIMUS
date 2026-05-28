@@ -41,14 +41,20 @@ UDP_DIR="/etc/udp-custom"
 mkdir -p "$UDP_DIR"
 mkdir -p "/var/log/MaximusVpsMx"
 
-# Descargar el binario directamente desde la Bóveda de MAXIMUS (Binario blindado 100% estable)
-echo -e "${YELLOW}[+] Descargando UDP-Custom desde la Bóveda Local Maximus...${NC}"
-if curl -sL -f --connect-timeout 10 --max-time 60 -o "$UDP_DIR/udp-custom" "https://raw.githubusercontent.com/JuandeMx/MAXIMUS/main/bin/udp-custom-linux-${BIN_ARCH}"; then
-    echo -e "${GREEN}[✔] Descarga segura exitosa (Bóveda MAXIMUS).${NC}"
+# Intentar copiar desde la bóveda local del panel para evitar descargas
+if [ -f "/etc/MaximusVpsMx/bin/udp-custom-linux-${BIN_ARCH}" ]; then
+    echo -e "${GREEN}[✔] Copiando UDP-Custom desde la Bóveda Local Maximus...${NC}"
+    cp -f "/etc/MaximusVpsMx/bin/udp-custom-linux-${BIN_ARCH}" "$UDP_DIR/udp-custom"
 else
-    echo -e "${RED}❌ Error: No se pudo conectar a la Bóveda MAXIMUS.${NC}"
-    echo -e "${RED}   Verifica la conexión a internet del servidor.${NC}"
-    exit 1
+    # Descargar el binario directamente si no existe localmente
+    echo -e "${YELLOW}[+] Descargando UDP-Custom desde la Bóveda Remota Maximus...${NC}"
+    if curl -sL -f --connect-timeout 10 --max-time 60 -o "$UDP_DIR/udp-custom" "https://raw.githubusercontent.com/JuandeMx/MAXIMUS/main/bin/udp-custom-linux-${BIN_ARCH}"; then
+        echo -e "${GREEN}[✔] Descarga segura exitosa (Bóveda MAXIMUS).${NC}"
+    else
+        echo -e "${RED}❌ Error: No se pudo conectar a la Bóveda MAXIMUS.${NC}"
+        echo -e "${RED}   Verifica la conexión a internet del servidor.${NC}"
+        exit 1
+    fi
 fi
 
 # VALIDACIÓN CRÍTICA DE INTEGRIDAD (Evitar archivos de 14 bytes/404)
