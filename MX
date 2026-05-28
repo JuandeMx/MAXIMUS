@@ -1408,7 +1408,30 @@ CFEOF
                         echo -e "${GREEN}✅ Activado.${NC}"; sleep 0.1 ;;
                     3) crontab -l 2>/dev/null | grep -v "cloudflare-ddns" | crontab -; echo -e "${RED}⚠️ Desactivado.${NC}"; sleep 0.1 ;;
                 esac ;;
-             case $mant_opt in
+            7) bash /etc/MaximusVpsMx/modules/bot_manager.sh ;;
+            8) sub_zombies ;;
+            9) check_bot_connection ;;
+            0) return ;;
+            *) continue ;;
+        esac
+    done
+}
+
+# --- MENÚ DE MANTENIMIENTO / ACTUALIZACIÓN ---
+menu_mantenimiento() {
+    while true; do
+        ui_header "MANTENIMIENTO Y ACTUALIZACIÓN"
+        echo -e "  ${CYAN}[1]>${GREEN} ACTUALIZACIÓN RÁPIDA (Solo Código, Sin Cortes)${NC}"
+        echo -e "  ${CYAN}[2]>${WHITE} ACTUALIZACIÓN INTELIGENTE (Mantiene Datos)${NC}"
+        echo -e "  ${CYAN}[3]>${YELLOW} REINSTALACIÓN FORZADA (Limpia y Repara)${NC}"
+        echo -e "  ${CYAN}[4]>${RED} [!] DESINSTALAR / PURGAR TODO EL PANEL${NC}"
+        ui_subhr
+        echo -e "  ${WHITE}[0] VOLVER AL MENÚ PRINCIPAL${NC}"
+        ui_hr
+        ui_prompt " Selecciona: "
+        read mant_opt
+
+        case $mant_opt in
             1)
                 echo -e "\n${YELLOW}▶ Iniciando Actualización Rápida Express...${NC}"
                 TEMP_DIR="/tmp/MaximusVpsMx_fast"
