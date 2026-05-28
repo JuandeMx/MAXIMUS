@@ -26,6 +26,9 @@ mkdir -p $WORK_DIR
 cp -r /etc/MaximusVpsMx/* $WORK_DIR/
 # Eliminar bases de datos locales y archivos sensibles para que no vayan en el paquete
 rm -f $WORK_DIR/keys.db
+rm -f $WORK_DIR/users.db
+rm -f $WORK_DIR/hysteria_users.db
+rm -f $WORK_DIR/*.db 2>/dev/null
 rm -f $WORK_DIR/cloudflare.conf
 rm -f $WORK_DIR/domain.conf
 rm -f $WORK_DIR/.master_node
