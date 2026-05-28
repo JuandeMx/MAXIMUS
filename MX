@@ -1,5 +1,5 @@
 #!/bin/bash
-# MaximusVpsMx - Super Panel v11.2.3 (Premium)
+# MaximusVpsMx - Super Panel v11.2.4 (Premium)
 # Modificado para Submenús y Funciones Avanzadas + Hysteria v2 Manager
 
 # SEGURIDAD: Solo root puede ejecutar este panel
@@ -73,7 +73,7 @@ if [ ! -f /etc/MaximusVpsMx/.master_node ]; then
 fi
 
 # --- PANEL VERSION ---
-PANEL_VERSION="v11.2.3"
+PANEL_VERSION="v11.2.4"
 
 # --- COLORES GLOBALES ---
 RED='\033[1;31m'
@@ -1408,30 +1408,7 @@ CFEOF
                         echo -e "${GREEN}✅ Activado.${NC}"; sleep 0.1 ;;
                     3) crontab -l 2>/dev/null | grep -v "cloudflare-ddns" | crontab -; echo -e "${RED}⚠️ Desactivado.${NC}"; sleep 0.1 ;;
                 esac ;;
-            7) bash /etc/MaximusVpsMx/modules/bot_manager.sh ;;
-            8) sub_zombies ;;
-            9) check_bot_connection ;;
-            0) return ;;
-            *) continue ;;
-        esac
-    done
-}
-
-# --- MENÚ DE MANTENIMIENTO / ACTUALIZACIÓN ---
-menu_mantenimiento() {
-    while true; do
-        ui_header "MANTENIMIENTO Y ACTUALIZACIÓN"
-        echo -e "  ${CYAN}[1]>${GREEN} ACTUALIZACIÓN RÁPIDA (Solo Código, Sin Cortes)${NC}"
-        echo -e "  ${CYAN}[2]>${WHITE} ACTUALIZACIÓN INTELIGENTE (Mantiene Datos)${NC}"
-        echo -e "  ${CYAN}[3]>${YELLOW} REINSTALACIÓN FORZADA (Limpia y Repara)${NC}"
-        echo -e "  ${CYAN}[4]>${RED} [!] DESINSTALAR / PURGAR TODO EL PANEL${NC}"
-        ui_subhr
-        echo -e "  ${WHITE}[0] VOLVER AL MENÚ PRINCIPAL${NC}"
-        ui_hr
-        ui_prompt " Selecciona: "
-        read mant_opt
-
-        case $mant_opt in
+             case $mant_opt in
             1)
                 echo -e "\n${YELLOW}▶ Iniciando Actualización Rápida Express...${NC}"
                 TEMP_DIR="/tmp/MaximusVpsMx_fast"
@@ -1440,156 +1417,314 @@ menu_mantenimiento() {
                 if [ -f /etc/MaximusVpsMx/.master_node ]; then
                     echo -e "${CYAN}[MAESTRO] Descargando código fresco desde GitHub...${NC}"
                     URL_REPO="https://github.com/JuandeMx/MAXIMUS.git"
-                    cd /root || exit
                     if git clone --depth=1 -q "$URL_REPO" "$TEMP_DIR"; then
-                        echo -e "${GREEN}[OK] Descarga exitosa. Inyectando cambios...${NC}"
-                        cp -rf $TEMP_DIR/* /etc/MaximusVpsMx/
-                        chmod +x /etc/MaximusVpsMx/MX
-                        chmod +x /etc/MaximusVpsMx/modules/*.sh
-                        chmod +x /etc/MaximusVpsMx/core/*.sh
-                         systemctl restart mx-proxy ws-epro stunnel4 maximus-bot maximus-keyserver 2>/dev/null
-                         if systemctl is-active --quiet maximus-tunnel 2>/dev/null; then
-                             systemctl restart maximus-tunnel 2>/dev/null
-                         fi
-                         
-                         echo -e "${CYAN}[+] Generando nuevos binarios para los clientes...${NC}"
-                        if [ -f /etc/MaximusVpsMx/compilar.sh ]; then
-                            cd /etc/MaximusVpsMx && bash compilar.sh >/dev/null 2>&1
-                        fi
+                        echo -e "${GREEN}[OK] Descarga exitosa. Aplicando actualización rápida...${NC}"
                         
-                        rm -rf "$TEMP_DIR"
-                        echo -e "${GREEN}✅ ACTUALIZACIÓN MAESTRA COMPLETADA.${NC}"
+                        exec bash -c "
+                            cp -rf $TEMP_DIR/* /etc/MaximusVpsMx/
+                            chmod +x /etc/MaximusVpsMx/MX
+                            chmod +x /etc/MaximusVpsMx/modules/*.sh 2>/dev/null
+                            chmod +x /etc/MaximusVpsMx/core/*.sh 2>/dev/null
+                            
+                            systemctl restart mx-proxy ws-epro stunnel4 maximus-bot maximus-keyserver 2>/dev/null
+                            if systemctl is-active --quiet maximus-tunnel 2>/dev/null; then
+                                systemctl restart maximus-tunnel 2>/dev/null
+                            fi
+                            
+                            echo -e '${CYAN}[+] Generando nuevos binarios para los clientes...${NC}'
+                            if [ -f /etc/MaximusVpsMx/compilar.sh ]; then
+                                cd /etc/MaximusVpsMx && bash compilar.sh >/dev/null 2>&1
+                            fi
+                            
+                            rm -rf '$TEMP_DIR'
+                            echo -e '${GREEN}✅ ACTUALIZACIÓN MAESTRA COMPLETADA.${NC}'
+                            sleep 1
+                            exec /usr/local/bin/menu
+                        "
                     else
                         echo -e "${RED}❌ ERROR: No se pudo conectar con GitHub.${NC}"
+                        ui_pause
                     fi
                 else
-                    echo -e "${CYAN}[CLIENTE] Descargando actualización compilada desde el Maestro...${NC}"
+                    # CLIENTE
+                    echo -e "${CYAN}[CLIENTE] Descargando actualización rápida desde el Maestro...${NC}"
                     source /etc/MaximusVpsMx/license.key
-                    if [ -z "$MASTER_URL" ]; then
+                    if [ -z "$MASTER_URL" ] && [ -n "$MASTER_IP" ]; then
                         MASTER_URL="http://$MASTER_IP:$MASTER_PORT"
                     fi
                     
+                    if [ -z "$CLIENT_KEY" ]; then
+                        echo -e "${RED}❌ ERROR: No se encontró la licencia en el cliente. Abortando.${NC}"
+                        ui_pause
+                        continue
+                    fi
+                    
+                    rm -f /tmp/payload.run 2>/dev/null
                     curl -4 -sL "$MASTER_URL/download?key=$CLIENT_KEY" -o /tmp/payload.run
                     if [ -s /tmp/payload.run ]; then
-                        echo -e "${GREEN}[OK] Binario recibido. Instalando...${NC}"
-                        chmod +x /tmp/payload.run
-                        cd /tmp && ./payload.run --target /tmp/MaximusVpsMx_fast >/dev/null 2>&1
-                        cp -rf /tmp/MaximusVpsMx_fast/* /etc/MaximusVpsMx/
-                        chmod +x /etc/MaximusVpsMx/MX /etc/MaximusVpsMx/core/*.sh 2>/dev/null
-                        systemctl restart mx-proxy ws-epro stunnel4 maximus-bot 2>/dev/null
-                        rm -rf /tmp/MaximusVpsMx_fast /tmp/payload.run
-                        echo -e "${GREEN}✅ ACTUALIZACIÓN CLIENTE COMPLETADA.${NC}"
+                        echo -e "${GREEN}[OK] Binario recibido. Aplicando actualización...${NC}"
+                        
+                        exec bash -c "
+                            chmod +x /tmp/payload.run
+                            rm -rf '$TEMP_DIR'
+                            /tmp/payload.run --target '$TEMP_DIR' >/dev/null 2>&1
+                            
+                            cp -rf '$TEMP_DIR'/* /etc/MaximusVpsMx/
+                            chmod +x /etc/MaximusVpsMx/MX /etc/MaximusVpsMx/core/*.sh 2>/dev/null
+                            systemctl restart mx-proxy ws-epro stunnel4 maximus-bot 2>/dev/null
+                            
+                            rm -rf '$TEMP_DIR' /tmp/payload.run
+                            echo -e '${GREEN}✅ ACTUALIZACIÓN CLIENTE COMPLETADA.${NC}'
+                            sleep 1
+                            exec /usr/local/bin/menu
+                        "
                     else
                         echo -e "${RED}❌ ERROR: No se pudo descargar la actualización del Maestro.${NC}"
+                        ui_pause
                     fi
                 fi
-                ui_pause ; return ;;
+                ;;
             2)
                 echo -e "\n${YELLOW}▶ Iniciando Actualización Inteligente...${NC}"
-                URL_REPO="https://github.com/JuandeMx/MAXIMUS.git"
-                TEMP_DIR="/tmp/MaximusVpsMx_temp"
-
-                echo -e "${CYAN}[+] Creando respaldo de datos vitales (Usuarios, Keys, IPs)...${NC}"
-                mkdir -p /tmp/MX_BACKUP
-                [ -f /etc/MaximusVpsMx/users.db ] && cp /etc/MaximusVpsMx/users.db /tmp/MX_BACKUP/
-                [ -f /etc/MaximusVpsMx/bot_config.json ] && cp /etc/MaximusVpsMx/bot_config.json /tmp/MX_BACKUP/
-                [ -f /etc/MaximusVpsMx/hysteria_users.db ] && cp /etc/MaximusVpsMx/hysteria_users.db /tmp/MX_BACKUP/
-                 echo -e "${RED}[!] Deteniendo todos los servicios y procesos vivos...${NC}"
-                systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot 2>/dev/null
-                killall -9 badvpn-udpgw hysteria udp-custom python3 stunnel4 2>/dev/null
-                pkill -f "key_server.py" >/dev/null 2>&1
-                pkill -f "cloudflared" >/dev/null 2>&1
-
-                rm -rf "$TEMP_DIR" 2>/dev/null
-                cd /tmp || exit
                 
                 if [ -f /etc/MaximusVpsMx/.master_node ]; then
+                    echo -e "${CYAN}[MAESTRO] Creando respaldo de datos vitales (Usuarios, Keys, IPs)...${NC}"
+                    mkdir -p /tmp/MX_BACKUP
+                    [ -f /etc/MaximusVpsMx/keys.db ] && cp /etc/MaximusVpsMx/keys.db /tmp/MX_BACKUP/
+                    [ -f /etc/MaximusVpsMx/domain.conf ] && cp /etc/MaximusVpsMx/domain.conf /tmp/MX_BACKUP/
+                    [ -f /etc/MaximusVpsMx/users.db ] && cp /etc/MaximusVpsMx/users.db /tmp/MX_BACKUP/
+                    [ -f /etc/MaximusVpsMx/bot_config.json ] && cp /etc/MaximusVpsMx/bot_config.json /tmp/MX_BACKUP/
+                    [ -f /etc/MaximusVpsMx/hysteria_users.db ] && cp /etc/MaximusVpsMx/hysteria_users.db /tmp/MX_BACKUP/
+                    [ -f /etc/MaximusVpsMx/cloudflare.conf ] && cp /etc/MaximusVpsMx/cloudflare.conf /tmp/MX_BACKUP/
+                    
+                    URL_REPO="https://github.com/JuandeMx/MAXIMUS.git"
+                    TEMP_DIR="/tmp/MaximusVpsMx_temp"
+                    rm -rf "$TEMP_DIR" 2>/dev/null
+                    
                     echo -e "${CYAN}[MAESTRO] Descargando última versión de GitHub...${NC}"
                     if git clone --depth=1 -q "$URL_REPO" "$TEMP_DIR"; then
-                        echo -e "${GREEN}[OK] Descarga exitosa.${NC}"
-                        echo -e "${CYAN}[+] Reemplazando archivos del sistema...${NC}"
-                        rm -rf /etc/MaximusVpsMx
-                        rm -f /usr/local/bin/MX
-                        rm -f /root/setup 2>/dev/null
-
-                        echo -e "${CYAN}[+] Ejecutando instalador Maestro...${NC}"
-                        cd "$TEMP_DIR" && chmod +x install.sh && bash install.sh
+                        echo -e "${GREEN}[OK] Descarga exitosa. Preparando reemplazo seguro...${NC}"
                         
-                        echo -e "${CYAN}[+] Generando nuevos binarios para los clientes...${NC}"
-                        if [ -f /etc/MaximusVpsMx/compilar.sh ]; then
-                            cd /etc/MaximusVpsMx && bash compilar.sh >/dev/null 2>&1
-                        fi
+                        exec bash -c "
+                            echo -e '${RED}[!] Deteniendo todos los servicios y procesos vivos...${NC}'
+                            systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-keyserver maximus-tunnel 2>/dev/null
+                            killall -9 badvpn-udpgw hysteria udp-custom python3 stunnel4 2>/dev/null
+                            pkill -f 'key_server.py' >/dev/null 2>&1
+                            pkill -f 'cloudflared' >/dev/null 2>&1
+                            
+                            rm -rf /etc/MaximusVpsMx
+                            rm -f /usr/local/bin/MX
+                            rm -f /root/setup 2>/dev/null
+                            
+                            echo -e '${CYAN}[+] Ejecutando instalador Maestro...${NC}'
+                            # Crear el archivo master_node antes de correr el instalador
+                            mkdir -p /etc/MaximusVpsMx
+                            touch /etc/MaximusVpsMx/.master_node
+                            
+                            cd '$TEMP_DIR' && chmod +x install.sh
+                            export MAXIMUS_UPDATED=1
+                            bash install.sh
+                            
+                            echo -e '${CYAN}[+] Generando nuevos binarios para los clientes...${NC}'
+                            if [ -f /etc/MaximusVpsMx/compilar.sh ]; then
+                                cd /etc/MaximusVpsMx && bash compilar.sh >/dev/null 2>&1
+                            fi
+                            
+                            echo -e '${CYAN}[+] Restaurando respaldo de datos...${NC}'
+                            [ -f /tmp/MX_BACKUP/users.db ] && cp /tmp/MX_BACKUP/users.db /etc/MaximusVpsMx/
+                            [ -f /tmp/MX_BACKUP/bot_config.json ] && cp /tmp/MX_BACKUP/bot_config.json /etc/MaximusVpsMx/
+                            [ -f /tmp/MX_BACKUP/hysteria_users.db ] && cp /tmp/MX_BACKUP/hysteria_users.db /etc/MaximusVpsMx/
+                            [ -f /tmp/MX_BACKUP/cloudflare.conf ] && cp /tmp/MX_BACKUP/cloudflare.conf /etc/MaximusVpsMx/
+                            [ -d /etc/MaximusVpsMx/slowdns ] && [ -f /tmp/MX_BACKUP/ns-domain.conf ] && cp /tmp/MX_BACKUP/ns-domain.conf /etc/MaximusVpsMx/slowdns/
+                            [ -d /etc/stunnel ] && [ -f /tmp/MX_BACKUP/stunnel.pem ] && cp /tmp/MX_BACKUP/stunnel.pem /etc/stunnel/
+                            [ -f /tmp/MX_BACKUP/dropbear ] && cp /tmp/MX_BACKUP/dropbear /etc/default/
+                            [ -f /tmp/MX_BACKUP/keys.db ] && cp /tmp/MX_BACKUP/keys.db /etc/MaximusVpsMx/
+                            [ -f /tmp/MX_BACKUP/domain.conf ] && cp /tmp/MX_BACKUP/domain.conf /etc/MaximusVpsMx/
+                            
+                            rm -rf '$TEMP_DIR' /tmp/MX_BACKUP
+                            echo -e '\n${GREEN}✅ ACTUALIZACIÓN INTELIGENTE MAESTRA COMPLETADA.${NC}'
+                            exec /usr/local/bin/menu
+                        "
                     else
                         echo -e "${RED}❌ ERROR: No se pudo conectar con GitHub.${NC}"
-                        ui_pause ; return
+                        ui_pause
                     fi
                 else
-                    echo -e "${CYAN}[CLIENTE] Descargando actualización compilada desde el Maestro...${NC}"
+                    # CLIENTE
+                    echo -e "${CYAN}[CLIENTE] Creando respaldo de datos vitales...${NC}"
+                    mkdir -p /tmp/MX_BACKUP
+                    [ -f /etc/MaximusVpsMx/users.db ] && cp /etc/MaximusVpsMx/users.db /tmp/MX_BACKUP/
+                    [ -f /etc/MaximusVpsMx/bot_config.json ] && cp /etc/MaximusVpsMx/bot_config.json /tmp/MX_BACKUP/
+                    [ -f /etc/MaximusVpsMx/hysteria_users.db ] && cp /etc/MaximusVpsMx/hysteria_users.db /tmp/MX_BACKUP/
+                    [ -f /etc/MaximusVpsMx/cloudflare.conf ] && cp /etc/MaximusVpsMx/cloudflare.conf /tmp/MX_BACKUP/
+                    
                     source /etc/MaximusVpsMx/license.key
-                    if [ -z "$MASTER_URL" ]; then
+                    if [ -z "$MASTER_URL" ] && [ -n "$MASTER_IP" ]; then
                         MASTER_URL="http://$MASTER_IP:$MASTER_PORT"
                     fi
                     
+                    if [ -z "$CLIENT_KEY" ]; then
+                        echo -e "${RED}❌ ERROR: No se encontró la licencia en el cliente. Abortando.${NC}"
+                        ui_pause
+                        continue
+                    fi
+                    
+                    echo -e "${CYAN}[CLIENTE] Descargando actualización compilada desde el Maestro...${NC}"
+                    rm -f /tmp/payload.run 2>/dev/null
                     curl -4 -sL "$MASTER_URL/download?key=$CLIENT_KEY" -o /tmp/payload.run
                     if [ -s /tmp/payload.run ]; then
-                        echo -e "${GREEN}[OK] Binario recibido. Ejecutando instalación ciega...${NC}"
-                        chmod +x /tmp/payload.run
-                        rm -rf /etc/MaximusVpsMx
-                        rm -f /usr/local/bin/MX
+                        echo -e "${GREEN}[OK] Binario recibido. Iniciando actualización...${NC}"
                         
-                        ./payload.run --target /etc/MaximusVpsMx >/dev/null 2>&1
-                        chmod +x /etc/MaximusVpsMx/MX /etc/MaximusVpsMx/core/*.sh 2>/dev/null
-                        ln -sf /etc/MaximusVpsMx/MX /usr/local/bin/MX 2>/dev/null
-                        ln -sf /etc/MaximusVpsMx/MX /usr/local/bin/menu 2>/dev/null
-                        
-                        # Simular el final de install.sh para el cliente
-                        echo -e "${CYAN}[+] Reconfigurando servicios básicos del Cliente...${NC}"
-                        bash /etc/MaximusVpsMx/core/speed_optimize.sh >/dev/null 2>&1
+                        exec bash -c "
+                            echo -e '${RED}[!] Deteniendo todos los servicios y procesos vivos...${NC}'
+                            systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot 2>/dev/null
+                            killall -9 badvpn-udpgw hysteria udp-custom python3 stunnel4 2>/dev/null
+                            
+                            rm -rf /etc/MaximusVpsMx
+                            rm -f /usr/local/bin/MX
+                            rm -f /root/setup 2>/dev/null
+                            
+                            # Extraer payload
+                            rm -rf /tmp/MaximusVpsMx 2>/dev/null
+                            chmod +x /tmp/payload.run
+                            /tmp/payload.run --target /tmp/MaximusVpsMx >/dev/null 2>&1
+                            
+                            # Ejecutar instalador con credenciales guardadas
+                            export MASTER_IP='$MASTER_IP'
+                            export MASTER_PORT='$MASTER_PORT'
+                            export MASTER_URL='$MASTER_URL'
+                            export CLIENT_KEY='$CLIENT_KEY'
+                            export MAXIMUS_UPDATED=1
+                            
+                            cd /tmp/MaximusVpsMx && chmod +x install.sh
+                            bash install.sh
+                            
+                            echo -e '${CYAN}[+] Restaurando respaldo de datos...${NC}'
+                            [ -f /tmp/MX_BACKUP/users.db ] && cp /tmp/MX_BACKUP/users.db /etc/MaximusVpsMx/
+                            [ -f /tmp/MX_BACKUP/bot_config.json ] && cp /tmp/MX_BACKUP/bot_config.json /etc/MaximusVpsMx/
+                            [ -f /tmp/MX_BACKUP/hysteria_users.db ] && cp /tmp/MX_BACKUP/hysteria_users.db /etc/MaximusVpsMx/
+                            [ -f /tmp/MX_BACKUP/cloudflare.conf ] && cp /tmp/MX_BACKUP/cloudflare.conf /etc/MaximusVpsMx/
+                            [ -d /etc/MaximusVpsMx/slowdns ] && [ -f /tmp/MX_BACKUP/ns-domain.conf ] && cp /tmp/MX_BACKUP/ns-domain.conf /etc/MaximusVpsMx/slowdns/
+                            [ -d /etc/stunnel ] && [ -f /tmp/MX_BACKUP/stunnel.pem ] && cp /tmp/MX_BACKUP/stunnel.pem /etc/stunnel/
+                            [ -f /tmp/MX_BACKUP/dropbear ] && cp /tmp/MX_BACKUP/dropbear /etc/default/
+                            
+                            rm -rf /tmp/payload.run /tmp/MaximusVpsMx /tmp/MX_BACKUP
+                            echo -e '\n${GREEN}✅ ACTUALIZACIÓN INTELIGENTE CLIENTE COMPLETADA.${NC}'
+                            exec /usr/local/bin/menu
+                        "
                     else
                         echo -e "${RED}❌ ERROR: No se pudo descargar la actualización del Maestro.${NC}"
-                        ui_pause ; return
+                        ui_pause
                     fi
                 fi
-
-                echo -e "${CYAN}[+] Restaurando respaldo de datos...${NC}"
-                [ -f /tmp/MX_BACKUP/users.db ] && cp /tmp/MX_BACKUP/users.db /etc/MaximusVpsMx/
-                [ -f /tmp/MX_BACKUP/bot_config.json ] && cp /tmp/MX_BACKUP/bot_config.json /etc/MaximusVpsMx/
-                [ -f /tmp/MX_BACKUP/hysteria_users.db ] && cp /tmp/MX_BACKUP/hysteria_users.db /etc/MaximusVpsMx/
-                [ -f /tmp/MX_BACKUP/cloudflare.conf ] && cp /tmp/MX_BACKUP/cloudflare.conf /etc/MaximusVpsMx/
-                [ -d /etc/MaximusVpsMx/slowdns ] && [ -f /tmp/MX_BACKUP/ns-domain.conf ] && cp /tmp/MX_BACKUP/ns-domain.conf /etc/MaximusVpsMx/slowdns/
-                [ -d /etc/stunnel ] && [ -f /tmp/MX_BACKUP/stunnel.pem ] && cp /tmp/MX_BACKUP/stunnel.pem /etc/stunnel/
-                [ -f /tmp/MX_BACKUP/dropbear ] && cp /tmp/MX_BACKUP/dropbear /etc/default/
-                # Restaurar archivos clave del Maestro
-                [ -f /tmp/MX_BACKUP/.master_node ] && cp /tmp/MX_BACKUP/.master_node /etc/MaximusVpsMx/
-                [ -f /tmp/MX_BACKUP/keys.db ] && cp /tmp/MX_BACKUP/keys.db /etc/MaximusVpsMx/
-                [ -f /tmp/MX_BACKUP/domain.conf ] && cp /tmp/MX_BACKUP/domain.conf /etc/MaximusVpsMx/
-                [ -f /tmp/MX_BACKUP/license.key ] && cp /tmp/MX_BACKUP/license.key /etc/MaximusVpsMx/
-
-                rm -rf "$TEMP_DIR" /tmp/MX_BACKUP
-                echo -e "\n${GREEN}✅ ACTUALIZACIÓN INTELIGENTE COMPLETADA EXITOSAMENTE.${NC}"
-                read -p "Presiona Enter para reiniciar el panel..." ; exec "$0" ; exit
                 ;;
             3)
                 echo -e "\n${RED}⚠️ REINSTALACION LIMPIA SELECCIONADA${NC}"
                 read -p "¿Estás 100% seguro de borrar TODO (Usuarios, Keys, Base de Datos)? [S/N]: " conf_clean
                 if [[ "$conf_clean" == "S" || "$conf_clean" == "s" ]]; then
-                    echo -e "${RED}🔥 INICIANDO LIMPIEZA TOTAL Y MATANDO PROCESOS...${NC}"
-                    systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot 2>/dev/null
-                    killall -9 badvpn-udpgw hysteria udp-custom python3 stunnel4 2>/dev/null
-                    pkill -9 -f "key_server.py" >/dev/null 2>&1
-                    pkill -9 -f "cloudflared" >/dev/null 2>&1
-                    fuser -k 6767/tcp >/dev/null 2>&1
-                    fuser -k 80/tcp >/dev/null 2>&1
-                    fuser -k 443/tcp >/dev/null 2>&1
-                    rm -rf /etc/MaximusVpsMx
-                    rm -f /usr/local/bin/MX
-                    rm -f /root/setup 2>/dev/null
-                    
-                    cd /tmp || exit
-                    rm -rf /tmp/MaximusVpsMx
-                    git clone --depth=1 -q https://github.com/JuandeMx/MAXIMUS.git /tmp/MaximusVpsMx
-                    cd /tmp/MaximusVpsMx && chmod +x install.sh && bash install.sh
-                    exec "$0" ; exit
+                    if [ -f /etc/MaximusVpsMx/.master_node ]; then
+                        # NODO MAESTRO
+                        echo -e "${RED}🔥 INICIANDO LIMPIEZA TOTAL Y REINSTALACIÓN DE MAESTRO...${NC}"
+                        
+                        exec bash -c "
+                            echo -e '${RED}🔥 Iniciando limpieza y deteniendo servicios del Maestro...${NC}'
+                            systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-keyserver maximus-tunnel 2>/dev/null
+                            killall -9 badvpn-udpgw hysteria udp-custom python3 stunnel4 2>/dev/null
+                            pkill -9 -f 'key_server.py' >/dev/null 2>&1
+                            pkill -9 -f 'cloudflared' >/dev/null 2>&1
+                            fuser -k 6767/tcp >/dev/null 2>&1
+                            fuser -k 80/tcp >/dev/null 2>&1
+                            fuser -k 443/tcp >/dev/null 2>&1
+                            
+                            # Limpiar instalación antigua
+                            rm -rf /etc/MaximusVpsMx
+                            rm -f /usr/local/bin/MX /usr/local/bin/menu /usr/local/bin/MENU
+                            rm -f /root/setup 2>/dev/null
+                            
+                            # Obtener código
+                            rm -rf /tmp/MaximusVpsMx
+                            if [ -d /var/MaximusVpsMx_backup ]; then
+                                echo -e '${GREEN}[+] Copiando instalador desde la copia de seguridad local...${NC}'
+                                cp -r /var/MaximusVpsMx_backup /tmp/MaximusVpsMx
+                            else
+                                echo -e '${YELLOW}[+] Descargando repositorio oficial desde GitHub...${NC}'
+                                git clone --depth=1 -q https://github.com/JuandeMx/MAXIMUS.git /tmp/MaximusVpsMx
+                            fi
+                            
+                            # Crear el archivo master_node antes de correr el instalador
+                            mkdir -p /etc/MaximusVpsMx
+                            touch /etc/MaximusVpsMx/.master_node
+                            
+                            # Ejecutar instalador
+                            cd /tmp/MaximusVpsMx && chmod +x install.sh
+                            export MAXIMUS_UPDATED=1
+                            bash install.sh
+                            
+                            # Recargar menú
+                            exec /usr/local/bin/menu
+                        "
+                    else
+                        # CLIENTE
+                        echo -e "${RED}🔥 INICIANDO LIMPIEZA TOTAL Y REINSTALACIÓN DE CLIENTE...${NC}"
+                        
+                        # Leer credenciales antes de borrar nada
+                        if [ -f /etc/MaximusVpsMx/license.key ]; then
+                            source /etc/MaximusVpsMx/license.key
+                        fi
+                        
+                        if [ -z "$MASTER_URL" ] && [ -n "$MASTER_IP" ]; then
+                            MASTER_URL="http://$MASTER_IP:$MASTER_PORT"
+                        fi
+                        
+                        if [ -z "$CLIENT_KEY" ]; then
+                            echo -e "${RED}❌ ERROR: No se encontró la licencia en el cliente. Abortando.${NC}"
+                            ui_pause
+                            continue
+                        fi
+                        
+                        # Descargar payload ANTES de borrar el menú actual
+                        echo -e "${CYAN}[+] Descargando instalador limpio desde el Maestro...${NC}"
+                        rm -f /tmp/payload.run 2>/dev/null
+                        curl -4 -sL "$MASTER_URL/download?key=$CLIENT_KEY" -o /tmp/payload.run
+                        
+                        if [ ! -s /tmp/payload.run ]; then
+                            echo -e "${RED}❌ ERROR: No se pudo descargar la reinstalación del Maestro. Abortando.${NC}"
+                            ui_pause
+                            continue
+                        fi
+                        
+                        exec bash -c "
+                            echo -e '${RED}🔥 Iniciando limpieza y deteniendo servicios del Cliente...${NC}'
+                            systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot 2>/dev/null
+                            killall -9 badvpn-udpgw hysteria udp-custom python3 stunnel4 2>/dev/null
+                            
+                            # Limpiar instalación antigua
+                            rm -rf /etc/MaximusVpsMx
+                            rm -f /usr/local/bin/MX /usr/local/bin/menu /usr/local/bin/MENU
+                            rm -f /root/setup 2>/dev/null
+                            
+                            # Extraer payload
+                            rm -rf /tmp/MaximusVpsMx 2>/dev/null
+                            chmod +x /tmp/payload.run
+                            /tmp/payload.run --target /tmp/MaximusVpsMx >/dev/null 2>&1
+                            
+                            # Ejecutar instalador con credenciales guardadas
+                            export MASTER_IP='$MASTER_IP'
+                            export MASTER_PORT='$MASTER_PORT'
+                            export MASTER_URL='$MASTER_URL'
+                            export CLIENT_KEY='$CLIENT_KEY'
+                            export MAXIMUS_UPDATED=1
+                            
+                            cd /tmp/MaximusVpsMx && chmod +x install.sh
+                            bash install.sh
+                            
+                            # Limpiar temporal
+                            rm -rf /tmp/payload.run /tmp/MaximusVpsMx
+                            
+                            # Recargar menú
+                            exec /usr/local/bin/menu
+                        "
+                    fi
                 fi
                 ;;
             4)
@@ -1597,37 +1732,40 @@ menu_mantenimiento() {
                 read -p "¿Estás 100% seguro de destruir MaximusVpsMx? [S/N]: " desc
                 if [[ "$desc" == "S" || "$desc" == "s" ]]; then
                     echo -e "${RED}🔥 INICIANDO PURGA MASIVA Y LIMPIEZA TOTAL...${NC}"
-                    # Detener y deshabilitar servicios complejos y matar todo
-                    systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot 2>/dev/null
-                    systemctl stop x-ui openvpn-server@server 2>/dev/null
-                    systemctl disable x-ui openvpn-server@server hysteria udp-custom ws-epro 2>/dev/null
-                    killall -9 badvpn-udpgw hysteria udp-custom python3 stunnel4 2>/dev/null
-                    pkill -9 -f "key_server.py" >/dev/null 2>&1
-                    pkill -9 -f "cloudflared" >/dev/null 2>&1
-                    fuser -k 6767/tcp >/dev/null 2>&1
-                    fuser -k 80/tcp >/dev/null 2>&1
-                    fuser -k 443/tcp >/dev/null 2>&1
-                    rm -f /root/setup 2>/dev/null
                     
-                    # Eliminar directorios y binarios externos
-                    rm -rf /usr/local/x-ui /etc/x-ui /usr/bin/x-ui 2>/dev/null
-                    rm -rf /usr/local/hysteria /etc/hysteria 2>/dev/null
-                    rm -f /etc/systemd/system/x-ui.service 2>/dev/null
-                    rm -f /etc/systemd/system/hysteria.service 2>/dev/null
-                    rm -f /etc/systemd/system/udp-custom.service 2>/dev/null
-                    
-                    # Eliminar estructura principal y alias
-                    rm -rf /etc/MaximusVpsMx
-                    rm -f /usr/local/bin/MX /usr/local/bin/menu /usr/local/bin/MENU
-                    
-                    # Purga de paquetes de repositorio
-                    apt-get purge stunnel4 dropbear openvpn -y 2>/dev/null
-                    apt-get autoremove -y 2>/dev/null
-                    
-                    # Refrescar systemd
-                    systemctl daemon-reload
-                    echo -e "${GREEN}✅ VUELO COMPLETADO. El servidor ha sido restaurado de fábrica.${NC}"
-                    exit
+                    exec bash -c "
+                        # Detener y deshabilitar servicios complejos y matar todo
+                        systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot 2>/dev/null
+                        systemctl stop x-ui openvpn-server@server 2>/dev/null
+                        systemctl disable x-ui openvpn-server@server hysteria udp-custom ws-epro 2>/dev/null
+                        killall -9 badvpn-udpgw hysteria udp-custom python3 stunnel4 2>/dev/null
+                        pkill -9 -f 'key_server.py' >/dev/null 2>&1
+                        pkill -9 -f 'cloudflared' >/dev/null 2>&1
+                        fuser -k 6767/tcp >/dev/null 2>&1
+                        fuser -k 80/tcp >/dev/null 2>&1
+                        fuser -k 443/tcp >/dev/null 2>&1
+                        rm -f /root/setup 2>/dev/null
+                        
+                        # Eliminar directorios y binarios externos
+                        rm -rf /usr/local/x-ui /etc/x-ui /usr/bin/x-ui 2>/dev/null
+                        rm -rf /usr/local/hysteria /etc/hysteria 2>/dev/null
+                        rm -f /etc/systemd/system/x-ui.service 2>/dev/null
+                        rm -f /etc/systemd/system/hysteria.service 2>/dev/null
+                        rm -f /etc/systemd/system/udp-custom.service 2>/dev/null
+                        
+                        # Eliminar estructura principal y alias
+                        rm -rf /etc/MaximusVpsMx
+                        rm -f /usr/local/bin/MX /usr/local/bin/menu /usr/local/bin/MENU
+                        
+                        # Purga de paquetes de repositorio
+                        apt-get purge stunnel4 dropbear openvpn -y 2>/dev/null
+                        apt-get autoremove -y 2>/dev/null
+                        
+                        # Refrescar systemd
+                        systemctl daemon-reload
+                        echo -e '${GREEN}✅ VUELO COMPLETADO. El servidor ha sido restaurado de fábrica.${NC}'
+                        exit 0
+                    "
                 fi ;;
             0) return ;;
         esac

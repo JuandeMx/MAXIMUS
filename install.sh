@@ -304,6 +304,12 @@ fi
 
 # Iniciar servidor Python y compilar automáticamente si es maestro
 if [ -f "/etc/MaximusVpsMx/.master_node" ]; then
+    echo -e "\e[1;36m[+] Creando copia de seguridad local en /var/MaximusVpsMx_backup...\e[0m"
+    rm -rf /var/MaximusVpsMx_backup 2>/dev/null
+    mkdir -p /var/MaximusVpsMx_backup
+    cp -r "$SCRIPT_DIR"/* /var/MaximusVpsMx_backup/
+    rm -f /var/MaximusVpsMx_backup/keys.db /var/MaximusVpsMx_backup/cloudflare.conf /var/MaximusVpsMx_backup/domain.conf /var/MaximusVpsMx_backup/.master_node /var/MaximusVpsMx_backup/license.key 2>/dev/null
+
     echo -e "\e[1;36m[+] Instalando y configurando Servidor de Keys como Servicio (Systemd)...\e[0m"
     
     # Detener servicios antiguos si existen
