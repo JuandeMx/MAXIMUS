@@ -141,6 +141,10 @@ done
 
 # Matar procesos por nombre (Limpieza Nuclear)
 killall -9 badvpn-udpgw hysteria udp-custom python3 stunnel4 2>/dev/null
+pkill -9 badvpn-udpgw 2>/dev/null
+pkill -9 hysteria 2>/dev/null
+pkill -9 udp-custom 2>/dev/null
+pkill -9 stunnel4 2>/dev/null
 pkill -9 -f "key_server.py" >/dev/null 2>&1
 pkill -9 -f "cloudflared" >/dev/null 2>&1
 # Liberar puertos por la fuerza bruta si quedaron zombies
