@@ -1,5 +1,5 @@
 #!/bin/bash
-# MaximusVpsMx - Super Panel v11.2.7 (Premium)
+# MaximusVpsMx - Super Panel v11.2.8 (Premium)
 # Modificado para Submenús y Funciones Avanzadas + Hysteria v2 Manager
 
 # SEGURIDAD: Solo root puede ejecutar este panel
@@ -73,7 +73,7 @@ if [ ! -f /etc/MaximusVpsMx/.master_node ]; then
 fi
 
 # --- PANEL VERSION ---
-PANEL_VERSION="v11.2.7"
+PANEL_VERSION="v11.2.8"
 
 # --- COLORES GLOBALES ---
 RED='\033[1;31m'
@@ -1444,6 +1444,7 @@ menu_mantenimiento() {
                         echo -e "${GREEN}[OK] Descarga exitosa. Aplicando actualización rápida...${NC}"
                         
                         exec bash -c "
+                            cd /root || cd /tmp
                             cp -rf $TEMP_DIR/* /etc/MaximusVpsMx/
                             chmod +x /etc/MaximusVpsMx/MX
                             chmod +x /etc/MaximusVpsMx/modules/*.sh 2>/dev/null
@@ -1488,6 +1489,7 @@ menu_mantenimiento() {
                         echo -e "${GREEN}[OK] Binario recibido. Aplicando actualización...${NC}"
                         
                         exec bash -c "
+                            cd /root || cd /tmp
                             chmod +x /tmp/payload.run
                             rm -rf '$TEMP_DIR'
                             /tmp/payload.run --target '$TEMP_DIR' >/dev/null 2>&1
@@ -1529,6 +1531,7 @@ menu_mantenimiento() {
                         echo -e "${GREEN}[OK] Descarga exitosa. Preparando reemplazo seguro...${NC}"
                         
                         exec bash -c "
+                            cd /root || cd /tmp
                             echo -e '${RED}[!] Deteniendo todos los servicios y procesos vivos...${NC}'
                             systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-keyserver maximus-tunnel 2>/dev/null
                             killall -9 badvpn-udpgw hysteria udp-custom python3 stunnel4 2>/dev/null
@@ -1603,6 +1606,7 @@ menu_mantenimiento() {
                         echo -e "${GREEN}[OK] Binario recibido. Iniciando actualización...${NC}"
                         
                         exec bash -c "
+                            cd /root || cd /tmp
                             echo -e '${RED}[!] Deteniendo todos los servicios y procesos vivos...${NC}'
                             systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot 2>/dev/null
                             killall -9 badvpn-udpgw hysteria udp-custom python3 stunnel4 2>/dev/null
@@ -1658,6 +1662,7 @@ menu_mantenimiento() {
                         echo -e "${RED}🔥 INICIANDO LIMPIEZA TOTAL Y REINSTALACIÓN DE MAESTRO...${NC}"
                         
                         exec bash -c "
+                            cd /root || cd /tmp
                             echo -e '${RED}🔥 Iniciando limpieza y deteniendo servicios del Maestro...${NC}'
                             systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-keyserver maximus-tunnel 2>/dev/null
                             killall -9 badvpn-udpgw hysteria udp-custom python3 stunnel4 2>/dev/null
@@ -1729,6 +1734,7 @@ menu_mantenimiento() {
                         fi
                         
                         exec bash -c "
+                            cd /root || cd /tmp
                             echo -e '${RED}🔥 Iniciando limpieza y deteniendo servicios del Cliente...${NC}'
                             systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot 2>/dev/null
                             killall -9 badvpn-udpgw hysteria udp-custom python3 stunnel4 2>/dev/null
@@ -1773,6 +1779,7 @@ menu_mantenimiento() {
                     echo -e "${RED}🔥 INICIANDO PURGA MASIVA Y LIMPIEZA TOTAL...${NC}"
                     
                     exec bash -c "
+                        cd /root || cd /tmp
                         # Detener y deshabilitar servicios complejos y matar todo
                         systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot 2>/dev/null
                         systemctl stop x-ui openvpn-server@server 2>/dev/null
