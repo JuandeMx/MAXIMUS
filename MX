@@ -1,5 +1,5 @@
 #!/bin/bash
-# MaximusVpsMx - Super Panel v11.2.13 (Premium)
+# MaximusVpsMx - Super Panel v11.2.14 (Premium)
 # Modificado para Submenús y Funciones Avanzadas + Hysteria v2 Manager
 
 # SEGURIDAD: Solo root puede ejecutar este panel
@@ -130,7 +130,7 @@ if [ ! -f /etc/MaximusVpsMx/.master_node ]; then
 fi
 
 # --- PANEL VERSION ---
-PANEL_VERSION="v11.2.13"
+PANEL_VERSION="v11.2.14"
 
 # --- COLORES GLOBALES ---
 RED='\033[1;31m'
@@ -1593,13 +1593,14 @@ menu_mantenimiento() {
                             systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-keyserver maximus-tunnel 2>/dev/null
                             systemctl disable stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-keyserver maximus-tunnel 2>/dev/null
                             systemctl daemon-reload 2>/dev/null
-                            killall -9 badvpn-udpgw hysteria udp-custom python3 stunnel4 2>/dev/null
+                            killall -9 badvpn-udpgw hysteria udp-custom stunnel4 2>/dev/null
                             pkill -9 badvpn-udpgw 2>/dev/null
                             pkill -9 hysteria 2>/dev/null
                             pkill -9 udp-custom 2>/dev/null
                             pkill -9 stunnel4 2>/dev/null
-                            pkill -f 'key_server.py' >/dev/null 2>&1
-                            pkill -f 'cloudflared' >/dev/null 2>&1
+                            pkill -9 -f 'key_server.py' >/dev/null 2>&1
+                            pkill -9 -f 'bot.py' >/dev/null 2>&1
+                            pkill -9 -f 'cloudflared' >/dev/null 2>&1
                             
                             rm -rf /etc/MaximusVpsMx
                             rm -f /usr/local/bin/MX
@@ -1670,11 +1671,12 @@ menu_mantenimiento() {
                             systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot 2>/dev/null
                             systemctl disable stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot 2>/dev/null
                             systemctl daemon-reload 2>/dev/null
-                            killall -9 badvpn-udpgw hysteria udp-custom python3 stunnel4 2>/dev/null
+                            killall -9 badvpn-udpgw hysteria udp-custom stunnel4 2>/dev/null
                             pkill -9 badvpn-udpgw 2>/dev/null
                             pkill -9 hysteria 2>/dev/null
                             pkill -9 udp-custom 2>/dev/null
                             pkill -9 stunnel4 2>/dev/null
+                            pkill -9 -f 'bot.py' >/dev/null 2>&1
                             
                             rm -rf /etc/MaximusVpsMx
                             rm -f /usr/local/bin/MX
@@ -1728,11 +1730,12 @@ menu_mantenimiento() {
                             systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-keyserver maximus-tunnel 2>/dev/null
                             systemctl disable stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-keyserver maximus-tunnel 2>/dev/null
                             systemctl daemon-reload 2>/dev/null
-                            killall -9 badvpn-udpgw hysteria udp-custom python3 stunnel4 2>/dev/null
+                            killall -9 badvpn-udpgw hysteria udp-custom stunnel4 2>/dev/null
                             pkill -9 badvpn-udpgw 2>/dev/null
                             pkill -9 hysteria 2>/dev/null
                             pkill -9 udp-custom 2>/dev/null
                             pkill -9 stunnel4 2>/dev/null
+                            pkill -9 -f 'bot.py' >/dev/null 2>&1
                             pkill -9 -f 'key_server.py' >/dev/null 2>&1
                             pkill -9 -f 'cloudflared' >/dev/null 2>&1
                             fuser -k 6767/tcp >/dev/null 2>&1
@@ -1802,11 +1805,12 @@ menu_mantenimiento() {
                             systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot 2>/dev/null
                             systemctl disable stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot 2>/dev/null
                             systemctl daemon-reload 2>/dev/null
-                            killall -9 badvpn-udpgw hysteria udp-custom python3 stunnel4 2>/dev/null
+                            killall -9 badvpn-udpgw hysteria udp-custom stunnel4 2>/dev/null
                             pkill -9 badvpn-udpgw 2>/dev/null
                             pkill -9 hysteria 2>/dev/null
                             pkill -9 udp-custom 2>/dev/null
                             pkill -9 stunnel4 2>/dev/null
+                            pkill -9 -f 'bot.py' >/dev/null 2>&1
                             
                             # Limpiar instalación antigua
                             rm -rf /etc/MaximusVpsMx
@@ -1850,12 +1854,13 @@ menu_mantenimiento() {
                         systemctl stop x-ui openvpn-server@server 2>/dev/null
                         systemctl disable x-ui openvpn-server@server hysteria udp-custom ws-epro stunnel4 dropbear mx-proxy badvpn mx-slowdns maximus-bot 2>/dev/null
                         systemctl daemon-reload 2>/dev/null
-                        killall -9 badvpn-udpgw hysteria udp-custom python3 stunnel4 2>/dev/null
+                        killall -9 badvpn-udpgw hysteria udp-custom stunnel4 2>/dev/null
                         pkill -9 badvpn-udpgw 2>/dev/null
                         pkill -9 hysteria 2>/dev/null
                         pkill -9 udp-custom 2>/dev/null
                         pkill -9 stunnel4 2>/dev/null
                         pkill -9 -f 'key_server.py' >/dev/null 2>&1
+                        pkill -9 -f 'bot.py' >/dev/null 2>&1
                         pkill -9 -f 'cloudflared' >/dev/null 2>&1
                         fuser -k 6767/tcp >/dev/null 2>&1
                         fuser -k 80/tcp >/dev/null 2>&1
