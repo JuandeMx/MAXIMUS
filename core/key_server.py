@@ -90,8 +90,9 @@ class KeyHandler(http.server.SimpleHTTPRequestHandler):
                     return
                 # Verificar IP (Anti-piratería)
                 if kdata['ip'] != 'NONE' and kdata['ip'] != client_ip:
-                    self.send_error(403, "Key is locked to another IP")
-                    return
+                    if path != "/check":
+                        self.send_error(403, "Key is locked to another IP")
+                        return
 
             # Manejo de Rutas
             if path == "/install":
