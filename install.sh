@@ -155,12 +155,72 @@ fuser -k 443/tcp >/dev/null 2>&1
 systemctl daemon-reload
 
 
+instalar_psutil_local() {
+    local ARCH=$(uname -m)
+    local ARCH_DEB="amd64"
+    if [[ "$ARCH" == "aarch64" ]]; then
+        ARCH_DEB="arm64"
+    fi
+    
+    # Detectar SO y versión
+    if [ -f /etc/os-release ]; then
+        source /etc/os-release
+        local OS_NAME=$(echo "$ID" | tr '[:upper:]' '[:lower:]')
+        local OS_VER=$(echo "$VERSION_ID" | cut -d. -f1)
+    else
+        local OS_NAME="ubuntu"
+        local OS_VER="22"
+    fi
+
+    # Determinar qué deb local usar
+    local DEB_NAME=""
+    if [[ "$OS_NAME" == "ubuntu" ]]; then
+        if [[ "$OS_VER" == "20" ]]; then
+            DEB_NAME="python3-psutil_ubuntu20_${ARCH_DEB}.deb"
+        elif [[ "$OS_VER" == "24" ]]; then
+            DEB_NAME="python3-psutil_ubuntu24_${ARCH_DEB}.deb"
+        else
+            DEB_NAME="python3-psutil_ubuntu22_${ARCH_DEB}.deb"
+        fi
+    elif [[ "$OS_NAME" == "debian" ]]; then
+        if [[ "$OS_VER" == "11" ]]; then
+            DEB_NAME="python3-psutil_debian11_${ARCH_DEB}.deb"
+        else
+            DEB_NAME="python3-psutil_debian12_${ARCH_DEB}.deb"
+        fi
+    else
+        DEB_NAME="python3-psutil_ubuntu22_${ARCH_DEB}.deb"
+    fi
+
+    local DEB_FILE=""
+    local S_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
+    if [ -f "$S_DIR/modules/offline/deb/$DEB_NAME" ]; then
+        DEB_FILE="$S_DIR/modules/offline/deb/$DEB_NAME"
+    elif [ -f "/etc/MaximusVpsMx/modules/offline/deb/$DEB_NAME" ]; then
+        DEB_FILE="/etc/MaximusVpsMx/modules/offline/deb/$DEB_NAME"
+    fi
+
+    if ! python3 -c "import psutil" 2>/dev/null; then
+        if [ -n "$DEB_FILE" ] && [ -f "$DEB_FILE" ]; then
+            echo -e "\e[1;33m[⚠️] apt no pudo instalar python3-psutil. Instalando paquete local: $(basename $DEB_FILE)... \e[0m"
+            dpkg -i "$DEB_FILE" >/dev/null 2>&1
+            apt-get install -y -f >/dev/null 2>&1
+        else
+            echo -e "\e[1;33m[⚠️] Instalando psutil vía pip3 fallback...\e[0m"
+            pip3 install psutil --break-system-packages >/dev/null 2>&1 || pip3 install psutil >/dev/null 2>&1
+        fi
+    fi
+}
+
 # 1. Update and Dependencies
 echo -e "\e[1;32m[+] Actualizando repositorios e instalando dependencias...\e[0m"
 # Eliminar repositorios defectuosos comunes en proveedores (Hostinger Monarx) para evitar bloqueos
 rm -f /etc/apt/sources.list.d/monarx.list 2>/dev/null
 apt-get update -y
 DEBIAN_FRONTEND=noninteractive apt-get install -y python3 python3-pip python3-psutil squid net-tools curl wget iptables vnstat cron ufw ncurses-bin jq cmake make gcc build-essential g++ netcat-openbsd openssl psmisc screen
+
+# Asegurar la correcta instalación de psutil
+instalar_psutil_local
 
 # 1.5 Firewall Local
 echo -e "\e[1;32m[+] Blindando Puertos Nativos con UFW...\e[0m"
