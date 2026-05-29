@@ -39,7 +39,7 @@ fi
 
 echo -e "\n${GREEN}[+] Instalando Maximus WS-Engine...${NC}"
 apt-get update -y > /dev/null 2>&1
-apt-get install -y python3 > /dev/null 2>&1
+apt-get install -y python3 python3-psutil > /dev/null 2>&1
 
 mkdir -p /etc/MaximusVpsMx/core
 

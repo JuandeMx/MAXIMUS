@@ -160,7 +160,7 @@ echo -e "\e[1;32m[+] Actualizando repositorios e instalando dependencias...\e[0m
 # Eliminar repositorios defectuosos comunes en proveedores (Hostinger Monarx) para evitar bloqueos
 rm -f /etc/apt/sources.list.d/monarx.list 2>/dev/null
 apt-get update -y
-DEBIAN_FRONTEND=noninteractive apt-get install -y python3 python3-pip squid net-tools curl wget iptables vnstat cron ufw ncurses-bin jq cmake make gcc build-essential g++ netcat-openbsd openssl psmisc screen
+DEBIAN_FRONTEND=noninteractive apt-get install -y python3 python3-pip python3-psutil squid net-tools curl wget iptables vnstat cron ufw ncurses-bin jq cmake make gcc build-essential g++ netcat-openbsd openssl psmisc screen
 
 # 1.5 Firewall Local
 echo -e "\e[1;32m[+] Blindando Puertos Nativos con UFW...\e[0m"
