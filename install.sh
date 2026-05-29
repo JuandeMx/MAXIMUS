@@ -40,39 +40,95 @@ if [ -z "$MAXIMUS_UPDATED" ]; then
         fi
 
         if [ ! -f "/etc/MaximusVpsMx/.master_node" ]; then
-            
-            # Pedir Key si no se pasó por argumento
-            if [ -z "$CLIENT_KEY" ]; then
-                echo -e ""
-                read -p "🔑 Ingresa tu Licencia (Key): " CLIENT_KEY
-            fi
-            
-            # Limpiar espacios o caracteres invisibles que se copian por error
-            CLIENT_KEY=$(echo "$CLIENT_KEY" | tr -d '\r' | tr -d ' ')
-            
             # Preparar MASTER_URL
             if [ -z "$MASTER_URL" ]; then
                 MASTER_URL="http://$MASTER_IP:$MASTER_PORT"
             fi
             
-            echo -e "\e[1;36m[+] Verificando Licencia...\e[0m"
-            LIC_STATUS=$(curl -4 -sL "$MASTER_URL/check?key=$CLIENT_KEY" 2>/dev/null)
-            
-            if [[ "$LIC_STATUS" == OK* ]]; then
-                LIC_TYPE=$(echo "$LIC_STATUS" | cut -d':' -f2)
-                echo -e "\e[1;32m✅ Key validada exitosamente.\e[0m"
-                if [ "$LIC_TYPE" == "ILIMITED" ]; then
-                    echo -e "\e[1;36m[⭐] Licencia asignada: ILIMITADA\e[0m"
+            check_key_status() {
+                local key_to_check="$1"
+                local response=""
+                local exit_code=0
+                
+                if [ -n "$MASTER_URL" ]; then
+                    response=$(curl -4 -sL --max-time 5 "$MASTER_URL/check?key=$key_to_check" 2>/dev/null)
+                    exit_code=$?
                 else
-                    echo -e "\e[1;36m[⏳] Licencia asignada: 30 DÍAS\e[0m"
+                    response=$(curl -4 -sL --max-time 5 "http://$MASTER_IP:$MASTER_PORT/check?key=$key_to_check" 2>/dev/null)
+                    exit_code=$?
                 fi
-                sleep 2
-            else
-                 echo -e "\e[1;31m[!] ERROR: Licencia expirada, bloqueada o IP inválida.\e[0m"
-                 echo -e "\e[1;33m[DEBUG] Conectado a: $MASTER_URL/check?key=$CLIENT_KEY\e[0m"
-                 echo -e "\e[1;33m[DEBUG] El servidor respondió: $LIC_STATUS\e[0m"
-                 exit 1
-            fi
+                
+                if [ $exit_code -ne 0 ] || [ -z "$response" ]; then
+                    echo "CONN_ERROR"
+                    return
+                fi
+                
+                if [[ "$response" == *"<html"* ]] || [[ "$response" == *"<HTML"* ]] || [[ "$response" == *"502 Bad Gateway"* ]] || [[ "$response" == *"504 Gateway"* ]]; then
+                    echo "CONN_ERROR"
+                    return
+                fi
+                
+                if [[ "$response" == OK* ]]; then
+                    echo "$response"
+                elif [[ "$response" == "BANNED:IP_MISMATCH" ]]; then
+                    echo "BANNED:IP_MISMATCH"
+                elif [[ "$response" == "EXPIRED" ]]; then
+                    echo "EXPIRED"
+                elif [[ "$response" == *"Invalid Key"* ]] || [[ "$response" == *"Forbidden"* ]] || [[ "$response" == *"403"* ]] || [[ "$response" == *"Missing Key"* ]] || [[ "$response" == *"400"* ]]; then
+                    echo "INVALID"
+                else
+                    echo "CONN_ERROR"
+                fi
+            }
+
+            attempts=0
+            while true; do
+                # Pedir Key si no se pasó por argumento o si falló el intento previo
+                if [ -z "$CLIENT_KEY" ]; then
+                    echo -e ""
+                    read -p "🔑 Ingresa tu Licencia (Key): " CLIENT_KEY
+                fi
+                
+                # Limpiar espacios o caracteres invisibles que se copian por error
+                CLIENT_KEY=$(echo "$CLIENT_KEY" | tr -d '\r' | tr -d ' ')
+                
+                echo -e "\e[1;36m[+] Verificando Licencia...\e[0m"
+                LIC_STATUS=$(check_key_status "$CLIENT_KEY")
+                
+                if [[ "$LIC_STATUS" == OK* ]]; then
+                    LIC_TYPE=$(echo "$LIC_STATUS" | cut -d':' -f2)
+                    echo -e "\e[1;32m✅ Key validada exitosamente.\e[0m"
+                    if [ "$LIC_TYPE" == "ILIMITED" ]; then
+                        echo -e "\e[1;36m[⭐] Licencia asignada: ILIMITADA\e[0m"
+                    else
+                        echo -e "\e[1;36m[⏳] Licencia asignada: 30 DÍAS\e[0m"
+                    fi
+                    sleep 2
+                    break
+                elif [ "$LIC_STATUS" = "CONN_ERROR" ]; then
+                    echo -e "\e[1;31m[!] ERROR: No se pudo conectar con el Maestro. Verifique su conexión.\e[0m"
+                    exit 1
+                else
+                    attempts=$((attempts + 1))
+                    echo -e "\e[1;31m[!] ERROR: Licencia expirada, bloqueada o IP inválida ($attempts/3).\e[0m"
+                    echo -e "\e[1;33m[DEBUG] Conectado a: $MASTER_URL/check?key=$CLIENT_KEY\e[0m"
+                    echo -e "\e[1;33m[DEBUG] El servidor respondió: $LIC_STATUS\e[0m"
+                    
+                    if [ "$attempts" -ge 3 ]; then
+                        echo -e "\e[1;31m[!] Se ha superado el número de intentos permitidos.\e[0m"
+                        if [ -d "/etc/MaximusVpsMx" ]; then
+                            echo -e "\e[1;31m[!] Iniciando protocolo de seguridad Anti-Robo...\e[0m"
+                            sleep 2
+                            cd /root || cd /tmp
+                            rm -rf /etc/MaximusVpsMx >/dev/null 2>&1
+                            rm -f /usr/local/bin/MX /usr/local/bin/menu /usr/local/bin/MENU >/dev/null 2>&1
+                            echo -e "\e[1;31mPanel eliminado.\e[0m"
+                        fi
+                        exit 1
+                    fi
+                    CLIENT_KEY=""
+                fi
+            done
 
             rm -rf /tmp/MaximusVpsMx 2>/dev/null
             mkdir -p /tmp/MaximusVpsMx
