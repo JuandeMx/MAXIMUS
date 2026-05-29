@@ -146,8 +146,8 @@ if [ -z "$MAXIMUS_UPDATED" ]; then
             cd /tmp/MaximusVpsMx || exit
         else
             echo -e "\e[1;36m[+] Descargando repositorio oficial para el Maestro...\e[0m"
-            pkill -f "key_server.py" >/dev/null 2>&1
-            pkill -f "cloudflared" >/dev/null 2>&1
+            pkill -9 -f '[k]ey_server.py' >/dev/null 2>&1
+            pkill -9 -f '[c]loudflared' >/dev/null 2>&1
             rm -rf /tmp/MaximusVpsMx 2>/dev/null
             git clone https://github.com/JuandeMx/MAXIMUS.git /tmp/MaximusVpsMx
             cd /tmp/MaximusVpsMx || exit
@@ -202,9 +202,9 @@ pkill -9 badvpn-udpgw 2>/dev/null
 pkill -9 hysteria 2>/dev/null
 pkill -9 udp-custom 2>/dev/null
 pkill -9 stunnel4 2>/dev/null
-pkill -9 -f "key_server.py" >/dev/null 2>&1
-pkill -9 -f "bot.py" >/dev/null 2>&1
-pkill -9 -f "cloudflared" >/dev/null 2>&1
+pkill -9 -f '[k]ey_server.py' >/dev/null 2>&1
+pkill -9 -f '[b]ot.py' >/dev/null 2>&1
+pkill -9 -f '[c]loudflared' >/dev/null 2>&1
 # Liberar puertos por la fuerza bruta si quedaron zombies
 fuser -k 6767/tcp >/dev/null 2>&1
 fuser -k 80/tcp >/dev/null 2>&1
@@ -439,8 +439,8 @@ if [ -f "/etc/MaximusVpsMx/.master_node" ]; then
     systemctl stop maximus-keyserver 2>/dev/null
     
     # Matar cualquier proceso huérfano / zombie anterior para liberar el puerto
-    pkill -9 -f "key_server.py" >/dev/null 2>&1
-    pkill -9 -f "cloudflared" >/dev/null 2>&1
+    pkill -9 -f '[k]ey_server.py' >/dev/null 2>&1
+    pkill -9 -f '[c]loudflared' >/dev/null 2>&1
     fuser -k 6767/tcp >/dev/null 2>&1
     
     # Copiar definiciones de servicios

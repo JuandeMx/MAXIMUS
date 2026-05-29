@@ -1,5 +1,5 @@
 #!/bin/bash
-# MaximusVpsMx - Super Panel v11.2.14 (Premium)
+# MaximusVpsMx - Super Panel v11.2.15 (Premium)
 # Modificado para Submenús y Funciones Avanzadas + Hysteria v2 Manager
 
 # SEGURIDAD: Solo root puede ejecutar este panel
@@ -130,7 +130,7 @@ if [ ! -f /etc/MaximusVpsMx/.master_node ]; then
 fi
 
 # --- PANEL VERSION ---
-PANEL_VERSION="v11.2.14"
+PANEL_VERSION="v11.2.15"
 
 # --- COLORES GLOBALES ---
 RED='\033[1;31m'
@@ -1598,9 +1598,9 @@ menu_mantenimiento() {
                             pkill -9 hysteria 2>/dev/null
                             pkill -9 udp-custom 2>/dev/null
                             pkill -9 stunnel4 2>/dev/null
-                            pkill -9 -f 'key_server.py' >/dev/null 2>&1
-                            pkill -9 -f 'bot.py' >/dev/null 2>&1
-                            pkill -9 -f 'cloudflared' >/dev/null 2>&1
+                            pkill -9 -f '[k]ey_server.py' >/dev/null 2>&1
+                            pkill -9 -f '[b]ot.py' >/dev/null 2>&1
+                            pkill -9 -f '[c]loudflared' >/dev/null 2>&1
                             
                             rm -rf /etc/MaximusVpsMx
                             rm -f /usr/local/bin/MX
@@ -1676,7 +1676,7 @@ menu_mantenimiento() {
                             pkill -9 hysteria 2>/dev/null
                             pkill -9 udp-custom 2>/dev/null
                             pkill -9 stunnel4 2>/dev/null
-                            pkill -9 -f 'bot.py' >/dev/null 2>&1
+                            pkill -9 -f '[b]ot.py' >/dev/null 2>&1
                             
                             rm -rf /etc/MaximusVpsMx
                             rm -f /usr/local/bin/MX
@@ -1735,9 +1735,9 @@ menu_mantenimiento() {
                             pkill -9 hysteria 2>/dev/null
                             pkill -9 udp-custom 2>/dev/null
                             pkill -9 stunnel4 2>/dev/null
-                            pkill -9 -f 'bot.py' >/dev/null 2>&1
-                            pkill -9 -f 'key_server.py' >/dev/null 2>&1
-                            pkill -9 -f 'cloudflared' >/dev/null 2>&1
+                            pkill -9 -f '[b]ot.py' >/dev/null 2>&1
+                            pkill -9 -f '[k]ey_server.py' >/dev/null 2>&1
+                            pkill -9 -f '[c]loudflared' >/dev/null 2>&1
                             fuser -k 6767/tcp >/dev/null 2>&1
                             fuser -k 80/tcp >/dev/null 2>&1
                             fuser -k 443/tcp >/dev/null 2>&1
@@ -1810,7 +1810,7 @@ menu_mantenimiento() {
                             pkill -9 hysteria 2>/dev/null
                             pkill -9 udp-custom 2>/dev/null
                             pkill -9 stunnel4 2>/dev/null
-                            pkill -9 -f 'bot.py' >/dev/null 2>&1
+                            pkill -9 -f '[b]ot.py' >/dev/null 2>&1
                             
                             # Limpiar instalación antigua
                             rm -rf /etc/MaximusVpsMx
@@ -1859,9 +1859,9 @@ menu_mantenimiento() {
                         pkill -9 hysteria 2>/dev/null
                         pkill -9 udp-custom 2>/dev/null
                         pkill -9 stunnel4 2>/dev/null
-                        pkill -9 -f 'key_server.py' >/dev/null 2>&1
-                        pkill -9 -f 'bot.py' >/dev/null 2>&1
-                        pkill -9 -f 'cloudflared' >/dev/null 2>&1
+                        pkill -9 -f '[k]ey_server.py' >/dev/null 2>&1
+                        pkill -9 -f '[b]ot.py' >/dev/null 2>&1
+                        pkill -9 -f '[c]loudflared' >/dev/null 2>&1
                         fuser -k 6767/tcp >/dev/null 2>&1
                         fuser -k 80/tcp >/dev/null 2>&1
                         fuser -k 443/tcp >/dev/null 2>&1
@@ -2013,7 +2013,7 @@ menu_maestro() {
                 if ! systemctl is-active --quiet maximus-keyserver; then
                     echo -e "${CYAN}[+] Iniciando Servidor Python (Systemd)...${NC}"
                     systemctl stop maximus-keyserver 2>/dev/null
-                    pkill -9 -f "key_server.py" >/dev/null 2>&1
+                    pkill -9 -f '[k]ey_server.py' >/dev/null 2>&1
                     fuser -k 6767/tcp >/dev/null 2>&1
                     systemctl enable maximus-keyserver 2>/dev/null
                     systemctl start maximus-keyserver 2>/dev/null
@@ -2062,11 +2062,11 @@ menu_maestro() {
                     
                     # Detener y limpiar túneles anteriores
                     systemctl stop maximus-tunnel 2>/dev/null
-                    pkill -9 -f "cloudflared" >/dev/null 2>&1
+                    pkill -9 -f '[c]loudflared' >/dev/null 2>&1
                     
                     # Asegurar Keyserver activo sin conflictos de puerto
                     systemctl stop maximus-keyserver 2>/dev/null
-                    pkill -9 -f "key_server.py" >/dev/null 2>&1
+                    pkill -9 -f '[k]ey_server.py' >/dev/null 2>&1
                     fuser -k 6767/tcp >/dev/null 2>&1
                     systemctl start maximus-keyserver 2>/dev/null
                     
