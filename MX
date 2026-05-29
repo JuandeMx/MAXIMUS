@@ -1,5 +1,5 @@
 #!/bin/bash
-# MaximusVpsMx - Super Panel v11.2.8 (Premium)
+# MaximusVpsMx - Super Panel v11.2.9 (Premium)
 # Modificado para Submenús y Funciones Avanzadas + Hysteria v2 Manager
 
 # SEGURIDAD: Solo root puede ejecutar este panel
@@ -73,7 +73,7 @@ if [ ! -f /etc/MaximusVpsMx/.master_node ]; then
 fi
 
 # --- PANEL VERSION ---
-PANEL_VERSION="v11.2.8"
+PANEL_VERSION="v11.2.9"
 
 # --- COLORES GLOBALES ---
 RED='\033[1;31m'
@@ -1534,6 +1534,8 @@ menu_mantenimiento() {
                             cd /root || cd /tmp
                             echo -e '${RED}[!] Deteniendo todos los servicios y procesos vivos...${NC}'
                             systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-keyserver maximus-tunnel 2>/dev/null
+                            systemctl disable stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-keyserver maximus-tunnel 2>/dev/null
+                            systemctl daemon-reload 2>/dev/null
                             killall -9 badvpn-udpgw hysteria udp-custom python3 stunnel4 2>/dev/null
                             pkill -9 badvpn-udpgw 2>/dev/null
                             pkill -9 hysteria 2>/dev/null
@@ -1609,6 +1611,8 @@ menu_mantenimiento() {
                             cd /root || cd /tmp
                             echo -e '${RED}[!] Deteniendo todos los servicios y procesos vivos...${NC}'
                             systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot 2>/dev/null
+                            systemctl disable stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot 2>/dev/null
+                            systemctl daemon-reload 2>/dev/null
                             killall -9 badvpn-udpgw hysteria udp-custom python3 stunnel4 2>/dev/null
                             pkill -9 badvpn-udpgw 2>/dev/null
                             pkill -9 hysteria 2>/dev/null
@@ -1665,6 +1669,8 @@ menu_mantenimiento() {
                             cd /root || cd /tmp
                             echo -e '${RED}🔥 Iniciando limpieza y deteniendo servicios del Maestro...${NC}'
                             systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-keyserver maximus-tunnel 2>/dev/null
+                            systemctl disable stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-keyserver maximus-tunnel 2>/dev/null
+                            systemctl daemon-reload 2>/dev/null
                             killall -9 badvpn-udpgw hysteria udp-custom python3 stunnel4 2>/dev/null
                             pkill -9 badvpn-udpgw 2>/dev/null
                             pkill -9 hysteria 2>/dev/null
@@ -1737,6 +1743,8 @@ menu_mantenimiento() {
                             cd /root || cd /tmp
                             echo -e '${RED}🔥 Iniciando limpieza y deteniendo servicios del Cliente...${NC}'
                             systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot 2>/dev/null
+                            systemctl disable stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot 2>/dev/null
+                            systemctl daemon-reload 2>/dev/null
                             killall -9 badvpn-udpgw hysteria udp-custom python3 stunnel4 2>/dev/null
                             pkill -9 badvpn-udpgw 2>/dev/null
                             pkill -9 hysteria 2>/dev/null
@@ -1783,7 +1791,8 @@ menu_mantenimiento() {
                         # Detener y deshabilitar servicios complejos y matar todo
                         systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot 2>/dev/null
                         systemctl stop x-ui openvpn-server@server 2>/dev/null
-                        systemctl disable x-ui openvpn-server@server hysteria udp-custom ws-epro 2>/dev/null
+                        systemctl disable x-ui openvpn-server@server hysteria udp-custom ws-epro stunnel4 dropbear mx-proxy badvpn mx-slowdns maximus-bot 2>/dev/null
+                        systemctl daemon-reload 2>/dev/null
                         killall -9 badvpn-udpgw hysteria udp-custom python3 stunnel4 2>/dev/null
                         pkill -9 badvpn-udpgw 2>/dev/null
                         pkill -9 hysteria 2>/dev/null

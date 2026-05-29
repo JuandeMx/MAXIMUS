@@ -130,14 +130,15 @@ echo -e "\e[1;36m=========================================================\e[0m\
 echo -e "\e[1;32m[+] Detectando y deteniendo servicios para una instalación limpia...\e[0m"
 SERVICES=("stunnel4" "ws-epro" "mx-proxy" "badvpn" "hysteria" "udp-custom" "mx-slowdns" "dropbear" "mx-webpanel" "maximus-bot")
 for srv in "${SERVICES[@]}"; do
-    if systemctl is-active --quiet "$srv" || systemctl is-enabled --quiet "$srv" 2>/dev/null; then
-        echo -e "\e[1;33m    - Deteniendo $srv...\e[0m"
-        systemctl stop "$srv" 2>/dev/null
-        systemctl disable "$srv" 2>/dev/null
-    fi
+    echo -e "\e[1;33m    - Deteniendo y deshabilitando $srv...\e[0m"
+    systemctl stop "$srv" 2>/dev/null
+    systemctl disable "$srv" 2>/dev/null
     # Eliminar definición de servicio antigua para evitar falsos positivos
     rm -f /etc/systemd/system/${srv}.service 2>/dev/null
 done
+
+# Recargar daemon inmediatamente para que systemd olvide las configuraciones antes de matar los procesos
+systemctl daemon-reload 2>/dev/null
 
 # Matar procesos por nombre (Limpieza Nuclear)
 killall -9 badvpn-udpgw hysteria udp-custom python3 stunnel4 2>/dev/null
