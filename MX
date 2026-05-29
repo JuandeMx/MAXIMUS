@@ -1,5 +1,5 @@
 #!/bin/bash
-# MaximusVpsMx - Super Panel v11.2.12 (Premium)
+# MaximusVpsMx - Super Panel v11.2.13 (Premium)
 # Modificado para Submenús y Funciones Avanzadas + Hysteria v2 Manager
 
 # SEGURIDAD: Solo root puede ejecutar este panel
@@ -9,46 +9,84 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 # --- LICENSE CHECK ---
+check_key_status() {
+    local key_to_check="$1"
+    local response=""
+    local exit_code=0
+    
+    if [ -n "$MASTER_URL" ]; then
+        response=$(curl -4 -sL --max-time 5 "$MASTER_URL/check?key=$key_to_check" 2>/dev/null)
+        exit_code=$?
+    else
+        response=$(curl -4 -sL --max-time 5 "http://$MASTER_IP:$MASTER_PORT/check?key=$key_to_check" 2>/dev/null)
+        exit_code=$?
+    fi
+    
+    if [ $exit_code -ne 0 ] || [ -z "$response" ]; then
+        echo "CONN_ERROR"
+        return
+    fi
+    
+    if [[ "$response" == *"<html"* ]] || [[ "$response" == *"<HTML"* ]] || [[ "$response" == *"502 Bad Gateway"* ]] || [[ "$response" == *"504 Gateway"* ]]; then
+        echo "CONN_ERROR"
+        return
+    fi
+    
+    if [[ "$response" == OK* ]]; then
+        echo "OK"
+    elif [[ "$response" == "BANNED:IP_MISMATCH" ]]; then
+        echo "BANNED:IP_MISMATCH"
+    elif [[ "$response" == "EXPIRED" ]]; then
+        echo "EXPIRED"
+    elif [[ "$response" == *"Invalid Key"* ]] || [[ "$response" == *"Forbidden"* ]] || [[ "$response" == *"403"* ]] || [[ "$response" == *"Missing Key"* ]] || [[ "$response" == *"400"* ]]; then
+        echo "INVALID"
+    else
+        echo "CONN_ERROR"
+    fi
+}
+
 if [ ! -f /etc/MaximusVpsMx/.master_node ]; then
     if [ -f /etc/MaximusVpsMx/license.key ]; then
         source /etc/MaximusVpsMx/license.key
         if { [ -n "$MASTER_IP" ] && [ -n "$MASTER_PORT" ] || [ -n "$MASTER_URL" ]; } && [ -n "$CLIENT_KEY" ]; then
-            if [ -n "$MASTER_URL" ]; then
-                LIC_STATUS=$(curl -4 -sL --max-time 5 "$MASTER_URL/check?key=$CLIENT_KEY" 2>/dev/null)
-            else
-                LIC_STATUS=$(curl -4 -sL --max-time 5 "http://$MASTER_IP:$MASTER_PORT/check?key=$CLIENT_KEY" 2>/dev/null)
+            if [ -z "$MASTER_URL" ]; then
+                MASTER_URL="http://$MASTER_IP:$MASTER_PORT"
             fi
-            if [[ "$LIC_STATUS" != OK* ]]; then
+            
+            LIC_STATUS=$(check_key_status "$CLIENT_KEY")
+            
+            if [ "$LIC_STATUS" = "CONN_ERROR" ]; then
                 clear
                 echo -e "\033[1;31m=========================================\033[0m"
-                
-                if [[ "$LIC_STATUS" == "BANNED:IP_MISMATCH" ]]; then
-                    echo -e "\033[1;31m   [!] VIOLACIÓN DE SEGURIDAD DETECTADA  \033[0m"
-                    echo -e "\033[1;31m=========================================\033[0m"
-                    echo -e "\033[1;33mEsta Licencia está registrada para otro Servidor.\033[0m"
-                    echo -e "\033[1;31mIniciando protocolo de seguridad Anti-Robo...\033[0m"
-                    sleep 2
-                    
-                    # Autodestrucción agresiva
-                    rm -rf /etc/MaximusVpsMx >/dev/null 2>&1
-                    rm -f /usr/local/bin/MX /usr/local/bin/menu /usr/local/bin/MENU >/dev/null 2>&1
-                    echo -e "\033[1;31mPanel eliminado. Su IP ha sido reportada.\033[0m"
-                    pkill -f "MX" >/dev/null 2>&1
-                    exit 1
-                fi
-                
-                echo -e "\033[1;31m   [!] LICENCIA EXPIRADA O INVÁLIDA  \033[0m"
+                echo -e "\033[1;31m   [!] ERROR DE CONEXIÓN CON EL MAESTRO  \033[0m"
                 echo -e "\033[1;31m=========================================\033[0m"
-                echo -e "Su acceso ha sido bloqueado por el servidor maestro."
+                echo -e "No se pudo establecer conexión con el servidor maestro."
+                echo -e "Verifique su acceso a internet o si el Maestro está activo."
+                echo -e "Intente de nuevo en unos minutos.\n"
+                exit 1
+            fi
+            
+            if [ "$LIC_STATUS" != "OK" ]; then
+                clear
+                echo -e "\033[1;31m=========================================\033[0m"
+                if [ "$LIC_STATUS" = "BANNED:IP_MISMATCH" ]; then
+                    echo -e "\033[1;31m   [!] ALERTA: IP NO COINCIDE / ACCESO BLOQUEADO  \033[0m"
+                    echo -e "\033[1;31m=========================================\033[0m"
+                    echo -e "\033[1;33mEsta Licencia está registrada para otro Servidor o IP.\033[0m"
+                else
+                    echo -e "\033[1;31m   [!] LICENCIA EXPIRADA O INVÁLIDA  \033[0m"
+                    echo -e "\033[1;31m=========================================\033[0m"
+                    echo -e "Su acceso ha sido bloqueado por el servidor maestro."
+                fi
+                echo -e "Tienes 3 intentos para ingresar una Key válida antes de la autodestrucción.\n"
+                
+                attempts=0
                 while true; do
                     read -p "Ingrese su nueva Key: " new_key
                     if [ -n "$new_key" ]; then
-                        if [ -n "$MASTER_URL" ]; then
-                            NEW_STATUS=$(curl -4 -sL --max-time 5 "$MASTER_URL/check?key=$new_key" 2>/dev/null)
-                        else
-                            NEW_STATUS=$(curl -4 -sL --max-time 5 "http://$MASTER_IP:$MASTER_PORT/check?key=$new_key" 2>/dev/null)
-                        fi
-                        if [[ "$NEW_STATUS" == OK* ]]; then
+                        NEW_STATUS=$(check_key_status "$new_key")
+                        
+                        if [ "$NEW_STATUS" = "OK" ]; then
                              if [ -n "$MASTER_URL" ]; then
                                  curl -4 -sL "$MASTER_URL/activate?key=$new_key" >/dev/null 2>&1
                              else
@@ -58,8 +96,27 @@ if [ ! -f /etc/MaximusVpsMx/.master_node ]; then
                              echo -e "\033[1;32mLicencia renovada exitosamente. Cargando panel...\033[0m"
                              sleep 2
                              break
+                        elif [ "$NEW_STATUS" = "CONN_ERROR" ]; then
+                             echo -e "\033[1;33mError de conexión al servidor de licencias. No se pudo validar. Intente de nuevo.\033[0m"
                         else
-                             echo -e "\033[1;31mKey inválida o bloqueada. Intente de nuevo.\033[0m"
+                             attempts=$((attempts + 1))
+                             if [ "$attempts" -ge 3 ]; then
+                                 clear
+                                 echo -e "\033[1;31m=========================================\033[0m"
+                                 echo -e "\033[1;31m   [!] VIOLACIÓN DE SEGURIDAD DETECTADA  \033[0m"
+                                 echo -e "\033[1;31m=========================================\033[0m"
+                                 echo -e "\033[1;33mSe ha superado el número de intentos permitidos.\033[0m"
+                                 echo -e "\033[1;31mIniciando protocolo de seguridad Anti-Robo...\033[0m"
+                                 sleep 2
+                                 
+                                 cd /root || cd /tmp
+                                 rm -rf /etc/MaximusVpsMx >/dev/null 2>&1
+                                 rm -f /usr/local/bin/MX /usr/local/bin/menu /usr/local/bin/MENU >/dev/null 2>&1
+                                 echo -e "\033[1;31mPanel eliminado por seguridad.\033[0m"
+                                 pkill -f "MX" >/dev/null 2>&1
+                                 exit 1
+                             fi
+                             echo -e "\033[1;31mKey inválida o bloqueada. Intente de nuevo ($attempts/3).\033[0m"
                         fi
                     fi
                 done
@@ -73,7 +130,7 @@ if [ ! -f /etc/MaximusVpsMx/.master_node ]; then
 fi
 
 # --- PANEL VERSION ---
-PANEL_VERSION="v11.2.12"
+PANEL_VERSION="v11.2.13"
 
 # --- COLORES GLOBALES ---
 RED='\033[1;31m'
