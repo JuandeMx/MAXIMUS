@@ -1,5 +1,5 @@
 #!/bin/bash
-# MaximusVpsMx - Super Panel v11.2.16 (Premium)
+# MaximusVpsMx - Super Panel v11.2.17 (Premium)
 # Modificado para Submenús y Funciones Avanzadas + Hysteria v2 Manager
 
 # SEGURIDAD: Solo root puede ejecutar este panel
@@ -130,7 +130,7 @@ if [ ! -f /etc/MaximusVpsMx/.master_node ]; then
 fi
 
 # --- PANEL VERSION ---
-PANEL_VERSION="v11.2.16"
+PANEL_VERSION="v11.2.17"
 
 # --- COLORES GLOBALES ---
 RED='\033[1;31m'
@@ -375,20 +375,7 @@ menu_usuarios() {
                     read -p " Límite de Conexiones (Por defecto 1): " limit
                     [ -z "$limit" ] && limit=1
                     
-                    echo -e "${CYAN} ¿Activar Bloqueo por HUID? (s/n)${NC}"
-                    read -p " Opción: " h_opt
                     hwid_val="OFF"
-                    if [[ "$h_opt" == "S" || "$h_opt" == "s" ]]; then
-                        echo -e "   ${YELLOW}▶ Selecciona el Método de Registro:${NC}"
-                        echo -e "   [1] Automático (Capturar en primer login)"
-                        echo -e "   [2] Manual (Ingresar Token ahora)"
-                        read -p "   Opción [1]: " m_hwid
-                        if [[ "$m_hwid" == "2" ]]; then
-                            read -p "   Ingresa el Token/HUID: " hwid_val
-                        else
-                            hwid_val="NONE"
-                        fi
-                    fi
 
                     exp_date=$(date -d "+$dias days" +%Y-%m-%d)
                     linux_exp_date=$(date -d "+$((dias + 1)) days" +%Y-%m-%d)
