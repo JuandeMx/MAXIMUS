@@ -1,5 +1,5 @@
 #!/bin/bash
-# MaximusVpsMx - Super Panel v11.2.15 (Premium)
+# MaximusVpsMx - Super Panel v11.2.16 (Premium)
 # Modificado para Submenús y Funciones Avanzadas + Hysteria v2 Manager
 
 # SEGURIDAD: Solo root puede ejecutar este panel
@@ -130,7 +130,7 @@ if [ ! -f /etc/MaximusVpsMx/.master_node ]; then
 fi
 
 # --- PANEL VERSION ---
-PANEL_VERSION="v11.2.15"
+PANEL_VERSION="v11.2.16"
 
 # --- COLORES GLOBALES ---
 RED='\033[1;31m'
@@ -148,6 +148,8 @@ UI_WIDTH=55
 DB_PATH="/etc/MaximusVpsMx/maximus.db"
 USER_DB="/etc/MaximusVpsMx/users.db"
 mkdir -p /etc/MaximusVpsMx
+touch "$USER_DB"
+touch "/etc/MaximusVpsMx/hysteria_users.db"
 
 ui_hr() { echo -e "${CYAN}═══════════════════════════════════════════════════════${NC}"; }
 ui_subhr() { echo -e "${CYAN}───────────────────────────────────────────────────────${NC}"; }
