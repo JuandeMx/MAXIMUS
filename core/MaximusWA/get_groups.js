@@ -43,6 +43,25 @@ async function start() {
         defaultQueryTimeoutMs: 60000
     });
 
+    // Parchear groupFetchAllParticipating con lógica de reintento para evitar timeouts al listar grupos
+    const originalGroupFetchAllParticipating = sock.groupFetchAllParticipating.bind(sock);
+    sock.groupFetchAllParticipating = async (retries = 3, delay = 2000) => {
+        for (let attempt = 1; attempt <= retries; attempt++) {
+            try {
+                return await originalGroupFetchAllParticipating();
+            } catch (err) {
+                const isTimeout = err.message?.includes('Timed Out') || err.message?.includes('timeout') || err.statusCode === 408 || err.output?.statusCode === 408;
+                if (isTimeout && attempt < retries) {
+                    console.log(`[WA-BOT] Timeout al obtener lista de grupos (intento ${attempt}/${retries}). Reintentando en ${delay}ms...`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2;
+                    continue;
+                }
+                throw err;
+            }
+        }
+    };
+
     sock.ev.on('creds.update', saveCreds);
 
     sock.ev.on('connection.update', async (update) => {

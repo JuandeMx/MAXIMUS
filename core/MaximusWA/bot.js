@@ -278,6 +278,79 @@ async function start() {
         defaultQueryTimeoutMs: 60000
     });
 
+    // Parchear funciones del socket para añadir reintentos automáticos ante timeouts
+    const originalSendMessage = sock.sendMessage.bind(sock);
+    sock.sendMessage = async (chatJid, content, options = {}, retries = 3, delay = 1500) => {
+        for (let attempt = 1; attempt <= retries; attempt++) {
+            try {
+                return await originalSendMessage(chatJid, content, options);
+            } catch (err) {
+                const isTimeout = err.message?.includes('Timed Out') || err.message?.includes('timeout') || err.statusCode === 408 || err.output?.statusCode === 408;
+                if (isTimeout && attempt < retries) {
+                    console.warn(`[WA-BOT] Advertencia: Límite de tiempo agotado al enviar mensaje a ${chatJid} (intento ${attempt}/${retries}). Reintentando en ${delay}ms...`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2;
+                    continue;
+                }
+                throw err;
+            }
+        }
+    };
+
+    const originalGroupParticipantsUpdate = sock.groupParticipantsUpdate.bind(sock);
+    sock.groupParticipantsUpdate = async (chatJid, participants, action, retries = 3, delay = 1500) => {
+        for (let attempt = 1; attempt <= retries; attempt++) {
+            try {
+                return await originalGroupParticipantsUpdate(chatJid, participants, action);
+            } catch (err) {
+                const isTimeout = err.message?.includes('Timed Out') || err.message?.includes('timeout') || err.statusCode === 408 || err.output?.statusCode === 408;
+                if (isTimeout && attempt < retries) {
+                    console.warn(`[WA-BOT] Timeout al actualizar participantes en ${chatJid} (intento ${attempt}/${retries}). Reintentando...`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2;
+                    continue;
+                }
+                throw err;
+            }
+        }
+    };
+
+    const originalGroupSettingUpdate = sock.groupSettingUpdate.bind(sock);
+    sock.groupSettingUpdate = async (chatJid, setting, retries = 3, delay = 1500) => {
+        for (let attempt = 1; attempt <= retries; attempt++) {
+            try {
+                return await originalGroupSettingUpdate(chatJid, setting);
+            } catch (err) {
+                const isTimeout = err.message?.includes('Timed Out') || err.message?.includes('timeout') || err.statusCode === 408 || err.output?.statusCode === 408;
+                if (isTimeout && attempt < retries) {
+                    console.warn(`[WA-BOT] Timeout al cambiar configuración de grupo en ${chatJid} (intento ${attempt}/${retries}). Reintentando...`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2;
+                    continue;
+                }
+                throw err;
+            }
+        }
+    };
+
+    const originalGroupMetadata = sock.groupMetadata.bind(sock);
+    sock.groupMetadata = async (chatJid, retries = 3, delay = 1500) => {
+        for (let attempt = 1; attempt <= retries; attempt++) {
+            try {
+                return await originalGroupMetadata(chatJid);
+            } catch (err) {
+                const isTimeout = err.message?.includes('Timed Out') || err.message?.includes('timeout') || err.statusCode === 408 || err.output?.statusCode === 408;
+                if (isTimeout && attempt < retries) {
+                    console.warn(`[WA-BOT] Timeout al obtener metadatos del grupo ${chatJid} (intento ${attempt}/${retries}). Reintentando...`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2;
+                    continue;
+                }
+                throw err;
+            }
+        }
+    };
+
     sock.ev.on('creds.update', saveCreds);
 
     sock.ev.on('connection.update', (update) => {
