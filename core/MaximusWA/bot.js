@@ -148,80 +148,88 @@ function getTargetJid(msg, parts) {
 
 // Send batch welcome message
 async function sendBatchWelcome(chatJid, sock) {
-    const groupSet = getGroupSettings(chatJid);
-    if (groupSet.pendingWelcomes.length === 0) return;
+    try {
+        const groupSet = getGroupSettings(chatJid);
+        if (groupSet.pendingWelcomes.length === 0) return;
 
-    const metadata = await getGroupMetadata(chatJid, sock);
-    const groupName = metadata ? metadata.subject : 'el grupo';
-    
-    // Obtener los primeros 10 o todos si se fuerza
-    const toWelcome = groupSet.pendingWelcomes.slice(0, 10);
-    groupSet.pendingWelcomes = groupSet.pendingWelcomes.slice(10);
-    saveSettings();
+        const metadata = await getGroupMetadata(chatJid, sock);
+        const groupName = metadata ? metadata.subject : 'el grupo';
+        
+        // Obtener los primeros 10 o todos si se fuerza
+        const toWelcome = groupSet.pendingWelcomes.slice(0, 10);
+        groupSet.pendingWelcomes = groupSet.pendingWelcomes.slice(10);
+        saveSettings();
 
-    // Crear lista de tags
-    const tagsStr = toWelcome.map(jid => `@${jid.split('@')[0]}`).join(', ');
-    
-    let welcomeTxt = groupSet.welcome_message;
-    welcomeTxt = welcomeTxt.replace(/{users}/g, tagsStr);
-    welcomeTxt = welcomeTxt.replace(/{group}/g, groupName);
+        // Crear lista de tags
+        const tagsStr = toWelcome.map(jid => `@${jid.split('@')[0]}`).join(', ');
+        
+        let welcomeTxt = groupSet.welcome_message;
+        welcomeTxt = welcomeTxt.replace(/{users}/g, tagsStr);
+        welcomeTxt = welcomeTxt.replace(/{group}/g, groupName);
 
-    await sock.sendMessage(chatJid, {
-        text: welcomeTxt,
-        mentions: toWelcome
-    });
+        await sock.sendMessage(chatJid, {
+            text: welcomeTxt,
+            mentions: toWelcome
+        });
+    } catch (e) {
+        console.error('[WA-BOT] Error al enviar bienvenida colectiva:', e);
+    }
 }
 
 // Periodic task checking for expired presentations (checks every 30 seconds)
 function startAutoKickTimer(sock) {
     console.log('🕒 Temporizador de Auto-Expulsión iniciado (Revisión cada 30 seg)...');
     setInterval(async () => {
-        loadSettings();
-        const now = Date.now();
-        const oneHour = 3600000; // 1 hora en milisegundos
+        try {
+            loadSettings();
+            const now = Date.now();
+            const oneHour = 3600000; // 1 hora en milisegundos
 
-        for (const chatJid of Object.keys(settings.groups)) {
-            const groupSet = settings.groups[chatJid];
-            if (!groupSet.pendingPresentations) continue;
+            for (const chatJid of Object.keys(settings.groups)) {
+                const groupSet = settings.groups[chatJid];
+                if (!groupSet.pendingPresentations) continue;
 
-            const pendingJids = Object.keys(groupSet.pendingPresentations);
-            if (pendingJids.length === 0) continue;
+                const pendingJids = Object.keys(groupSet.pendingPresentations);
+                if (pendingJids.length === 0) continue;
 
-            let changed = false;
+                let changed = false;
 
-            for (const userJid of pendingJids) {
-                const joinTime = groupSet.pendingPresentations[userJid];
-                if (now - joinTime > oneHour) {
-                    console.log(`[WA-BOT] Plazo expirado de presentación para @${userJid.split('@')[0]} en ${chatJid}`);
-                    
-                    const { isBotAdmin } = await checkAdmins(chatJid, userJid, sock);
-                    
-                    if (isBotAdmin) {
-                        try {
-                            // Expulsar al usuario
-                            await sock.groupParticipantsUpdate(chatJid, [userJid], 'remove');
-                            
-                            // Enviar notificación al grupo
-                            await sock.sendMessage(chatJid, {
-                                text: `⏰ @${userJid.split('@')[0]} ha sido expulsado automáticamente por no presentarse (Nombre, País, Compañía) dentro del plazo de 1 hora.`,
-                                mentions: [userJid]
-                            });
-                        } catch (e) {
-                            console.error(`[WA-BOT] Error al expulsar a ${userJid}:`, e);
+                for (const userJid of pendingJids) {
+                    const joinTime = groupSet.pendingPresentations[userJid];
+                    if (now - joinTime > oneHour) {
+                        console.log(`[WA-BOT] Plazo expirado de presentación para @${userJid.split('@')[0]} en ${chatJid}`);
+                        
+                        const { isBotAdmin } = await checkAdmins(chatJid, userJid, sock);
+                        
+                        if (isBotAdmin) {
+                            try {
+                                // Expulsar al usuario
+                                await sock.groupParticipantsUpdate(chatJid, [userJid], 'remove');
+                                
+                                // Enviar notificación al grupo
+                                await sock.sendMessage(chatJid, {
+                                    text: `⏰ @${userJid.split('@')[0]} ha sido expulsado automáticamente por no presentarse (Nombre, País, Compañía) dentro del plazo de 1 hora.`,
+                                    mentions: [userJid]
+                                });
+                            } catch (e) {
+                                console.error(`[WA-BOT] Error al expulsar a ${userJid}:`, e);
+                            }
+                        } else {
+                            console.log(`[WA-BOT] No se pudo expulsar a ${userJid} porque el bot no es administrador.`);
                         }
-                    } else {
-                        console.log(`[WA-BOT] No se pudo expulsar a ${userJid} porque el bot no es administrador.`);
-                    }
 
-                    // Eliminar de pendientes para no volver a evaluar
-                    delete groupSet.pendingPresentations[userJid];
-                    changed = true;
+                        // Eliminar de pendientes para no volver a evaluar
+                        delete groupSet.pendingPresentations[userJid];
+                        changed = true;
+                    }
+                }
+
+                if (changed) {
+                    saveSettings();
                 }
             }
-
-            if (changed) {
-                saveSettings();
-            }
+        } catch (err) {
+            console.error('[WA-BOT] Error en temporizador de auto-expulsión:', err);
         }
     }, 30 * 1000);
 }
@@ -295,36 +303,40 @@ async function start() {
 
     // Welcome messages and additions listener
     sock.ev.on('group-participants.update', async (update) => {
-        const { id, participants, action } = update;
-        
-        // Refresh cache on any change
-        getGroupMetadata(id, sock, true).catch(() => {});
+        try {
+            const { id, participants, action } = update;
+            
+            // Refresh cache on any change
+            getGroupMetadata(id, sock, true).catch(() => {});
 
-        if (action === 'add') {
-            const groupSet = getGroupSettings(id);
-            const now = Date.now();
-            const botJid = sock.user.id.split(':')[0] + '@s.whatsapp.net';
+            if (action === 'add') {
+                const groupSet = getGroupSettings(id);
+                const now = Date.now();
+                const botJid = sock.user.id.split(':')[0] + '@s.whatsapp.net';
 
-            for (const part of participants) {
-                if (part === botJid) continue; // Ignorar el bot
+                for (const part of participants) {
+                    if (part === botJid) continue; // Ignorar el bot
 
-                // Si es un moderador global del bot, ignorar reglas de presentación
-                if (settings.moderators && settings.moderators.includes(part)) continue;
+                    // Si es un moderador global del bot, ignorar reglas de presentación
+                    if (settings.moderators && settings.moderators.includes(part)) continue;
 
-                // Añadir a colas
-                if (!groupSet.pendingWelcomes.includes(part)) {
-                    groupSet.pendingWelcomes.push(part);
+                    // Añadir a colas
+                    if (!groupSet.pendingWelcomes.includes(part)) {
+                        groupSet.pendingWelcomes.push(part);
+                    }
+                    groupSet.pendingPresentations[part] = now;
                 }
-                groupSet.pendingPresentations[part] = now;
-            }
-            saveSettings();
+                saveSettings();
 
-            console.log(`[WA-BOT] ${participants.length} usuarios añadidos. Cola de bienvenida actual: ${groupSet.pendingWelcomes.length}/10`);
+                console.log(`[WA-BOT] ${participants.length} usuarios añadidos. Cola de bienvenida actual: ${groupSet.pendingWelcomes.length}/10`);
 
-            // Lanzar bienvenida si llegamos a 10
-            if (groupSet.welcome_active && groupSet.pendingWelcomes.length >= 10) {
-                await sendBatchWelcome(id, sock);
+                // Lanzar bienvenida si llegamos a 10
+                if (groupSet.welcome_active && groupSet.pendingWelcomes.length >= 10) {
+                    await sendBatchWelcome(id, sock);
+                }
             }
+        } catch (e) {
+            console.error('[WA-BOT] Error en listener group-participants.update:', e);
         }
     });
 
@@ -333,7 +345,8 @@ async function start() {
         if (m.type !== 'notify') return;
 
         for (const msg of m.messages) {
-            if (!msg.message || msg.key.fromMe) continue;
+            try {
+                if (!msg.message || msg.key.fromMe) continue;
 
             const chatJid = msg.key.remoteJid;
             const senderJid = msg.key.participant || msg.key.remoteJid;
@@ -749,6 +762,8 @@ async function start() {
                 saveSettings();
                 await sock.sendMessage(chatJid, { text: `✅ *Mensaje de bienvenida establecido con éxito:* \n\n${welcomeTxt}` }, { quoted: msg });
                 continue;
+            } catch (e) {
+                console.error('[WA-BOT] Error al procesar mensaje individual:', e);
             }
         }
     });
