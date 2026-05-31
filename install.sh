@@ -184,7 +184,7 @@ echo -e "\e[1;36m=========================================================\e[0m\
 
 # 0. Limpieza y Preparación de Terreno (v6.2 Residual Fix)
 echo -e "\e[1;32m[+] Detectando y deteniendo servicios para una instalación limpia...\e[0m"
-SERVICES=("stunnel4" "ws-epro" "mx-proxy" "badvpn" "hysteria" "udp-custom" "mx-slowdns" "dropbear" "mx-webpanel" "maximus-bot")
+SERVICES=("stunnel4" "ws-epro" "mx-proxy" "badvpn" "hysteria" "udp-custom" "mx-slowdns" "dropbear" "mx-webpanel" "maximus-bot" "maximus-wa" "maximus-api")
 for srv in "${SERVICES[@]}"; do
     echo -e "\e[1;33m    - Deteniendo y deshabilitando $srv...\e[0m"
     systemctl stop "$srv" 2>/dev/null

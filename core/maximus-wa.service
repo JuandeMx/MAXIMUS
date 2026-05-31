@@ -1,0 +1,14 @@
+[Unit]
+Description=Maximus WhatsApp Moderation Bot Daemon
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/etc/MaximusVpsMx/core/MaximusWA
+ExecStart=/usr/bin/node bot.js
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

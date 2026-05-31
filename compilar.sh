@@ -33,8 +33,11 @@ rm -f $WORK_DIR/cloudflare.conf
 rm -f $WORK_DIR/domain.conf
 rm -f $WORK_DIR/.master_node
 rm -f $WORK_DIR/license.key
-# Borrar el servidor Python ya que los clientes no lo necesitan
 rm -f $WORK_DIR/core/key_server.py
+rm -rf $WORK_DIR/core/MaximusWA
+rm -f $WORK_DIR/core/maximus-wa.service
+rm -f $WORK_DIR/modules/wa_manager.sh
+
 
 # 4. Compilación Binaria con SHC
 echo -e "\e[1;32m[+] Ofuscando código fuente a binarios...\e[0m"

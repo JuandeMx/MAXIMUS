@@ -34,3 +34,6 @@ bot_config.json
 .master_node
 keys.db
 license.key
+
+# Node modules
+core/MaximusWA/node_modules/

@@ -1,5 +1,5 @@
 #!/bin/bash
-# MaximusVpsMx - Super Panel v11.2.18 (Premium)
+# MaximusVpsMx - Super Panel v11.2.19 (Premium)
 # Modificado para Submenús y Funciones Avanzadas + Hysteria v2 Manager
 
 # SEGURIDAD: Solo root puede ejecutar este panel
@@ -130,7 +130,7 @@ if [ ! -f /etc/MaximusVpsMx/.master_node ]; then
 fi
 
 # --- PANEL VERSION ---
-PANEL_VERSION="v11.2.18"
+PANEL_VERSION="v11.2.19"
 
 # --- COLORES GLOBALES ---
 RED='\033[1;31m'
@@ -1334,44 +1334,77 @@ sub_zombies() {
 
 # --- DIAGNÓSTICO DE CONEXIÓN CON BOT WHATSAPP ---
 check_bot_connection() {
-    ui_header "DIAGNÓSTICO: CONEXIÓN BOT WA"
-    echo -e " ${CYAN}Verificando servicios locales...${NC}\n"
+    ui_header "DIAGNÓSTICO: BOT DE WHATSAPP MODERADOR"
+    echo -e " ${CYAN}Verificando estado del bot y dependencias...${NC}\n"
     
-    # 1. Verificar si el servidor API de Python está corriendo
-    if pgrep -f api_whatsapp.py > /dev/null; then
-        echo -e " ${GREEN}✅ API Python Maximus : [CORRIENDO]${NC}"
+    # 1. Verificar si Node.js está instalado
+    if command -v node >/dev/null 2>&1; then
+        echo -e " ${GREEN}✅ Motor Node.js       : [INSTALADO - $(node -v)]${NC}"
     else
-        echo -e " ${RED}❌ API Python Maximus : [DETENIDA]${NC}"
-        echo -e " ${YELLOW}👉 Intentando iniciar API ahora...${NC}"
-        # Intentar iniciar la API en segundo plano
-        if [ -f /etc/MaximusVpsMx/core/api_whatsapp.py ]; then
-            screen -dmS maximus_api python3 /etc/MaximusVpsMx/core/api_whatsapp.py
-            sleep 2
-            pgrep -f api_whatsapp.py > /dev/null && echo -e " ${GREEN}✅ API Iniciada con éxito.${NC}" || echo -e " ${RED}❌ Falló al iniciar.${NC}"
-        else
-            echo -e " ${RED}❌ No se encontró /etc/MaximusVpsMx/core/api_whatsapp.py${NC}"
-        fi
+        echo -e " ${RED}❌ Motor Node.js       : [NO DETECTADO]${NC}"
+        echo -e " ${YELLOW}👉 Instálelo desde la opción 1 del menú del bot WA.${NC}"
     fi
 
-    # 2. Verificar puerto 8085 (Donde escucha la API)
-    if netstat -tuln | grep :8085 > /dev/null; then
-        echo -e " ${GREEN}✅ Puerto 8085        : [ABIERTO / OK]${NC}"
+    # 2. Verificar estado del daemon
+    if systemctl is-active --quiet maximus-wa; then
+        echo -e " ${GREEN}✅ Servicio Systemd    : [CORRIENDO / OK]${NC}"
     else
-        echo -e " ${RED}❌ Puerto 8085        : [CERRADO / ERROR]${NC}"
-        echo -e " ${YELLOW}⚠️  Revisa si el Firewall UFW está bloqueando el puerto.${NC}"
+        echo -e " ${RED}❌ Servicio Systemd    : [DETENIDO / ERROR]${NC}"
+        echo -e " ${YELLOW}👉 Inícielo desde la opción 3 del menú del bot WA.${NC}"
     fi
 
-    # 3. Prueba de conectividad (Ping al exterior para descartar red del VPS)
+    # 3. Verificar si el dispositivo está vinculado (credenciales)
+    if [ -d "/etc/MaximusVpsMx/wa_auth_info" ] && [ -f "/etc/MaximusVpsMx/wa_auth_info/creds.json" ]; then
+        echo -e " ${GREEN}✅ Dispositivo WA      : [VINCULADO / OK]${NC}"
+    else
+        echo -e " ${RED}❌ Dispositivo WA      : [NO VINCULADO / SIN CREDENCIALES]${NC}"
+        echo -e " ${YELLOW}👉 Vincúlelo usando la opción 2 del menú del bot WA.${NC}"
+    fi
+
+    # 4. Verificar archivo de grupos configurados
+    if [ -f "/etc/MaximusVpsMx/wa_groups.json" ]; then
+        echo -e " ${GREEN}✅ Grupos de Moderación: [CONFIGURADOS / OK]${NC}"
+        echo -e "    └─ $(cat /etc/MaximusVpsMx/wa_groups.json | tr -d '\n\r ')"
+    else
+        echo -e " ${RED}❌ Grupos de Moderación: [NO CONFIGURADOS]${NC}"
+        echo -e " ${YELLOW}👉 Configure los grupos en la opción 2 del menú del bot WA.${NC}"
+    fi
+
+    # 5. Prueba de conectividad del VPS
     if ping -c 1 8.8.8.8 > /dev/null 2>&1; then
-        echo -e " ${GREEN}✅ Red Externa VPS    : [ESTABLE]${NC}"
+        echo -e " ${GREEN}✅ Red Externa VPS     : [ESTABLE / ONLINE]${NC}"
     else
-        echo -e " ${RED}❌ Red Externa VPS    : [CAÍDA / SIN INTERNET]${NC}"
+        echo -e " ${RED}❌ Red Externa VPS     : [CAÍDA / SIN INTERNET]${NC}"
     fi
     
     ui_hr
-    echo -e " ${WHITE}Si todo está verde y el bot sigue sin conectar,${NC}"
-    echo -e " ${WHITE}revisa el archivo 'config.js' en tu computadora.${NC}"
+    echo -e " ${WHITE}Si todo está en verde y el bot no elimina enlaces o no responde,${NC}"
+    echo -e " ${WHITE}asegúrate de que el bot tenga permisos de ADMINISTRADOR${NC}"
+    echo -e " ${WHITE}dentro del grupo de WhatsApp.${NC}"
     ui_pause
+}
+
+# --- SUBMENÚ DE BOTS ---
+menu_bots() {
+    while true; do
+        ui_header "GESTIÓN DE BOTS (TELEGRAM / WHATSAPP)"
+        systemctl is-active --quiet maximus-bot && tg_st="${GREEN}[ON]${NC}" || tg_st="${RED}[OFF]${NC}"
+        systemctl is-active --quiet maximus-wa && wa_st="${GREEN}[ON]${NC}" || wa_st="${RED}[OFF]${NC}"
+        
+        echo -e "  ${CYAN}[1]>${WHITE} GESTIONAR BOT TELEGRAM  | $tg_st${NC}"
+        echo -e "  ${CYAN}[2]>${WHITE} GESTIONAR BOT WHATSAPP  | $wa_st${NC}"
+        ui_hr
+        echo -e "  ${WHITE}[0] VOLVER A HERRAMIENTAS${NC}"
+        ui_hr
+        ui_prompt " Selecciona una opción: " ; read opt_bot
+        
+        case $opt_bot in
+            1) bash /etc/MaximusVpsMx/modules/bot_manager.sh ;;
+            2) bash /etc/MaximusVpsMx/modules/wa_manager.sh ;;
+            0) return ;;
+            *) continue ;;
+        esac
+    done
 }
 
 # --- SUBMENÚ DE SISTEMA ---
@@ -1382,6 +1415,7 @@ menu_sistema() {
         crontab -l 2>/dev/null | grep -q "cloudflare-ddns" && cf_st="${GREEN}[Activo]${NC}" || cf_st="${RED}[Inactivo]${NC}"
         systemctl is-active --quiet mx-webpanel && wp_st="${GREEN}[ON]${NC}" || wp_st="${RED}[OFF]${NC}"
         systemctl is-active --quiet maximus-bot && tg_st="${GREEN}[ON]${NC}" || tg_st="${RED}[OFF]${NC}"
+        systemctl is-active --quiet maximus-wa && wa_st="${GREEN}[ON]${NC}" || wa_st="${RED}[OFF]${NC}"
 
         echo -e "  ${CYAN}[1]>${WHITE} Optimización y Auto-Limpieza${NC}"
         echo -e "  ${CYAN}[2]>${WHITE} Editor de Banner Global (SSH/Issue)${NC}"
@@ -1390,9 +1424,13 @@ menu_sistema() {
         ui_subhr
         echo -e "  ${CYAN} [5]>${WHITE} Firewall UFW Config          | $fw_st${NC}"
         echo -e "  ${CYAN} [6]>${WHITE} CLOUDFLARE DDNS              | $cf_st${NC}"
-        echo -e "  ${CYAN} [7]>${GREEN} TELEGRAM BOT (Elite Edition) | $tg_st${NC}"
+        if [ -f /etc/MaximusVpsMx/.master_node ]; then
+            echo -e "  ${CYAN} [7]>${GREEN} GESTIÓN DE BOTS (TG / WA)    | TG:$tg_st WA:$wa_st${NC}"
+        fi
         echo -e "  ${CYAN} [8]>${WHITE} Escanear y Purgar Hilos Zombis${NC}"
-        echo -e "  ${CYAN} [9]>${YELLOW} Diagnóstico de Conexión Bot WA${NC}"
+        if [ -f /etc/MaximusVpsMx/.master_node ]; then
+            echo -e "  ${CYAN} [9]>${YELLOW} Diagnóstico de Conexión Bot WA${NC}"
+        fi
         ui_hr
         echo -e "  ${WHITE}[0] VOLVER AL MENÚ PRINCIPAL${NC}"
         ui_hr
@@ -1431,11 +1469,11 @@ CFEOF
                         echo -e "${GREEN}✅ Activado.${NC}"; sleep 0.1 ;;
                     3) crontab -l 2>/dev/null | grep -v "cloudflare-ddns" | crontab -; echo -e "${RED}⚠️ Desactivado.${NC}"; sleep 0.1 ;;
                 esac ;;
-            7) bash /etc/MaximusVpsMx/modules/bot_manager.sh ;;
+            7) [ -f /etc/MaximusVpsMx/.master_node ] && menu_bots || continue ;;
             8) sub_zombies ;;
-            9) check_bot_connection ;;
+            9) [ -f /etc/MaximusVpsMx/.master_node ] && check_bot_connection || continue ;;
             0) return ;;
-            *) continue ;;
+            * ) continue ;;
         esac
     done
 }
@@ -1473,7 +1511,7 @@ menu_mantenimiento() {
                             chmod +x /etc/MaximusVpsMx/modules/*.sh 2>/dev/null
                             chmod +x /etc/MaximusVpsMx/core/*.sh 2>/dev/null
                             
-                            systemctl restart mx-proxy ws-epro stunnel4 maximus-bot maximus-keyserver 2>/dev/null
+                            systemctl restart mx-proxy ws-epro stunnel4 maximus-bot maximus-wa maximus-api maximus-keyserver 2>/dev/null
                             if systemctl is-active --quiet maximus-tunnel 2>/dev/null; then
                                 systemctl restart maximus-tunnel 2>/dev/null
                             fi
@@ -1519,7 +1557,7 @@ menu_mantenimiento() {
                             
                             cp -rf '$TEMP_DIR'/* /etc/MaximusVpsMx/
                             chmod +x /etc/MaximusVpsMx/MX /etc/MaximusVpsMx/core/*.sh 2>/dev/null
-                            systemctl restart mx-proxy ws-epro stunnel4 maximus-bot 2>/dev/null
+                            systemctl restart mx-proxy ws-epro stunnel4 maximus-bot maximus-wa maximus-api 2>/dev/null
                             
                             rm -rf '$TEMP_DIR' /tmp/payload.run
                             echo -e '${GREEN}✅ ACTUALIZACIÓN CLIENTE COMPLETADA.${NC}'
@@ -1556,8 +1594,8 @@ menu_mantenimiento() {
                         exec bash -c "
                             cd /root || cd /tmp
                             echo -e '${RED}[!] Deteniendo todos los servicios y procesos vivos...${NC}'
-                            systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-keyserver maximus-tunnel 2>/dev/null
-                            systemctl disable stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-keyserver maximus-tunnel 2>/dev/null
+                            systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api maximus-keyserver maximus-tunnel 2>/dev/null
+                            systemctl disable stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api maximus-keyserver maximus-tunnel 2>/dev/null
                             systemctl daemon-reload 2>/dev/null
                             killall -9 badvpn-udpgw hysteria udp-custom stunnel4 2>/dev/null
                             pkill -9 badvpn-udpgw 2>/dev/null
@@ -1634,8 +1672,8 @@ menu_mantenimiento() {
                         exec bash -c "
                             cd /root || cd /tmp
                             echo -e '${RED}[!] Deteniendo todos los servicios y procesos vivos...${NC}'
-                            systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot 2>/dev/null
-                            systemctl disable stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot 2>/dev/null
+                            systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api 2>/dev/null
+                            systemctl disable stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api 2>/dev/null
                             systemctl daemon-reload 2>/dev/null
                             killall -9 badvpn-udpgw hysteria udp-custom stunnel4 2>/dev/null
                             pkill -9 badvpn-udpgw 2>/dev/null
@@ -1693,8 +1731,8 @@ menu_mantenimiento() {
                         exec bash -c "
                             cd /root || cd /tmp
                             echo -e '${RED}🔥 Iniciando limpieza y deteniendo servicios del Maestro...${NC}'
-                            systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-keyserver maximus-tunnel 2>/dev/null
-                            systemctl disable stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-keyserver maximus-tunnel 2>/dev/null
+                            systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api maximus-keyserver maximus-tunnel 2>/dev/null
+                            systemctl disable stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api maximus-keyserver maximus-tunnel 2>/dev/null
                             systemctl daemon-reload 2>/dev/null
                             killall -9 badvpn-udpgw hysteria udp-custom stunnel4 2>/dev/null
                             pkill -9 badvpn-udpgw 2>/dev/null
@@ -1768,8 +1806,8 @@ menu_mantenimiento() {
                         exec bash -c "
                             cd /root || cd /tmp
                             echo -e '${RED}🔥 Iniciando limpieza y deteniendo servicios del Cliente...${NC}'
-                            systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot 2>/dev/null
-                            systemctl disable stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot 2>/dev/null
+                            systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api 2>/dev/null
+                            systemctl disable stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api 2>/dev/null
                             systemctl daemon-reload 2>/dev/null
                             killall -9 badvpn-udpgw hysteria udp-custom stunnel4 2>/dev/null
                             pkill -9 badvpn-udpgw 2>/dev/null
@@ -1816,9 +1854,9 @@ menu_mantenimiento() {
                     exec bash -c "
                         cd /root || cd /tmp
                         # Detener y deshabilitar servicios complejos y matar todo
-                        systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot 2>/dev/null
+                        systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api 2>/dev/null
                         systemctl stop x-ui openvpn-server@server 2>/dev/null
-                        systemctl disable x-ui openvpn-server@server hysteria udp-custom ws-epro stunnel4 dropbear mx-proxy badvpn mx-slowdns maximus-bot 2>/dev/null
+                        systemctl disable x-ui openvpn-server@server hysteria udp-custom ws-epro stunnel4 dropbear mx-proxy badvpn mx-slowdns maximus-bot maximus-wa maximus-api 2>/dev/null
                         systemctl daemon-reload 2>/dev/null
                         killall -9 badvpn-udpgw hysteria udp-custom stunnel4 2>/dev/null
                         pkill -9 badvpn-udpgw 2>/dev/null
