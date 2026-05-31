@@ -99,6 +99,28 @@ function isValidPresentation(text) {
 // Metadata cache
 const metadataCache = new Map();
 
+// Store de mensajes en memoria para el protocolo de reenvío E2EE de WhatsApp.
+// Sin este store, cuando WhatsApp solicita un re-envío de mensaje (retry),
+// Baileys retorna undefined y marca la sesión de cifrado como corrupta.
+// Esto acumula sesiones dañadas hasta que assertSessions no puede resolver
+// el handshake a tiempo, causando timeouts permanentes en el envío.
+const messageStore = new Map();
+const MESSAGE_STORE_MAX_SIZE = 500; // Máximo de mensajes en memoria
+
+function storeMessage(msgId, message) {
+    try {
+        if (!msgId || !message) return;
+        // Limitar tamaño del store eliminando los más antiguos
+        if (messageStore.size >= MESSAGE_STORE_MAX_SIZE) {
+            const firstKey = messageStore.keys().next().value;
+            messageStore.delete(firstKey);
+        }
+        messageStore.set(msgId, message);
+    } catch (e) {
+        // Silenciar errores de store para no afectar el flujo principal
+    }
+}
+
 async function getGroupMetadata(chatJid, sock, force = false) {
     if (!force && metadataCache.has(chatJid)) {
         return metadataCache.get(chatJid);
@@ -275,9 +297,23 @@ async function start() {
         version,
         auth: state,
         logger: pino({ level: 'silent' }),
-        defaultQueryTimeoutMs: 60000,
+        defaultQueryTimeoutMs: 120000,
         cachedGroupMetadata: async (jid) => {
             return metadataCache.get(jid);
+        },
+        getMessage: async (key) => {
+            // Buscar el mensaje en nuestro store local.
+            // Sin esto, cuando WhatsApp pide un re-envío de mensaje,
+            // Baileys retorna undefined → la sesión Signal se corrompe
+            // → assertSessions acumula sesiones rotas → timeout permanente.
+            if (key.id && messageStore.has(key.id)) {
+                return messageStore.get(key.id);
+            }
+            return undefined;
+        },
+        shouldIgnoreJid: (jid) => {
+            // Ignorar broadcasts y newsletters para reducir carga de sesiones
+            return jid?.endsWith('@broadcast') || jid?.endsWith('@newsletter');
         }
     });
 
@@ -290,6 +326,10 @@ async function start() {
             try {
                 const res = await originalSendMessage(chatJid, content, options);
                 consecutiveTimeouts = 0; // Resetear contador al tener éxito
+                // Almacenar el mensaje enviado para el protocolo de retry E2EE
+                if (res?.key?.id) {
+                    storeMessage(res.key.id, res.message || content);
+                }
                 return res;
             } catch (err) {
                 const isTimeout = err.message?.includes('Timed Out') || err.message?.includes('timeout') || err.statusCode === 408 || err.output?.statusCode === 408;
@@ -444,6 +484,8 @@ async function start() {
         } else if (connection === 'open') {
             connectionAttempts = 0;
             console.log('✅ Bot de WhatsApp Moderador Avanzado listo y conectado.');
+            console.log('📦 Message Store activo (getMessage habilitado para protocolo de retry E2EE).');
+            console.log(`⏱️ Query Timeout: 120s | shouldIgnoreJid: broadcasts+newsletters`);
             
             // Mostrar los grupos administrados en el log al iniciar
             try {
@@ -549,6 +591,18 @@ async function start() {
 
     // Message events listener
     sock.ev.on('messages.upsert', async (m) => {
+        // Almacenar TODOS los mensajes entrantes en el store para el protocolo
+        // de reenvío E2EE. Esto es crítico para que getMessage() funcione.
+        try {
+            for (const msg of m.messages) {
+                if (msg.key?.id && msg.message) {
+                    storeMessage(msg.key.id, msg.message);
+                }
+            }
+        } catch (e) {
+            // Nunca bloquear el flujo por un error de store
+        }
+
         if (m.type !== 'notify') return;
 
         for (const msg of m.messages) {
@@ -674,6 +728,8 @@ async function start() {
                                        `🔒 *Anti-Links:* ${groupSet.antilink ? '🟢 Activado' : '🔴 Desactivado'}\n` +
                                        `👋 *Bienvenidas:* ${groupSet.welcome_active ? '🟢 Activado' : '🔴 Desactivado'}\n` +
                                        `👥 *Cola Bienvenida:* \`${groupSet.pendingWelcomes.length}/5\` acumulados\n` +
+                                       `📦 *Msg Store:* \`${messageStore.size}\` msgs en caché\n` +
+                                       `🗂️ *Grupos Caché:* \`${metadataCache.size}\` grupos\n` +
                                        `⏱️ *Uptime:* ${Math.round(process.uptime() / 60)} min\n` +
                                        `━━━━━━━━━━━━━━━━━━━━━━`;
                     await sock.sendMessage(chatJid, { text: statusText }, { quoted: msg });
