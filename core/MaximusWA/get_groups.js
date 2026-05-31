@@ -1,4 +1,4 @@
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const qrcode = require('qrcode-terminal');
 const fs = require('fs');
@@ -15,11 +15,25 @@ if (!fs.existsSync(targetDir)) {
     fs.mkdirSync(targetDir, { recursive: true });
 }
 
+let connectionAttempts = 0;
+
 async function start() {
     console.log('🤖 Iniciando conexión con WhatsApp... Por favor espera.');
+    
+    // Obtener la versión de WhatsApp Web más reciente
+    let version = [2, 3000, 1017539726]; // Fallback estable
+    try {
+        const { version: latestVersion, isLatest } = await fetchLatestBaileysVersion();
+        version = latestVersion;
+        console.log(`[WA-BOT] Versión de WhatsApp Web detectada: ${version.join('.')}`);
+    } catch (e) {
+        console.log(`[WA-BOT] No se pudo obtener la versión actual de WA. Usando fallback: ${version.join('.')}`);
+    }
+
     const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
     
     const sock = makeWASocket({
+        version,
         auth: state,
         logger: pino({ level: 'silent' }),
         printQRInTerminal: true
@@ -31,15 +45,41 @@ async function start() {
         const { connection, lastDisconnect } = update;
         
         if (connection === 'close') {
-            const shouldReconnect = lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut;
-            console.log('⚠️ Conexión cerrada con el servidor de WhatsApp. Reintentando conectar...');
-            if (shouldReconnect) {
-                start();
-            } else {
-                console.log('❌ Sesión cerrada permanentemente. Por favor, borre wa_auth_info e intente de nuevo.');
-                process.exit(1);
+            const statusCode = lastDisconnect?.error?.output?.statusCode;
+            const errorMsg = lastDisconnect?.error?.message || lastDisconnect?.error;
+            console.log(`⚠️ Conexión cerrada. Código: ${statusCode}. Razón: ${errorMsg}`);
+            
+            // Si el estado es 401 (loggedOut), forzar cierre
+            const isLoggedOut = statusCode === DisconnectReason.loggedOut;
+            
+            if (isLoggedOut) {
+                console.log('❌ Sesión cerrada permanentemente o token inválido.');
+                console.log('Limpiando credenciales antiguas para generar un código QR nuevo...');
+                if (fs.existsSync(AUTH_DIR)) {
+                    fs.rmSync(AUTH_DIR, { recursive: true, force: true });
+                }
+                setTimeout(() => start(), 2000);
+                return;
             }
+
+            connectionAttempts++;
+            if (connectionAttempts > 5) {
+                console.log('❌ Se detectaron múltiples fallos consecutivos al conectar.');
+                console.log('Limpiando caché de credenciales temporales para solucionar el bucle...');
+                if (fs.existsSync(AUTH_DIR)) {
+                    // Borrar sólo los archivos de credenciales (dejar el store si es necesario) o borrar todo para QR nuevo
+                    fs.rmSync(AUTH_DIR, { recursive: true, force: true });
+                }
+                connectionAttempts = 0;
+                console.log('Reintentando conexión desde cero con QR nuevo...');
+                setTimeout(() => start(), 3000);
+                return;
+            }
+
+            console.log('🔄 Reintentando conectar en 5 segundos...');
+            setTimeout(() => start(), 5000);
         } else if (connection === 'open') {
+            connectionAttempts = 0;
             console.log('\n==================================================');
             console.log('   ✅ ¡CONECTADO CON ÉXITO A TU WHATSAPP!   ');
             console.log('==================================================\n');

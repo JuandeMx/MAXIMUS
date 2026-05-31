@@ -1,4 +1,4 @@
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const fs = require('fs');
 const path = require('path');
@@ -226,11 +226,25 @@ function startAutoKickTimer(sock) {
 // Initial settings load
 loadSettings();
 
+let connectionAttempts = 0;
+
 async function start() {
     console.log('🤖 Iniciando Demonio de WhatsApp Moderador Avanzado...');
+    
+    // Obtener la versión de WhatsApp Web más reciente
+    let version = [2, 3000, 1017539726]; // Fallback estable
+    try {
+        const { version: latestVersion } = await fetchLatestBaileysVersion();
+        version = latestVersion;
+        console.log(`[WA-BOT] Versión de WhatsApp Web detectada: ${version.join('.')}`);
+    } catch (e) {
+        console.log(`[WA-BOT] No se pudo obtener la versión actual de WA. Usando fallback: ${version.join('.')}`);
+    }
+
     const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
     
     const sock = makeWASocket({
+        version,
         auth: state,
         logger: pino({ level: 'silent' })
     });
@@ -241,16 +255,36 @@ async function start() {
         const { connection, lastDisconnect } = update;
         
         if (connection === 'close') {
-            const shouldReconnect = lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut;
-            console.log('⚠️ Conexión cerrada. Reconectando:', shouldReconnect);
-            if (shouldReconnect) {
-                setTimeout(start, 5000);
-            } else {
-                console.error('❌ La sesión de WhatsApp ha expirado o se ha cerrado.');
+            const statusCode = lastDisconnect?.error?.output?.statusCode;
+            const errorMsg = lastDisconnect?.error?.message || lastDisconnect?.error;
+            console.log(`⚠️ Conexión cerrada. Código: ${statusCode}. Razón: ${errorMsg}`);
+            
+            // Si la sesión fue cerrada (loggedOut)
+            const isLoggedOut = statusCode === DisconnectReason.loggedOut;
+            if (isLoggedOut) {
+                console.error('❌ La sesión de WhatsApp ha expirado o se ha cerrado permanentemente.');
+                if (fs.existsSync(AUTH_DIR)) {
+                    fs.rmSync(AUTH_DIR, { recursive: true, force: true });
+                }
                 process.exit(1);
             }
+
+            connectionAttempts++;
+            if (connectionAttempts > 5) {
+                console.log('❌ Se detectaron múltiples fallos de conexión en el daemon bot.js.');
+                console.log('Limpiando credenciales temporales corruptas para forzar reinicio limpio...');
+                if (fs.existsSync(AUTH_DIR)) {
+                    fs.rmSync(AUTH_DIR, { recursive: true, force: true });
+                }
+                connectionAttempts = 0;
+                process.exit(1); // Detener para que systemd reinicie de forma limpia con QR nuevo
+            }
+
+            console.log('🔄 Reconectando en 5 segundos...');
+            setTimeout(start, 5000);
         } else if (connection === 'open') {
-            console.log('✅ Bot de WhatsApp Moderador Avanzado listo.');
+            connectionAttempts = 0;
+            console.log('✅ Bot de WhatsApp Moderador Avanzado listo y conectado.');
             // Iniciar timer
             startAutoKickTimer(sock);
         }
