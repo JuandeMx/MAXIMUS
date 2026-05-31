@@ -1,3 +1,6 @@
+if (typeof globalThis.crypto === 'undefined') {
+    globalThis.crypto = require('crypto').webcrypto;
+}
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const qrcode = require('qrcode-terminal');
