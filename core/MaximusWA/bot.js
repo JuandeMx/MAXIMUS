@@ -63,28 +63,37 @@ function getGroupSettings(chatJid) {
 
 // Helper to extract text
 function getMessageText(message) {
-    if (!message) return '';
-    return message.conversation || 
-           (message.extendedTextMessage && message.extendedTextMessage.text) || 
-           (message.imageMessage && message.imageMessage.caption) || 
-           '';
+    try {
+        if (!message) return '';
+        return message.conversation || 
+               (message.extendedTextMessage && message.extendedTextMessage.text) || 
+               (message.imageMessage && message.imageMessage.caption) || 
+               '';
+    } catch (e) {
+        return '';
+    }
 }
 
 // Check presentation format (Nombre, País, Compañía)
 function isValidPresentation(text) {
-    // Normalizar texto quitando acentos y mayúsculas
-    const clean = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    
-    // Buscar indicios de Nombre
-    const hasName = clean.includes('nombre') || clean.includes('llamo') || clean.includes('name');
-    
-    // Buscar indicios de País
-    const hasCountry = clean.includes('pais') || clean.includes('soy de') || clean.includes('de:') || clean.includes('nacion');
-    
-    // Buscar indicios de Compañía
-    const hasCompany = clean.includes('compania') || clean.includes('empresa') || clean.includes('trabajo') || clean.includes('firma') || clean.includes('compañia');
-    
-    return hasName && hasCountry && hasCompany;
+    try {
+        if (!text) return false;
+        // Normalizar texto quitando acentos y mayúsculas
+        const clean = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        
+        // Buscar indicios de Nombre
+        const hasName = clean.includes('nombre') || clean.includes('llamo') || clean.includes('name');
+        
+        // Buscar indicios de País
+        const hasCountry = clean.includes('pais') || clean.includes('de:') || clean.includes('soy de') || clean.includes('country') || clean.includes('ubicacion');
+        
+        // Buscar indicios de Compañía
+        const hasCompany = clean.includes('compania') || clean.includes('empresa') || clean.includes('trabajo') || clean.includes('firma') || clean.includes('compañia');
+        
+        return hasName && hasCountry && hasCompany;
+    } catch (e) {
+        return false;
+    }
 }
 
 // Metadata cache
@@ -108,25 +117,33 @@ async function getGroupMetadata(chatJid, sock, force = false) {
 
 // Admin privileges check
 async function checkAdmins(chatJid, senderJid, sock) {
-    // 1. Verificar si el remitente está en la lista de moderadores globales del bot
-    const globalMods = settings.moderators || [];
-    if (globalMods.includes(senderJid)) {
-        return { isSenderAdmin: true, isBotAdmin: true };
-    }
+    try {
+        // 1. Verificar si el remitente está en la lista de moderadores globales del bot
+        const globalMods = settings.moderators || [];
+        if (globalMods.includes(senderJid)) {
+            return { isSenderAdmin: true, isBotAdmin: true };
+        }
 
-    const metadata = await getGroupMetadata(chatJid, sock);
-    if (!metadata) return { isSenderAdmin: false, isBotAdmin: false };
-    
-    const botJid = sock.user.id.split(':')[0] + '@s.whatsapp.net';
-    const participants = metadata.participants || [];
-    
-    const sender = participants.find(p => p.id === senderJid);
-    const bot = participants.find(p => p.id === botJid);
-    
-    const isSenderAdmin = sender && (sender.admin === 'admin' || sender.admin === 'superadmin' || sender.id === botJid);
-    const isBotAdmin = bot && (bot.admin === 'admin' || bot.admin === 'superadmin');
-    
-    return { isSenderAdmin: !!isSenderAdmin, isBotAdmin: !!isBotAdmin };
+        const metadata = await getGroupMetadata(chatJid, sock);
+        if (!metadata) return { isSenderAdmin: false, isBotAdmin: false };
+        
+        if (!sock || !sock.user || !sock.user.id) {
+            return { isSenderAdmin: false, isBotAdmin: false };
+        }
+        const botJid = sock.user.id.split(':')[0] + '@s.whatsapp.net';
+        const participants = metadata.participants || [];
+        
+        const sender = participants.find(p => p.id === senderJid);
+        const bot = participants.find(p => p.id === botJid);
+        
+        const isSenderAdmin = sender && (sender.admin === 'admin' || sender.admin === 'superadmin' || sender.id === botJid);
+        const isBotAdmin = bot && (bot.admin === 'admin' || bot.admin === 'superadmin');
+        
+        return { isSenderAdmin: !!isSenderAdmin, isBotAdmin: !!isBotAdmin };
+    } catch (e) {
+        console.error('[WA-BOT] Error en checkAdmins:', e);
+        return { isSenderAdmin: false, isBotAdmin: false };
+    }
 }
 
 // Extract target user for moderation commands (.kick, .warn, .approve)
@@ -155,9 +172,9 @@ async function sendBatchWelcome(chatJid, sock) {
         const metadata = await getGroupMetadata(chatJid, sock);
         const groupName = metadata ? metadata.subject : 'el grupo';
         
-        // Obtener los primeros 10 o todos si se fuerza
-        const toWelcome = groupSet.pendingWelcomes.slice(0, 10);
-        groupSet.pendingWelcomes = groupSet.pendingWelcomes.slice(10);
+        // Obtener los primeros 5 o todos si se fuerza
+        const toWelcome = groupSet.pendingWelcomes.slice(0, 5);
+        groupSet.pendingWelcomes = groupSet.pendingWelcomes.slice(5);
         saveSettings();
 
         // Crear lista de tags
@@ -328,10 +345,10 @@ async function start() {
                 }
                 saveSettings();
 
-                console.log(`[WA-BOT] ${participants.length} usuarios añadidos. Cola de bienvenida actual: ${groupSet.pendingWelcomes.length}/10`);
+                console.log(`[WA-BOT] ${participants.length} usuarios añadidos. Cola de bienvenida actual: ${groupSet.pendingWelcomes.length}/5`);
 
-                // Lanzar bienvenida si llegamos a 10
-                if (groupSet.welcome_active && groupSet.pendingWelcomes.length >= 10) {
+                // Lanzar bienvenida si llegamos a 5
+                if (groupSet.welcome_active && groupSet.pendingWelcomes.length >= 5) {
                     await sendBatchWelcome(id, sock);
                 }
             }
@@ -448,7 +465,7 @@ async function start() {
                                  `🔒 *Anti-Links:* ${groupSet.antilink ? '✅ Activo' : '❌ Inactivo'}\n` +
                                  `📝 *Filtro Palabras:* ${groupSet.badwords_active ? '✅ Activo' : '❌ Inactivo'}\n` +
                                  `👋 *Mensaje Bienvenida:* ${groupSet.welcome_active ? '✅ Activo' : '❌ Inactivo'}\n` +
-                                 `👥 *Cola Bienvenida:* \`${groupSet.pendingWelcomes.length}/10\` acumulados\n` +
+                                 `👥 *Cola Bienvenida:* \`${groupSet.pendingWelcomes.length}/5\` acumulados\n` +
                                  `━━━━━━━━━━━━━━━━━━━━━━\n` +
                                  `⚙️ *COMANDOS DE ADMINISTRADOR:*\n` +
                                  `• \`.mute\` : Cierra el grupo\n` +
