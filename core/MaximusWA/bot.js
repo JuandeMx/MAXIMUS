@@ -404,22 +404,36 @@ async function start() {
             }
 
             // 2. AUTOMACIÓN DE FILTRO (links / palabras)
-            if (!text.startsWith('.')) {
+            if (!text.startsWith('.') && !text.startsWith('!')) {
                 // Anti-links filter check (Solo si no es admin)
                 if (groupSet.antilink) {
-                    const hasLink = /https?:\/\/[^\s]+|www\.[^\s]+|wa\.me\/[0-9]+/i.test(text);
+                    const hasLink = /https?:\/\/[^\s]+|www\.[^\s]+|wa\.me\/[^\s]+|t\.me\/[^\s]+|[a-zA-Z0-9.-]+\.(com|net|org|info|biz|me|cc|tv|xyz|app|dev|io|co|tk|cf|gq|ml|live|top|online|site|club|vip)\b/i.test(text);
                     if (hasLink) {
                         const { isSenderAdmin, isBotAdmin } = await checkAdmins(chatJid, senderJid, sock);
                         if (!isSenderAdmin) {
                             if (isBotAdmin) {
-                                // Delete link message
-                                await sock.sendMessage(chatJid, { delete: msg.key });
-                                
-                                // Send warn message
-                                await sock.sendMessage(chatJid, { 
-                                    text: `⚠️ @${senderJid.split('@')[0]} los enlaces no están permitidos en este grupo y tu mensaje ha sido eliminado.`,
-                                    mentions: [senderJid]
-                                });
+                                try {
+                                    // Delete link message
+                                    await sock.sendMessage(chatJid, { delete: msg.key });
+                                    
+                                    // Send warn message
+                                    await sock.sendMessage(chatJid, { 
+                                        text: `⚠️ @${senderJid.split('@')[0]} los enlaces no están permitidos en este grupo y tu mensaje ha sido eliminado.`,
+                                        mentions: [senderJid]
+                                    });
+                                } catch (e) {
+                                    console.error('[WA-BOT] Error al eliminar mensaje con enlace:', e);
+                                }
+                            } else {
+                                try {
+                                    // Advertir que no tiene privilegios de admin
+                                    await sock.sendMessage(chatJid, { 
+                                        text: `⚠️ @${senderJid.split('@')[0]} envió un enlace, pero el bot no pudo eliminar el mensaje porque NO tiene privilegios de ADMINISTRADOR en el grupo.`,
+                                        mentions: [senderJid]
+                                    });
+                                } catch (e) {
+                                    console.error('[WA-BOT] Error al enviar aviso de falta de permisos admin:', e);
+                                }
                             }
                             continue;
                         }
@@ -455,6 +469,27 @@ async function start() {
             // Comando .ping
             if (cmd === '.ping') {
                 await sock.sendMessage(chatJid, { text: '🏓 *Pong!* El bot está activo y vigilando.' }, { quoted: msg });
+                continue;
+            }
+
+            // Comando !status / .status
+            if (cmd === '!status' || cmd === '.status') {
+                try {
+                    let botJid = sock.user.id.split(':')[0] + '@s.whatsapp.net';
+                    const { isBotAdmin } = await checkAdmins(chatJid, botJid, sock);
+                    const statusText = `🤖 *ESTADO DEL BOT MAXIMUS WA* 🛡️\n` +
+                                       `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                                       `✅ *Estado:* Operativo / Vigilando\n` +
+                                       `⚙️ *Rol en el Grupo:* ${isBotAdmin ? '👑 ADMINISTRADOR (Activo)' : '⚠️ MIEMBRO REGULAR (Sin permisos de eliminación)'}\n` +
+                                       `🔒 *Anti-Links:* ${groupSet.antilink ? '🟢 Activado' : '🔴 Desactivado'}\n` +
+                                       `👋 *Bienvenidas:* ${groupSet.welcome_active ? '🟢 Activado' : '🔴 Desactivado'}\n` +
+                                       `👥 *Cola Bienvenida:* \`${groupSet.pendingWelcomes.length}/5\` acumulados\n` +
+                                       `⏱️ *Uptime:* ${Math.round(process.uptime() / 60)} min\n` +
+                                       `━━━━━━━━━━━━━━━━━━━━━━`;
+                    await sock.sendMessage(chatJid, { text: statusText }, { quoted: msg });
+                } catch (e) {
+                    console.error('[WA-BOT] Error en comando status:', e);
+                }
                 continue;
             }
 
