@@ -1585,11 +1585,23 @@ CF_API_TOKEN="$cf_token"
 CF_ZONE_ID="$cf_zone"
 CF_RECORD_NAME="$cf_domain"
 CFEOF
-                        echo -e "${GREEN}✅ Guardado.${NC}"; sleep 0.1 ;;
+                        rm -f /etc/MaximusVpsMx/.last_ip
+                        echo -e "${GREEN}✅ Guardado y reiniciado caché de IP.${NC}"
+                        echo -e "${YELLOW}▶ Ejecutando primera sincronización de prueba...${NC}"
+                        bash /etc/MaximusVpsMx/modules/cloudflare-ddns.sh
+                        ui_pause
+                        ;;
                     2)
                         (crontab -l 2>/dev/null | grep -v "cloudflare-ddns"; echo "*/5 * * * * /etc/MaximusVpsMx/modules/cloudflare-ddns.sh") | crontab -
-                        echo -e "${GREEN}✅ Activado.${NC}"; sleep 0.1 ;;
-                    3) crontab -l 2>/dev/null | grep -v "cloudflare-ddns" | crontab -; echo -e "${RED}⚠️ Desactivado.${NC}"; sleep 0.1 ;;
+                        echo -e "${GREEN}✅ Activado en Tareas Cron.${NC}"
+                        echo -e "${YELLOW}▶ Sincronizando con Cloudflare...${NC}"
+                        bash /etc/MaximusVpsMx/modules/cloudflare-ddns.sh
+                        ui_pause
+                        ;;
+                    3)
+                        crontab -l 2>/dev/null | grep -v "cloudflare-ddns" | crontab -
+                        rm -f /etc/MaximusVpsMx/.last_ip
+                        echo -e "${RED}⚠️ Desactivado en Tareas Cron y caché limpiada.${NC}"; sleep 1 ;;
                 esac ;;
             7) [ -f /etc/MaximusVpsMx/.master_node ] && menu_bots || continue ;;
             8) sub_zombies ;;
