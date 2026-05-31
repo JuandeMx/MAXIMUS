@@ -71,7 +71,7 @@ ALL_RECORDS=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/$CF_ZON
     -H "Authorization: Bearer $CF_API_TOKEN" \
     -H "Content-Type: application/json")
 
-SUCCESS=$(echo "$ALL_RECORDS" | jq -r '.success 2>/dev/null')
+SUCCESS=$(echo "$ALL_RECORDS" | jq -r '.success' 2>/dev/null)
 if [ "$SUCCESS" != "true" ]; then
     log_msg "ERROR" "La consulta de la API de Cloudflare falló. Verifica tus credenciales (Token/ZoneID)."
     if [ -t 1 ]; then
@@ -81,7 +81,7 @@ if [ "$SUCCESS" != "true" ]; then
 fi
 
 # Contar cuántos registros A hay
-TOTAL=$(echo "$ALL_RECORDS" | jq '.result | length 2>/dev/null')
+TOTAL=$(echo "$ALL_RECORDS" | jq '.result | length' 2>/dev/null)
 if [ -z "$TOTAL" ] || [ "$TOTAL" -eq 0 ]; then
     log_msg "WARN" "No se encontraron registros tipo A en esta Zona de Cloudflare."
     exit 0
@@ -123,7 +123,7 @@ for i in $(seq 0 $(($TOTAL - 1))); do
             -H "Content-Type: application/json" \
             --data "{\"type\":\"A\",\"name\":\"$RECORD_NAME\",\"content\":\"$IP_ACTUAL\",\"ttl\":120,\"proxied\":$RECORD_PROXIED}")
 
-        UPD_OK=$(echo "$UPDATE" | jq -r '.success 2>/dev/null')
+        UPD_OK=$(echo "$UPDATE" | jq -r '.success' 2>/dev/null)
         if [ "$UPD_OK" == "true" ]; then
             log_msg "OK" "Registro '$RECORD_NAME' actualizado con éxito a '$IP_ACTUAL'."
             UPDATED=$(($UPDATED + 1))

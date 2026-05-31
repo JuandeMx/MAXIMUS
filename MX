@@ -130,7 +130,7 @@ if [ ! -f /etc/MaximusVpsMx/.master_node ]; then
 fi
 
 # --- PANEL VERSION ---
-PANEL_VERSION="v11.2.31"
+PANEL_VERSION="v11.2.32"
 
 # --- COLORES GLOBALES ---
 RED='\033[1;31m'
