@@ -1420,53 +1420,53 @@ generar_payloads() {
 
     # Generamos la lista de payloads en formato texto puro (para copiar/pegar)
     p1="CONNECT [host_port] [protocol]\\r\\nHost: $phost\\r\\n\\r\\n"
-    p2="GET http://$phost/ HTTP/1.1\\r\\nHost: $phost\\r\\nConnection: Keep-Alive\\r\\n\\r\\n"
-    p3="POST http://$phost/ HTTP/1.1\\r\\nHost: $phost\\r\\nConnection: Keep-Alive\\r\\nContent-Length: 9999\\r\\n\\r\\n"
-    p4="CONNECT $phost@[host_port] [protocol]\\r\\nHost: $phost\\r\\n\\r\\n"
-    p5="CONNECT [host_port]@$phost [protocol]\\r\\nHost: $phost\\r\\n\\r\\n"
-    p6="GET / HTTP/1.1\\r\\nHost: $phost\\r\\nUpgrade: websocket\\r\\nConnection: Upgrade\\r\\n\\r\\n"
-    p7="GET http://$phost/ HTTP/1.1\\r\\nHost: $phost\\r\\nUpgrade: websocket\\r\\nConnection: Upgrade\\r\\n\\r\\n"
-    p8="CONNECT [host_port] [protocol]\\r\\nHost: $phost\\r\\nProxy-Connection: Keep-Alive\\r\\nConnection: Keep-Alive\\r\\n\\r\\n"
-    p9="CONNECT [host_port] [protocol]\\r\\nHost: $phost\\r\\n\\r\\n[split]GET http://$phost/ HTTP/1.1\\r\\nHost: $phost\\r\\n\\r\\n"
-    p10="CONNECT [host_port] [protocol]\\r\\nHost: $phost\\r\\n\\r\\n[instant_split]GET http://$phost/ HTTP/1.1\\r\\nHost: $phost\\r\\n\\r\\n"
-    p11="GET http://$phost/ HTTP/1.1\\r\\nHost: $phost\\r\\nConnection: Keep-Alive\\r\\nReferer: http://$phost/\\r\\n\\r\\n"
-    p12="GET / HTTP/1.1[crlf]Host: $phost[crlf]Upgrade: websocket[crlf]Connection: Upgrade[crlf][crlf]"
-    p13="CONNECT [host_port] [protocol]\\r\\nHost: $phost\\r\\nX-Online-Host: $phost\\r\\nX-Forward-Host: $phost\\r\\n\\r\\n"
-    p14="GET / HTTP/1.1\\r\\nHost: $phost\\r\\nConnection: Keep-Alive\\r\\nUser-Agent: Chrome\\r\\nAccept: */*\\r\\n\\r\\n"
-    p15="GET wss://$phost/ HTTP/1.1\\r\\nHost: $phost\\r\\nUpgrade: websocket\\r\\nConnection: Upgrade\\r\\n\\r\\n"
+    p2="GET http://$phost HTTP/1.1[crlf]Host: $phost[crlf]Connection: keep-alive[crlf]Proxy-Connection: keep-alive[crlf][crlf]"
+    p3="GET / HTTP/1.1[crlf]Host: $phost[crlf]Upgrade: websocket[crlf]Connection: Upgrade[crlf][crlf]"
+    p4="GET wss://$phost/ HTTP/1.1[crlf]Host: $phost[crlf]Upgrade: websocket[crlf]Connection: Upgrade[crlf][crlf]"
+    p5="CONNECT http://$phost/ HTTP/1.1[crlf]Host: $phost[crlf]X-Online-Host: $phost[crlf]X-Forward-Host: $phost[crlf]Connection: Keep-Alive[crlf]User-Agent: Yes[crlf] CONNECT [host_port] HTTP/1.1[crlf][crlf]"
+    p6="GET http://$phost/ HTTP/1.1[crlf]Host: $phost[crlf] Access-Control-Allow-Credentials: true, true[lf] Access-Control-Allow-Headers: X-Requested-With,Content-Type[lf] Access-Control-Allow-Methods: GET,PUT,OPTIONS,POST,DELETE[lf] Cache-Control: max-age=86400[lf] public[lf] Connection: keep-alive[lf] Content-Type: text/html; charset=UTF-8[crlf]Content-Length: 9999999999[crlf]UseDNS: Yes[crlf]Vary: Accept-Encoding[crlf][raw][crlf][crlf][crlf]"
+    p7="CONNECT free.facebook.com;$phost;internet.org;c.whatsapp.net@[host_port] [protocol][crlf][delay_split]GET http://free.facebook.com;$phost;internet.org;c.whatsapp.net/ HTTP/1.1[crlf]Host: free.facebook.com;$phost;internet.org;c.whatsapp.net[crlf]X-Online-Host: free.facebook.com;$phost;internet.org;c.whatsapp.net[crlf]Connection: Keep-Alive[crlf][crlf]"
+    p8="GET http://$phost/ HTTP/1.1[crlf]Host: $phost[crlf]User-Agent: Yes[crlf]Accept-Encoding: gzip,deflate[crlf]Connection: Basic[crlf]Referer: $phost[crlf]Cookie: $phost [crlf]Proxy-Connection: Keep-Alive[crlf][crlf][netData][crlf][crlf][crlf]"
+    p9="GET http://$phost/ HTTP/1.1[crlf]Host: $phost[crlf]X-Online-Host: $phost[crlf]X-Forward-Host: $phost[crlf]Connection: Keep-Alive[crlf]User-Agent: [ua][crlf][crlf][delay_split]CONNECT [host_port] [protocol][crlf][crlf]"
+    p10="CONNECT $phost@[host_port] [protocol]\\r\\nHost: $phost\\r\\n\\r\\n"
+    p11="CONNECT [host_port]@$phost [protocol]\\r\\nHost: $phost\\r\\n\\r\\n"
+    p12="CONNECT [host_port] [protocol]\\r\\nHost: $phost\\r\\n\\r\\n[split]GET http://$phost/ HTTP/1.1\\r\\nHost: $phost\\r\\n\\r\\n"
+    p13="CONNECT [host_port] [protocol]\\r\\nHost: $phost\\r\\n\\r\\n[instant_split]GET http://$phost/ HTTP/1.1\\r\\nHost: $phost\\r\\n\\r\\n"
+    p14="GET http://$phost/ HTTP/1.1\\r\\nHost: $phost\\r\\nConnection: Keep-Alive\\r\\nReferer: http://$phost/\\r\\n\\r\\n"
+    p15="CONNECT [host_port] [protocol]\\r\\nHost: $phost\\r\\nX-Online-Host: $phost\\r\\nX-Forward-Host: $phost\\r\\n\\r\\n"
 
     clear
     ui_header "PAYLOADS GENERADOS PARA: $phost"
     echo -e " Copia el texto tal como se muestra para usarlo en tu VPN client:\n"
     echo -e " ${YELLOW}[1] Directo (Normal):${NC}"
     printf "  ${WHITE}%s${NC}\n\n" "$p1"
-    echo -e " ${YELLOW}[2] HTTP Bug Get:${NC}"
+    echo -e " ${YELLOW}[2] RealStrategy HTTP Bug Get:${NC}"
     printf "  ${WHITE}%s${NC}\n\n" "$p2"
-    echo -e " ${YELLOW}[3] HTTP Bug Post:${NC}"
+    echo -e " ${YELLOW}[3] HTTP Custom WS (crlf):${NC}"
     printf "  ${WHITE}%s${NC}\n\n" "$p3"
-    echo -e " ${YELLOW}[4] Front Query CONNECT:${NC}"
+    echo -e " ${YELLOW}[4] WebSocket Secure SSL (wss):${NC}"
     printf "  ${WHITE}%s${NC}\n\n" "$p4"
-    echo -e " ${YELLOW}[5] Back Query CONNECT:${NC}"
+    echo -e " ${YELLOW}[5] RealStrategy Multi-Header Bypass:${NC}"
     printf "  ${WHITE}%s${NC}\n\n" "$p5"
-    echo -e " ${YELLOW}[6] Cloudflare WebSocket (SSL):${NC}"
+    echo -e " ${YELLOW}[6] RealStrategy Access-Control Bypass:${NC}"
     printf "  ${WHITE}%s${NC}\n\n" "$p6"
-    echo -e " ${YELLOW}[7] Cloudflare WS CDN Direct:${NC}"
+    echo -e " ${YELLOW}[7] RealStrategy Multiplex (Facebook/WA):${NC}"
     printf "  ${WHITE}%s${NC}\n\n" "$p7"
-    echo -e " ${YELLOW}[8] Keep-Alive Standard:${NC}"
+    echo -e " ${YELLOW}[8] RealStrategy Cookie & Referer:${NC}"
     printf "  ${WHITE}%s${NC}\n\n" "$p8"
-    echo -e " ${YELLOW}[9] Split Normal HTTP:${NC}"
+    echo -e " ${YELLOW}[9] RealStrategy Delay Split CONNECT:${NC}"
     printf "  ${WHITE}%s${NC}\n\n" "$p9"
-    echo -e " ${YELLOW}[10] Split Delay Custom:${NC}"
+    echo -e " ${YELLOW}[10] Front Query CONNECT:${NC}"
     printf "  ${WHITE}%s${NC}\n\n" "$p10"
-    echo -e " ${YELLOW}[11] Dual Host Redirect:${NC}"
+    echo -e " ${YELLOW}[11] Back Query CONNECT:${NC}"
     printf "  ${WHITE}%s${NC}\n\n" "$p11"
-    echo -e " ${YELLOW}[12] HTTP Custom WS (crlf):${NC}"
+    echo -e " ${YELLOW}[12] Split Normal HTTP:${NC}"
     printf "  ${WHITE}%s${NC}\n\n" "$p12"
-    echo -e " ${YELLOW}[13] SSL SNI Spoof (Multi-Host):${NC}"
+    echo -e " ${YELLOW}[13] Split Delay Custom:${NC}"
     printf "  ${WHITE}%s${NC}\n\n" "$p13"
-    echo -e " ${YELLOW}[14] Cloudfront / AWS Payload:${NC}"
+    echo -e " ${YELLOW}[14] Dual Host Redirect:${NC}"
     printf "  ${WHITE}%s${NC}\n\n" "$p14"
-    echo -e " ${YELLOW}[15] WebSocket Secure SSL (wss):${NC}"
+    echo -e " ${YELLOW}[15] SSL SNI Spoof (Multi-Host):${NC}"
     printf "  ${WHITE}%s${NC}\n\n" "$p15"
     ui_subhr
     
@@ -1481,46 +1481,46 @@ PAYLOADS GENERADOS PARA: $phost
 1. Directo (Normal):
 $p1
 
-2. HTTP Bug Get:
+2. RealStrategy HTTP Bug Get:
 $p2
 
-3. HTTP Bug Post:
+3. HTTP Custom WS (crlf):
 $p3
 
-4. Front Query CONNECT:
+4. WebSocket Secure SSL (wss):
 $p4
 
-5. Back Query CONNECT:
+5. RealStrategy Multi-Header Bypass:
 $p5
 
-6. Cloudflare WebSocket (SSL):
+6. RealStrategy Access-Control Bypass:
 $p6
 
-7. Cloudflare WS CDN Direct:
+7. RealStrategy Multiplex (Facebook/WA):
 $p7
 
-8. Keep-Alive Standard:
+8. RealStrategy Cookie & Referer:
 $p8
 
-9. Split Normal HTTP:
+9. RealStrategy Delay Split CONNECT:
 $p9
 
-10. Split Delay Custom:
+10. Front Query CONNECT:
 $p10
 
-11. Dual Host Redirect:
+11. Back Query CONNECT:
 $p11
 
-12. HTTP Custom WS (crlf):
+12. Split Normal HTTP:
 $p12
 
-13. SSL SNI Spoof (Multi-Host):
+13. Split Delay Custom:
 $p13
 
-14. Cloudfront / AWS Payload:
+14. Dual Host Redirect:
 $p14
 
-15. WebSocket Secure SSL (wss):
+15. SSL SNI Spoof (Multi-Host):
 $p15
 EOF
         echo -e "\n${GREEN}✅ Payloads guardados exitosamente en: ${WHITE}$outfile${NC}"
