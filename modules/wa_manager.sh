@@ -35,8 +35,25 @@ install_deps() {
     echo -e "${YELLOW}[+] Instalando módulos de Node.js locales (Baileys, Pino, QR)...${NC}"
     if [ -d "/etc/MaximusVpsMx/core/MaximusWA" ]; then
         cd /etc/MaximusVpsMx/core/MaximusWA || exit 1
-        npm install --no-audit --no-fund >/dev/null 2>&1
-        echo -e "${GREEN}[OK] Módulos de Node.js instalados con éxito.${NC}"
+        
+        # Limpieza previa para evitar incompatibilidades
+        rm -f package-lock.json
+        rm -rf node_modules
+        
+        # Ejecutar instalador mostrando la salida y verificando errores
+        if npm install --no-audit --no-fund; then
+            echo -e "${GREEN}[OK] Módulos de Node.js instalados con éxito.${NC}"
+        else
+            echo -e "${YELLOW}[!] Reintentando instalación con --legacy-peer-deps...${NC}"
+            if npm install --no-audit --no-fund --legacy-peer-deps; then
+                echo -e "${GREEN}[OK] Módulos de Node.js instalados con éxito.${NC}"
+            else
+                echo -e "${RED}❌ Error: No se pudieron instalar las dependencias de Node.js.${NC}"
+                echo -e "${YELLOW}Intenta ejecutar manualmente: cd /etc/MaximusVpsMx/core/MaximusWA && npm install${NC}"
+                sleep 5
+                return 1
+            fi
+        fi
     else
         echo -e "${RED}❌ Error: No se encontró el directorio /etc/MaximusVpsMx/core/MaximusWA${NC}"
         sleep 2
