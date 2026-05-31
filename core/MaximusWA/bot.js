@@ -105,9 +105,9 @@ async function getGroupMetadata(chatJid, sock, force = false) {
     }
     try {
         const metadata = await sock.groupMetadata(chatJid);
-        metadataCache.set(chatJid, metadata);
-        // Expire cache after 5 minutes
-        setTimeout(() => metadataCache.delete(chatJid), 5 * 60 * 1000);
+        if (metadata) {
+            metadataCache.set(chatJid, metadata);
+        }
         return metadata;
     } catch (e) {
         console.error(`[WA-BOT] Error al obtener metadatos de ${chatJid}:`, e);
@@ -275,22 +275,40 @@ async function start() {
         version,
         auth: state,
         logger: pino({ level: 'silent' }),
-        defaultQueryTimeoutMs: 60000
+        defaultQueryTimeoutMs: 60000,
+        cachedGroupMetadata: async (jid) => {
+            return metadataCache.get(jid);
+        }
     });
+
+    let consecutiveTimeouts = 0;
 
     // Parchear funciones del socket para añadir reintentos automáticos ante timeouts
     const originalSendMessage = sock.sendMessage.bind(sock);
     sock.sendMessage = async (chatJid, content, options = {}, retries = 3, delay = 1500) => {
         for (let attempt = 1; attempt <= retries; attempt++) {
             try {
-                return await originalSendMessage(chatJid, content, options);
+                const res = await originalSendMessage(chatJid, content, options);
+                consecutiveTimeouts = 0; // Resetear contador al tener éxito
+                return res;
             } catch (err) {
                 const isTimeout = err.message?.includes('Timed Out') || err.message?.includes('timeout') || err.statusCode === 408 || err.output?.statusCode === 408;
-                if (isTimeout && attempt < retries) {
-                    console.warn(`[WA-BOT] Advertencia: Límite de tiempo agotado al enviar mensaje a ${chatJid} (intento ${attempt}/${retries}). Reintentando en ${delay}ms...`);
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                    delay *= 2;
-                    continue;
+                if (isTimeout) {
+                    consecutiveTimeouts++;
+                    console.warn(`[WA-BOT] Timeout detectado al enviar mensaje. Consecutivos: ${consecutiveTimeouts}/5`);
+                    if (consecutiveTimeouts >= 5) {
+                        console.error('[WA-BOT] Demasiados timeouts consecutivos detectados. Forzando reconexión limpia de la sesión...');
+                        consecutiveTimeouts = 0;
+                        try {
+                            sock.end(new Error('Persistent query timeouts'));
+                        } catch (endErr) {}
+                    }
+                    if (attempt < retries) {
+                        console.warn(`[WA-BOT] Advertencia: Límite de tiempo agotado al enviar mensaje a ${chatJid} (intento ${attempt}/${retries}). Reintentando en ${delay}ms...`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        delay *= 2;
+                        continue;
+                    }
                 }
                 throw err;
             }
@@ -301,14 +319,27 @@ async function start() {
     sock.groupParticipantsUpdate = async (chatJid, participants, action, retries = 3, delay = 1500) => {
         for (let attempt = 1; attempt <= retries; attempt++) {
             try {
-                return await originalGroupParticipantsUpdate(chatJid, participants, action);
+                const res = await originalGroupParticipantsUpdate(chatJid, participants, action);
+                consecutiveTimeouts = 0; // Resetear contador
+                return res;
             } catch (err) {
                 const isTimeout = err.message?.includes('Timed Out') || err.message?.includes('timeout') || err.statusCode === 408 || err.output?.statusCode === 408;
-                if (isTimeout && attempt < retries) {
-                    console.warn(`[WA-BOT] Timeout al actualizar participantes en ${chatJid} (intento ${attempt}/${retries}). Reintentando...`);
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                    delay *= 2;
-                    continue;
+                if (isTimeout) {
+                    consecutiveTimeouts++;
+                    console.warn(`[WA-BOT] Timeout detectado al actualizar participantes. Consecutivos: ${consecutiveTimeouts}/5`);
+                    if (consecutiveTimeouts >= 5) {
+                        console.error('[WA-BOT] Demasiados timeouts consecutivos detectados. Forzando reconexión limpia de la sesión...');
+                        consecutiveTimeouts = 0;
+                        try {
+                            sock.end(new Error('Persistent query timeouts'));
+                        } catch (endErr) {}
+                    }
+                    if (attempt < retries) {
+                        console.warn(`[WA-BOT] Timeout al actualizar participantes en ${chatJid} (intento ${attempt}/${retries}). Reintentando...`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        delay *= 2;
+                        continue;
+                    }
                 }
                 throw err;
             }
@@ -319,14 +350,27 @@ async function start() {
     sock.groupSettingUpdate = async (chatJid, setting, retries = 3, delay = 1500) => {
         for (let attempt = 1; attempt <= retries; attempt++) {
             try {
-                return await originalGroupSettingUpdate(chatJid, setting);
+                const res = await originalGroupSettingUpdate(chatJid, setting);
+                consecutiveTimeouts = 0; // Resetear contador
+                return res;
             } catch (err) {
                 const isTimeout = err.message?.includes('Timed Out') || err.message?.includes('timeout') || err.statusCode === 408 || err.output?.statusCode === 408;
-                if (isTimeout && attempt < retries) {
-                    console.warn(`[WA-BOT] Timeout al cambiar configuración de grupo en ${chatJid} (intento ${attempt}/${retries}). Reintentando...`);
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                    delay *= 2;
-                    continue;
+                if (isTimeout) {
+                    consecutiveTimeouts++;
+                    console.warn(`[WA-BOT] Timeout detectado al cambiar configuración de grupo. Consecutivos: ${consecutiveTimeouts}/5`);
+                    if (consecutiveTimeouts >= 5) {
+                        console.error('[WA-BOT] Demasiados timeouts consecutivos detectados. Forzando reconexión limpia de la sesión...');
+                        consecutiveTimeouts = 0;
+                        try {
+                            sock.end(new Error('Persistent query timeouts'));
+                        } catch (endErr) {}
+                    }
+                    if (attempt < retries) {
+                        console.warn(`[WA-BOT] Timeout al cambiar configuración de grupo en ${chatJid} (intento ${attempt}/${retries}). Reintentando...`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        delay *= 2;
+                        continue;
+                    }
                 }
                 throw err;
             }
@@ -337,14 +381,27 @@ async function start() {
     sock.groupMetadata = async (chatJid, retries = 3, delay = 1500) => {
         for (let attempt = 1; attempt <= retries; attempt++) {
             try {
-                return await originalGroupMetadata(chatJid);
+                const res = await originalGroupMetadata(chatJid);
+                consecutiveTimeouts = 0; // Resetear contador
+                return res;
             } catch (err) {
                 const isTimeout = err.message?.includes('Timed Out') || err.message?.includes('timeout') || err.statusCode === 408 || err.output?.statusCode === 408;
-                if (isTimeout && attempt < retries) {
-                    console.warn(`[WA-BOT] Timeout al obtener metadatos del grupo ${chatJid} (intento ${attempt}/${retries}). Reintentando...`);
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                    delay *= 2;
-                    continue;
+                if (isTimeout) {
+                    consecutiveTimeouts++;
+                    console.warn(`[WA-BOT] Timeout detectado al obtener metadatos. Consecutivos: ${consecutiveTimeouts}/5`);
+                    if (consecutiveTimeouts >= 5) {
+                        console.error('[WA-BOT] Demasiados timeouts consecutivos detectados. Forzando reconexión limpia de la sesión...');
+                        consecutiveTimeouts = 0;
+                        try {
+                            sock.end(new Error('Persistent query timeouts'));
+                        } catch (endErr) {}
+                    }
+                    if (attempt < retries) {
+                        console.warn(`[WA-BOT] Timeout al obtener metadatos del grupo ${chatJid} (intento ${attempt}/${retries}). Reintentando...`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        delay *= 2;
+                        continue;
+                    }
                 }
                 throw err;
             }
@@ -403,6 +460,36 @@ async function start() {
                 console.log('[WA-BOT] Error al leer wa_groups.json. Administrando todos por defecto.');
             }
 
+            // Pre-cargar y cachear los metadatos de los grupos asíncronamente
+            (async () => {
+                try {
+                    let allowedGps = [];
+                    if (fs.existsSync(GROUPS_FILE)) {
+                        allowedGps = JSON.parse(fs.readFileSync(GROUPS_FILE, 'utf8'));
+                    }
+                    
+                    if (allowedGps.includes('all') || allowedGps.length === 0) {
+                        console.log('[WA-BOT] Pre-cargando metadatos para todos los grupos en segundo plano...');
+                        const allGps = await sock.groupFetchAllParticipating();
+                        for (const jid of Object.keys(allGps)) {
+                            metadataCache.set(jid, allGps[jid]);
+                        }
+                        console.log(`[WA-BOT] Carga completada. Metadatos de ${Object.keys(allGps).length} grupos guardados en caché.`);
+                    } else {
+                        console.log(`[WA-BOT] Pre-cargando metadatos para ${allowedGps.length} grupo(s) en segundo plano...`);
+                        for (const jid of allowedGps) {
+                            if (jid === 'all') continue;
+                            const metadata = await getGroupMetadata(jid, sock, true);
+                            if (metadata) {
+                                console.log(`[WA-BOT] Metadatos pre-cargados para: ${metadata.subject}`);
+                            }
+                        }
+                    }
+                } catch (errGps) {
+                    console.warn('[WA-BOT] Advertencia al pre-cargar metadatos de grupos:', errGps.message || errGps);
+                }
+            })();
+
             // Iniciar timer
             startAutoKickTimer(sock);
         }
@@ -444,6 +531,19 @@ async function start() {
             }
         } catch (e) {
             console.error('[WA-BOT] Error en listener group-participants.update:', e);
+        }
+    });
+
+    sock.ev.on('groups.update', async (updates) => {
+        for (const update of updates) {
+            try {
+                if (update.id) {
+                    await getGroupMetadata(update.id, sock, true);
+                    console.log(`[WA-BOT] Metadatos actualizados en caché para el grupo: ${update.id}`);
+                }
+            } catch (e) {
+                // Silently ignore
+            }
         }
     });
 
