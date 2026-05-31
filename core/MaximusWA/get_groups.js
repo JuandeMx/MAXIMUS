@@ -39,7 +39,8 @@ async function start() {
         version,
         auth: state,
         logger: pino({ level: 'silent' }),
-        printQRInTerminal: true
+        printQRInTerminal: true,
+        defaultQueryTimeoutMs: 60000
     });
 
     sock.ev.on('creds.update', saveCreds);
