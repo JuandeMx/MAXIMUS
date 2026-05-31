@@ -779,8 +779,9 @@ async function start() {
                 saveSettings();
                 await sock.sendMessage(chatJid, { text: `✅ *Mensaje de bienvenida establecido con éxito:* \n\n${welcomeTxt}` }, { quoted: msg });
                 continue;
-            } catch (e) {
-                console.error('[WA-BOT] Error al procesar mensaje individual:', e);
+            }
+        } catch (e) {
+            console.error('[WA-BOT] Error al procesar mensaje individual:', e);
             }
         }
     });
