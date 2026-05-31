@@ -314,6 +314,22 @@ async function start() {
         } else if (connection === 'open') {
             connectionAttempts = 0;
             console.log('✅ Bot de WhatsApp Moderador Avanzado listo y conectado.');
+            
+            // Mostrar los grupos administrados en el log al iniciar
+            try {
+                if (fs.existsSync(GROUPS_FILE)) {
+                    const gps = JSON.parse(fs.readFileSync(GROUPS_FILE, 'utf8'));
+                    console.log(`[WA-BOT] Grupos administrados cargados: ${JSON.stringify(gps)}`);
+                    if (gps.length === 0) {
+                        console.log('⚠️ ADVERTENCIA: La lista de grupos en wa_groups.json está VACÍA. El bot ignorará todos los mensajes.');
+                    }
+                } else {
+                    console.log('[WA-BOT] Grupos administrados cargados: TODOS por defecto (archivo wa_groups.json no existe).');
+                }
+            } catch (e) {
+                console.log('[WA-BOT] Error al leer wa_groups.json. Administrando todos por defecto.');
+            }
+
             // Iniciar timer
             startAutoKickTimer(sock);
         }
