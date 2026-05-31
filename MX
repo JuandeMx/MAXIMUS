@@ -1407,6 +1407,127 @@ menu_bots() {
     done
 }
 
+generar_payloads() {
+    ui_header "GENERADOR DE PAYLOADS PREMIUM"
+    echo -e " Introduce el Host / Dominio que deseas usar para tus payloads"
+    echo -e " Ejemplo: mi-vps.com, whatsapp.net, cdn.net\n"
+    ui_prompt " Host / Dominio: " ; read phost
+    if [ -z "$phost" ]; then
+        echo -e "\n${RED}❌ Error: El Host no puede estar vacío.${NC}"
+        sleep 1.5
+        return
+    fi
+
+    # Generamos la lista de payloads en formato texto puro (para copiar/pegar)
+    p1="CONNECT [host_port] [protocol]\\r\\nHost: $phost\\r\\n\\r\\n"
+    p2="GET http://$phost/ HTTP/1.1\\r\\nHost: $phost\\r\\nConnection: Keep-Alive\\r\\n\\r\\n"
+    p3="POST http://$phost/ HTTP/1.1\\r\\nHost: $phost\\r\\nConnection: Keep-Alive\\r\\nContent-Length: 9999\\r\\n\\r\\n"
+    p4="CONNECT $phost@[host_port] [protocol]\\r\\nHost: $phost\\r\\n\\r\\n"
+    p5="CONNECT [host_port]@$phost [protocol]\\r\\nHost: $phost\\r\\n\\r\\n"
+    p6="GET / HTTP/1.1\\r\\nHost: $phost\\r\\nUpgrade: websocket\\r\\nConnection: Upgrade\\r\\n\\r\\n"
+    p7="GET http://$phost/ HTTP/1.1\\r\\nHost: $phost\\r\\nUpgrade: websocket\\r\\nConnection: Upgrade\\r\\n\\r\\n"
+    p8="CONNECT [host_port] [protocol]\\r\\nHost: $phost\\r\\nProxy-Connection: Keep-Alive\\r\\nConnection: Keep-Alive\\r\\n\\r\\n"
+    p9="CONNECT [host_port] [protocol]\\r\\nHost: $phost\\r\\n\\r\\n[split]GET http://$phost/ HTTP/1.1\\r\\nHost: $phost\\r\\n\\r\\n"
+    p10="CONNECT [host_port] [protocol]\\r\\nHost: $phost\\r\\n\\r\\n[instant_split]GET http://$phost/ HTTP/1.1\\r\\nHost: $phost\\r\\n\\r\\n"
+    p11="GET http://$phost/ HTTP/1.1\\r\\nHost: $phost\\r\\nConnection: Keep-Alive\\r\\nReferer: http://$phost/\\r\\n\\r\\n"
+    p12="GET / HTTP/1.1[crlf]Host: $phost[crlf]Upgrade: websocket[crlf]Connection: Upgrade[crlf][crlf]"
+    p13="CONNECT [host_port] [protocol]\\r\\nHost: $phost\\r\\nX-Online-Host: $phost\\r\\nX-Forward-Host: $phost\\r\\n\\r\\n"
+    p14="GET / HTTP/1.1\\r\\nHost: $phost\\r\\nConnection: Keep-Alive\\r\\nUser-Agent: Chrome\\r\\nAccept: */*\\r\\n\\r\\n"
+    p15="GET wss://$phost/ HTTP/1.1\\r\\nHost: $phost\\r\\nUpgrade: websocket\\r\\nConnection: Upgrade\\r\\n\\r\\n"
+
+    clear
+    ui_header "PAYLOADS GENERADOS PARA: $phost"
+    echo -e " Copia el texto tal como se muestra para usarlo en tu VPN client:\n"
+    echo -e " ${YELLOW}[1] Directo (Normal):${NC}"
+    echo -e " ${WHITE}$p1${NC}\n"
+    echo -e " ${YELLOW}[2] HTTP Bug Get:${NC}"
+    echo -e " ${WHITE}$p2${NC}\n"
+    echo -e " ${YELLOW}[3] HTTP Bug Post:${NC}"
+    echo -e " ${WHITE}$p3${NC}\n"
+    echo -e " ${YELLOW}[4] Front Query CONNECT:${NC}"
+    echo -e " ${WHITE}$p4${NC}\n"
+    echo -e " ${YELLOW}[5] Back Query CONNECT:${NC}"
+    echo -e " ${WHITE}$p5${NC}\n"
+    echo -e " ${YELLOW}[6] Cloudflare WebSocket (SSL):${NC}"
+    echo -e " ${WHITE}$p6${NC}\n"
+    echo -e " ${YELLOW}[7] Cloudflare WS CDN Direct:${NC}"
+    echo -e " ${WHITE}$p7${NC}\n"
+    echo -e " ${YELLOW}[8] Keep-Alive Standard:${NC}"
+    echo -e " ${WHITE}$p8${NC}\n"
+    echo -e " ${YELLOW}[9] Split Normal HTTP:${NC}"
+    echo -e " ${WHITE}$p9${NC}\n"
+    echo -e " ${YELLOW}[10] Split Delay Custom:${NC}"
+    echo -e " ${WHITE}$p10${NC}\n"
+    echo -e " ${YELLOW}[11] Dual Host Redirect:${NC}"
+    echo -e " ${WHITE}$p11${NC}\n"
+    echo -e " ${YELLOW}[12] HTTP Custom WS (crlf):${NC}"
+    echo -e " ${WHITE}$p12${NC}\n"
+    echo -e " ${YELLOW}[13] SSL SNI Spoof (Multi-Host):${NC}"
+    echo -e " ${WHITE}$p13${NC}\n"
+    echo -e " ${YELLOW}[14] Cloudfront / AWS Payload:${NC}"
+    echo -e " ${WHITE}$p14${NC}\n"
+    echo -e " ${YELLOW}[15] WebSocket Secure SSL (wss):${NC}"
+    echo -e " ${WHITE}$p15${NC}\n"
+    ui_subhr
+    
+    read -p "¿Deseas guardar estos payloads en un archivo? [s/n]: " wopt
+    if [[ "$wopt" == "s" || "$wopt" == "S" ]]; then
+        outfile="/root/payloads_${phost}.txt"
+        cat > "$outfile" <<EOF
+============================================================
+PAYLOADS GENERADOS PARA: $phost
+============================================================
+
+1. Directo (Normal):
+$p1
+
+2. HTTP Bug Get:
+$p2
+
+3. HTTP Bug Post:
+$p3
+
+4. Front Query CONNECT:
+$p4
+
+5. Back Query CONNECT:
+$p5
+
+6. Cloudflare WebSocket (SSL):
+$p6
+
+7. Cloudflare WS CDN Direct:
+$p7
+
+8. Keep-Alive Standard:
+$p8
+
+9. Split Normal HTTP:
+$p9
+
+10. Split Delay Custom:
+$p10
+
+11. Dual Host Redirect:
+$p11
+
+12. HTTP Custom WS (crlf):
+$p12
+
+13. SSL SNI Spoof (Multi-Host):
+$p13
+
+14. Cloudfront / AWS Payload:
+$p14
+
+15. WebSocket Secure SSL (wss):
+$p15
+EOF
+        echo -e "\n${GREEN}✅ Payloads guardados exitosamente en: ${WHITE}$outfile${NC}"
+    fi
+    ui_pause
+}
+
 # --- SUBMENÚ DE SISTEMA ---
 menu_sistema() {
     while true; do
@@ -1431,6 +1552,7 @@ menu_sistema() {
         if [ -f /etc/MaximusVpsMx/.master_node ]; then
             echo -e "  ${CYAN} [9]>${YELLOW} Diagnóstico de Conexión Bot WA${NC}"
         fi
+        echo -e "  ${CYAN}[10]>${WHITE} Generador de Payloads (15 Métodos)${NC}"
         ui_hr
         echo -e "  ${WHITE}[0] VOLVER AL MENÚ PRINCIPAL${NC}"
         ui_hr
@@ -1472,6 +1594,7 @@ CFEOF
             7) [ -f /etc/MaximusVpsMx/.master_node ] && menu_bots || continue ;;
             8) sub_zombies ;;
             9) [ -f /etc/MaximusVpsMx/.master_node ] && check_bot_connection || continue ;;
+            10) generar_payloads ;;
             0) return ;;
             * ) continue ;;
         esac
