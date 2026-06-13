@@ -65,7 +65,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/badvpn-udpgw --listen-addr 0.0.0.0:$bad_port --max-clients 1000 --max-connections-for-client 10
+ExecStart=/usr/local/bin/badvpn-udpgw --listen-addr 0.0.0.0:$bad_port --max-clients 1000 --max-connections-for-client 250
 Restart=always
 
 [Install]
