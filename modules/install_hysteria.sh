@@ -186,6 +186,7 @@ WantedBy=multi-user.target
 EOF
 
 # Abrir puerto en firewall local
+ufw allow ${hy_port}/udp 2>/dev/null
 ufw allow ${hy_range}/udp 2>/dev/null
 
 # EXCLUSIÓN Y PORT-HOPPING NAT
