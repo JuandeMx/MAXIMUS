@@ -1,5 +1,5 @@
 #!/bin/bash
-# MaximusVpsMx - Super Panel v11.2.34 (Premium)
+# MaximusVpsMx - Super Panel v11.2.35 (Premium)
 # Modificado para Submenús y Funciones Avanzadas + Hysteria v2 Manager
 
 # SEGURIDAD: Solo root puede ejecutar este panel
@@ -130,7 +130,7 @@ if [ ! -f /etc/MaximusVpsMx/.master_node ]; then
 fi
 
 # --- PANEL VERSION ---
-PANEL_VERSION="v11.2.34"
+PANEL_VERSION="v11.2.35"
 
 # --- COLORES GLOBALES ---
 RED='\033[1;31m'
@@ -1077,11 +1077,19 @@ sub_hysteria() {
                 # Generar enlace hy2
                 server_ip=$(wget -qO- ipv4.icanhazip.com)
                 obfs_val=$(grep 'password:' /etc/hysteria/config.yaml | tail -1 | awk '{print $NF}')
+                
+                # Detectar rango de port-hopping de iptables
+                hy_display_port="$hy_port"
+                iptables_rule=$(iptables -t nat -S PREROUTING 2>/dev/null | grep "REDIRECT" | grep -E "to-port[s]* $hy_port| $hy_port" | grep -oE '[0-9]+:[0-9]+' | head -1)
+                if [ -n "$iptables_rule" ]; then
+                    hy_display_port=$(echo "$iptables_rule" | tr ':' '-')
+                fi
+
                 echo -e "\n${GREEN}✅ Usuario $hy_user Creado Correctamente.${NC}"
                 echo -e "${CYAN}Expiración: $exp_date${NC}"
                 echo -e "${WHITE}-------------------------------------------------------${NC}"
                 echo -e "${YELLOW}📋 ENLACE HY2:${NC}"
-                echo -e "${WHITE}hy2://$hy_pass@$server_ip:$hy_port?insecure=1&sni=bing.com&obfs=salamander&obfs-password=$obfs_val#$hy_user${NC}"
+                echo -e "${WHITE}hy2://$hy_pass@$server_ip:$hy_display_port?insecure=1&sni=bing.com&obfs=salamander&obfs-password=$obfs_val#$hy_user${NC}"
                 echo -e "${WHITE}-------------------------------------------------------${NC}"
                 read -p "Presiona Enter..." ;;
             2)

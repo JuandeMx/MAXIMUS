@@ -154,7 +154,20 @@ def get_server_ip():
 def get_hysteria_port():
     # Lee el puerto configurado en Hysteria
     port = run_command("grep 'listen:' /etc/hysteria/config.yaml 2>/dev/null | grep -o '[0-9]*' | head -1")
-    return port if port else "443"
+    port = port if port else "443"
+    
+    # Intentar detectar si existe una regla de port-hopping en iptables redireccionando a este puerto
+    try:
+        rule = run_command(f"iptables -t nat -S PREROUTING 2>/dev/null | grep 'REDIRECT' | grep '{port}'")
+        if rule:
+            import re
+            match = re.search(r'--dport\s+([0-9]+:[0-9]+)', rule)
+            if match:
+                return match.group(1).replace(':', '-')
+    except:
+        pass
+        
+    return port
 
 def get_hysteria_obfs():
     # Lee la contraseña obfs maestra
