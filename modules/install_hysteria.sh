@@ -62,56 +62,63 @@ mkdir -p /etc/MaximusVpsMx/core
 cat > /etc/MaximusVpsMx/core/hysteria_auth.py << 'PYEOF'
 #!/usr/bin/env python3
 import sys
+import json
 import datetime
 import os
 
 DB_PATH = "/etc/MaximusVpsMx/hysteria_users.db"
-LOG_PATH = "/var/log/MaximusVpsMx/hysteria_auth.log"
 
-def log_msg(msg):
+def log_debug(msg):
     try:
-        with open(LOG_PATH, "a") as f:
+        with open("/var/log/MaximusVpsMx/hysteria_auth_debug.log", "a") as f:
             f.write(f"[{datetime.datetime.now()}] {msg}\n")
     except:
         pass
 
 def check_auth():
     try:
-        if len(sys.argv) < 3:
-            log_msg("Faltan argumentos pasados por Hysteria.")
-            sys.exit(1)
-            
-        client_auth = sys.argv[2].strip()
+        line = sys.stdin.readline()
+        if not line:
+            return
+        
+        data = json.loads(line)
+        client_auth = data.get("auth", "")
         
         if not os.path.exists(DB_PATH):
-            log_msg("No se encontro la database de usuarios.")
-            sys.exit(1)
+            print(json.dumps({"ok": False, "msg": "No DB found"}))
+            return
 
         with open(DB_PATH, "r") as f:
             for line in f:
                 parts = line.strip().split(":")
-                if len(parts) < 3: continue
+                if len(parts) < 5:
+                    continue
                 
-                user = parts[0]
-                password = parts[1]
-                expiry_str = parts[2]
+                user, password, expiry_str, up_m, down_m = parts
                 
                 if password == client_auth:
                     expiry_date = datetime.datetime.strptime(expiry_str, "%Y-%m-%d")
                     if datetime.datetime.now() <= expiry_date:
-                        log_msg(f"Auth OK para usuario: {user}")
-                        print(user) 
-                        sys.exit(0)
-                    else:
-                        log_msg(f"Auth Fallida: Cuenta expirada ({user})")
-                        sys.exit(1)
+                        up_bps = int(up_m) * 1000000
+                        down_bps = int(down_m) * 1000000
                         
-        log_msg(f"Auth Fallida: Credenciales invalidas (Pass: {client_auth})")
-        sys.exit(1)
+                        resp = {
+                            "ok": True,
+                            "id": user,
+                            "up": up_bps,
+                            "down": down_bps
+                        }
+                        print(json.dumps(resp))
+                        return
+                    else:
+                        print(json.dumps({"ok": False, "msg": "Account expired"}))
+                        return
+
+        print(json.dumps({"ok": False, "msg": "Invalid credentials"}))
 
     except Exception as e:
-        log_msg(f"Error interno: {str(e)}")
-        sys.exit(1)
+        log_debug(f"Error: {str(e)}")
+        print(json.dumps({"ok": False, "msg": "Internal server error"}))
 
 if __name__ == "__main__":
     check_auth()
