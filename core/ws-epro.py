@@ -19,7 +19,7 @@ TARGET_PORT = int(sys.argv[2])
 LISTENING_ADDR = '0.0.0.0'
 BUFLEN = 131072
 
-RESPONSE_WS = b'HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nServer: Maximus-WSEngine\r\n\r\n'
+RESPONSE_WS = 'HTTP/1.1 101 🏴‍☠️ [LEGIÓN ANONYMUS & FreeLatam] ⚡ Conectando...\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nServer: Maximus-WSEngine\r\n\r\n'.encode('utf-8')
 
 class Proxy(threading.Thread):
     def __init__(self, client_sock):
