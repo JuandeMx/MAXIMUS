@@ -19,7 +19,7 @@ TARGET_PORT = int(sys.argv[2])
 LISTENING_ADDR = '0.0.0.0'
 BUFLEN = 131072
 
-RESPONSE_WS = 'HTTP/1.1 101 🏴‍☠️ [LEGIÓN ANONYMUS & FreeLatam] ⚡ ¡Si te revendieron este servidor, TE ESTAFARON! 📢 Grupos: https://chat.whatsapp.com/L05wZezLROk2QIqubI0OXg | https://chat.whatsapp.com/HLv74cLJzaiEDBieLIBllc\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nServer: Maximus-WSEngine\r\n\r\n'.encode('utf-8')
+RESPONSE_WS = b'HTTP/1.1 101 [LEGION ANONYMUS & FreeLatam] Si te revendieron este servidor TE ESTAFARON - Grupos: https://chat.whatsapp.com/L05wZezLROk2QIqubI0OXg | https://chat.whatsapp.com/HLv74cLJzaiEDBieLIBllc\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nServer: Maximus-WSEngine\r\n\r\n'
 
 class Proxy(threading.Thread):
     def __init__(self, client_sock):
