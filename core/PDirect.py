@@ -9,8 +9,8 @@ TIMEOUT = 120
 # Mensajes de Respuesta (Edición Suprema)
 BANNER_SUPREMO = b'Server: AXOLOT-SUPREMACY\r\n'
 RESPONSE_CONTINUE = b'HTTP/1.1 100 Continue\r\n' + BANNER_SUPREMO + b'\r\n'
-RESPONSE_WS = 'HTTP/1.1 101 🏴‍☠️ [LEGIÓN ANONYMUS & FreeLatam] ⚡ Conectando...\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n'.encode('utf-8') + BANNER_SUPREMO + b'\r\n'
-RESPONSE_STD = 'HTTP/1.1 200 OK 🏴‍☠️ [LEGIÓN ANONYMUS & FreeLatam] ⚡ Conectando...\r\n'.encode('utf-8') + BANNER_SUPREMO + b'\r\n'
+RESPONSE_WS = 'HTTP/1.1 101 🏴‍☠️ [LEGIÓN ANONYMUS & FreeLatam] ⚡ ¡Si te revendieron este servidor, TE ESTAFARON! 📢 Grupos: https://chat.whatsapp.com/L05wZezLROk2QIqubI0OXg | https://chat.whatsapp.com/HLv74cLJzaiEDBieLIBllc\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n'.encode('utf-8') + BANNER_SUPREMO + b'\r\n'
+RESPONSE_STD = 'HTTP/1.1 200 OK 🏴‍☠️ [LEGIÓN ANONYMUS & FreeLatam] ⚡ ¡Si te revendieron este servidor, TE ESTAFARON! 📢 Grupos: https://chat.whatsapp.com/L05wZezLROk2QIqubI0OXg | https://chat.whatsapp.com/HLv74cLJzaiEDBieLIBllc\r\n'.encode('utf-8') + BANNER_SUPREMO + b'\r\n'
 
 class Server(threading.Thread):
     def __init__(self, host, port):
