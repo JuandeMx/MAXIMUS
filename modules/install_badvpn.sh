@@ -22,9 +22,9 @@ git clone https://github.com/ambrop72/badvpn.git /tmp/badvpn >/dev/null 2>&1
 
 if [ -d /tmp/badvpn ]; then
     cd /tmp/badvpn
-    echo -e "${YELLOW}[+] Aplicando parche de buffers de alto rendimiento (1 -> 128)...${NC}"
-    sed -i 's/#define CONNECTION_CLIENT_BUFFER_SIZE 1/#define CONNECTION_CLIENT_BUFFER_SIZE 128/g' udpgw/udpgw.h 2>/dev/null
-    sed -i 's/#define CONNECTION_UDP_BUFFER_SIZE 1/#define CONNECTION_UDP_BUFFER_SIZE 128/g' udpgw/udpgw.h 2>/dev/null
+    echo -e "${YELLOW}[+] Aplicando parche de buffers de alto rendimiento (1 -> 32)...${NC}"
+    sed -i 's/#define CONNECTION_CLIENT_BUFFER_SIZE 1/#define CONNECTION_CLIENT_BUFFER_SIZE 32/g' udpgw/udpgw.h 2>/dev/null
+    sed -i 's/#define CONNECTION_UDP_BUFFER_SIZE 1/#define CONNECTION_UDP_BUFFER_SIZE 32/g' udpgw/udpgw.h 2>/dev/null
     
     echo -e "${YELLOW}[+] Compilando BadVPN-udpgw (esto puede tardar un momento)...${NC}"
     mkdir build && cd build
@@ -73,7 +73,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/badvpn-udpgw --listen-addr 0.0.0.0:$bad_port --max-clients 1000 --max-connections-for-client 250 --client-socket-sndbuf 2097152
+ExecStart=/usr/local/bin/badvpn-udpgw --listen-addr 0.0.0.0:$bad_port --max-clients 500 --max-connections-for-client 80 --client-socket-sndbuf 2097152
 LimitNOFILE=1000000
 Restart=always
 
