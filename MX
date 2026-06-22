@@ -1,5 +1,5 @@
 #!/bin/bash
-# MaximusVpsMx - Super Panel v11.2.40 (Premium)
+# MaximusVpsMx - Super Panel v11.2.41 (Premium)
 # Modificado para Submenús y Funciones Avanzadas + Hysteria v2 Manager
 
 # SEGURIDAD: Solo root puede ejecutar este panel
@@ -130,7 +130,7 @@ if [ ! -f /etc/MaximusVpsMx/.master_node ]; then
 fi
 
 # --- PANEL VERSION ---
-PANEL_VERSION="v11.2.40"
+PANEL_VERSION="v11.2.41"
 
 # --- COLORES GLOBALES ---
 RED='\033[1;31m'
@@ -1536,6 +1536,55 @@ EOF
     ui_pause
 }
 
+# --- SUBMENÚ DE BANNERS ---
+sub_menu_banners() {
+    while true; do
+        ui_header "G E S T I Ó N   D E   B A N N E R S"
+        echo -e "  ${CYAN}[1]>${WHITE} Editar Banner Grande (HTML / SSH / Login)${NC}"
+        echo -e "  ${CYAN}[2]>${WHITE} Editar Banner Chico (Log de HTTP Custom)${NC}"
+        echo -e "  ${CYAN}[3]>${WHITE} Editar Banner Global del SSH (/etc/issue.net)${NC}"
+        ui_hr
+        echo -e "  ${WHITE}[0] VOLVER AL MENÚ ANTERIOR${NC}"
+        ui_hr
+        ui_prompt " Selecciona una opción: " ; read opt_ban
+        
+        case $opt_ban in
+            1)
+                echo -e "\n${YELLOW}▶ Abriendo editor para el Banner Grande (HTML)...${NC}"
+                sleep 0.5
+                nano /etc/MaximusVpsMx/core/maximus_banner.sh
+                echo -e "${YELLOW}▶ Reiniciando servicio SSH para aplicar el banner...${NC}"
+                systemctl restart ssh 2>/dev/null || systemctl restart sshd 2>/dev/null
+                echo -e "${GREEN}✅ Banner Grande actualizado y SSH reiniciado.${NC}"
+                sleep 1.5
+                ;;
+            2)
+                echo -e "\n${YELLOW}▶ Abriendo editor para el Banner Chico (Texto Plano)...${NC}"
+                if [ ! -f /etc/MaximusVpsMx/core/small_banner.txt ]; then
+                    echo "[LEGION ANONYMUS & FreeLatam] Si te revendieron este servidor TE ESTAFARON - Grupos: https://chat.whatsapp.com/L05wZezLROk2QIqubI0OXg | https://chat.whatsapp.com/HLv74cLJzaiEDBieLIBllc" > /etc/MaximusVpsMx/core/small_banner.txt
+                fi
+                sleep 0.5
+                nano /etc/MaximusVpsMx/core/small_banner.txt
+                echo -e "${YELLOW}▶ Reiniciando Proxys Python para aplicar el banner...${NC}"
+                systemctl restart mx-proxy ws-epro 2>/dev/null
+                echo -e "${GREEN}✅ Banner Chico actualizado y Proxys reiniciados.${NC}"
+                sleep 1.5
+                ;;
+            3)
+                echo -e "\n${YELLOW}▶ Abriendo editor para el Banner Global (issue.net)...${NC}"
+                sleep 0.5
+                nano /etc/issue.net
+                echo -e "${YELLOW}▶ Reiniciando servicio SSH para aplicar...${NC}"
+                systemctl restart ssh 2>/dev/null || systemctl restart sshd 2>/dev/null
+                echo -e "${GREEN}✅ Banner Global actualizado y SSH reiniciado.${NC}"
+                sleep 1.5
+                ;;
+            0) break ;;
+            *) continue ;;
+        esac
+    done
+}
+
 # --- SUBMENÚ DE SISTEMA ---
 menu_sistema() {
     while true; do
@@ -1547,7 +1596,7 @@ menu_sistema() {
         systemctl is-active --quiet maximus-wa && wa_st="${GREEN}[ON]${NC}" || wa_st="${RED}[OFF]${NC}"
 
         echo -e "  ${CYAN}[1]>${WHITE} Optimización y Auto-Limpieza${NC}"
-        echo -e "  ${CYAN}[2]>${WHITE} Editor de Banner Global (SSH/Issue)${NC}"
+        echo -e "  ${CYAN}[2]>${WHITE} GESTIÓN DE BANNERS (Grande / Chico / Global)${NC}"
         echo -e "  ${CYAN}[3]>${WHITE} Respaldar Cuentas Localmente${NC}"
         echo -e "  ${CYAN}[4]>${WHITE} Monitor de Tráfico (vnstat)${NC}"
         ui_subhr
@@ -1568,7 +1617,7 @@ menu_sistema() {
         
         case $opt_sys in
             1) sub_optimizacion ;;
-            2) nano /etc/issue.net ;;
+            2) sub_menu_banners ;;
             3)
                 echo -e "\n${YELLOW}▶ Generando Backup...${NC}"
                 tar -cvf /root/users_backup.tar /etc/passwd /etc/shadow /etc/MaximusVpsMx/users.db 2>/dev/null

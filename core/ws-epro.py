@@ -19,7 +19,22 @@ TARGET_PORT = int(sys.argv[2])
 LISTENING_ADDR = '0.0.0.0'
 BUFLEN = 131072
 
-RESPONSE_WS = b'HTTP/1.1 101 [LEGION ANONYMUS & FreeLatam] Si te revendieron este servidor TE ESTAFARON - Grupos: https://chat.whatsapp.com/L05wZezLROk2QIqubI0OXg | https://chat.whatsapp.com/HLv74cLJzaiEDBieLIBllc\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nServer: Maximus-WSEngine\r\n\r\n'
+def obtener_banner_chico():
+    import os
+    default_text = "[LEGION ANONYMUS & FreeLatam] Si te revendieron este servidor TE ESTAFARON - Grupos: https://chat.whatsapp.com/L05wZezLROk2QIqubI0OXg | https://chat.whatsapp.com/HLv74cLJzaiEDBieLIBllc"
+    path = "/etc/MaximusVpsMx/core/small_banner.txt"
+    if os.path.exists(path):
+        try:
+            with open(path, "r", encoding="utf-8", errors="ignore") as f:
+                text = f.read().strip().replace("\r", "").replace("\n", " ")
+                if text:
+                    return text.encode("ascii", errors="ignore").decode("ascii")
+        except:
+            pass
+    return default_text
+
+BANNER_TEXT = obtener_banner_chico()
+RESPONSE_WS = f'HTTP/1.1 101 {BANNER_TEXT}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nServer: Maximus-WSEngine\r\n\r\n'.encode('ascii')
 
 class Proxy(threading.Thread):
     def __init__(self, client_sock):
