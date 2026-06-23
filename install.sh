@@ -396,6 +396,9 @@ echo -e "\e[1;32m[+] Preparando accesos globales (menu / MENU / MX)...\e[0m"
 ln -sf /etc/MaximusVpsMx/MX /usr/local/bin/MX
 ln -sf /etc/MaximusVpsMx/MX /usr/local/bin/menu
 ln -sf /etc/MaximusVpsMx/MX /usr/local/bin/MENU
+ln -sf /etc/MaximusVpsMx/MX /usr/bin/MX
+ln -sf /etc/MaximusVpsMx/MX /usr/bin/menu
+ln -sf /etc/MaximusVpsMx/MX /usr/bin/MENU
 chmod 700 /etc/MaximusVpsMx/MX
 chmod +x /etc/MaximusVpsMx/core/*.sh 2>/dev/null
 chmod +x /etc/MaximusVpsMx/core/*.py 2>/dev/null

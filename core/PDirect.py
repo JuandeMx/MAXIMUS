@@ -1,31 +1,20 @@
-import socket, threading, select, sys, time, datetime
+import socket, threading, thread, select, signal, sys, time, getopt
 
-# Config
+# Listen
 LISTENING_ADDR = '0.0.0.0'
-LISTENING_PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 80
-BUFLEN = 8192
-TIMEOUT = 120
+if sys.argv[1:]:
+  LISTENING_PORT = sys.argv[1]
+else:
+  LISTENING_PORT = 80  
+#Pass
+PASS = ''
 
-# Mensajes de Respuesta (Edición Suprema)
-def obtener_banner_chico():
-    import os
-    default_text = "[LEGION ANONYMUS & FreeLatam] Si te revendieron este servidor TE ESTAFARON - Grupos: https://chat.whatsapp.com/L05wZezLROk2QIqubI0OXg | https://chat.whatsapp.com/HLv74cLJzaiEDBieLIBllc"
-    path = "/etc/MaximusVpsMx/core/small_banner.txt"
-    if os.path.exists(path):
-        try:
-            with open(path, "r", encoding="utf-8", errors="ignore") as f:
-                text = f.read().strip().replace("\r", "").replace("\n", " ")
-                if text:
-                    return text.encode("ascii", errors="ignore").decode("ascii")
-        except:
-            pass
-    return default_text
-
-BANNER_TEXT = obtener_banner_chico()
-BANNER_SUPREMO = b'Server: AXOLOT-SUPREMACY\r\n'
-RESPONSE_CONTINUE = b'HTTP/1.1 100 Continue\r\n' + BANNER_SUPREMO + b'\r\n'
-RESPONSE_WS = f'HTTP/1.1 101 {BANNER_TEXT}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n'.encode('ascii') + BANNER_SUPREMO + b'\r\n'
-RESPONSE_STD = f'HTTP/1.1 200 OK {BANNER_TEXT}\r\n'.encode('ascii') + BANNER_SUPREMO + b'\r\n'
+# CONST
+BUFLEN = 4096 * 4
+TIMEOUT = 60
+DEFAULT_HOST = '127.0.0.1:443'
+RESPONSE = 'HTTP/1.1 200 <strong>By SCRIP | LATAM</strong>\r\nContent-length: 0\r\n\r\nHTTP/1.1 200 Connection established\r\n\r\n'
+#RESPONSE = 'HTTP/1.1 200 Hello_World!\r\nContent-length: 0\r\n\r\nHTTP/1.1 200 Connection established\r\n\r\n'  # lint:ok
 
 class Server(threading.Thread):
     def __init__(self, host, port):
@@ -33,147 +22,247 @@ class Server(threading.Thread):
         self.running = False
         self.host = host
         self.port = port
+        self.threads = []
+        self.threadsLock = threading.Lock()
+        self.logLock = threading.Lock()
 
     def run(self):
+        self.soc = socket.socket(socket.AF_INET)
+        self.soc.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.soc.settimeout(2)
+        intport = int(self.port)
+        self.soc.bind((self.host, intport))
+        self.soc.listen(0)
+        self.running = True
+
         try:
-            self.soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.soc.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            self.soc.settimeout(2)
-            self.soc.bind((self.host, self.port))
-            self.soc.listen(200)
-            self.running = True
             while self.running:
                 try:
                     c, addr = self.soc.accept()
                     c.setblocking(1)
                 except socket.timeout:
                     continue
-                conn = ConnectionHandler(c, addr)
-                conn.daemon = True
+
+                conn = ConnectionHandler(c, self, addr)
                 conn.start()
-        except Exception as e:
-            pass
+                self.addConn(conn)
         finally:
             self.running = False
             self.soc.close()
 
-def log_error(msg):
-    pass
+    def printLog(self, log):
+        self.logLock.acquire()
+        print log
+        self.logLock.release()
 
-def collect_headers(sock, initial_buffer, timeout_sec):
-    buf = initial_buffer
-    deadline = time.time() + timeout_sec
-    while b'\r\n\r\n' not in buf and b'\n\n' not in buf:
-        remaining = deadline - time.time()
-        if remaining <= 0: break
-        r, _, _ = select.select([sock], [], [], min(remaining, 0.5))
-        if sock in r:
-            chunk = sock.recv(BUFLEN)
-            if not chunk: break
-            buf += chunk
-        else:
-            break
-    return buf
+    def addConn(self, conn):
+        try:
+            self.threadsLock.acquire()
+            if self.running:
+                self.threads.append(conn)
+        finally:
+            self.threadsLock.release()
+
+    def removeConn(self, conn):
+        try:
+            self.threadsLock.acquire()
+            self.threads.remove(conn)
+        finally:
+            self.threadsLock.release()
+
+    def close(self):
+        try:
+            self.running = False
+            self.threadsLock.acquire()
+
+            threads = list(self.threads)
+            for c in threads:
+                c.close()
+        finally:
+            self.threadsLock.release()
+
 
 class ConnectionHandler(threading.Thread):
-    def __init__(self, socClient, addr):
+    def __init__(self, socClient, server, addr):
         threading.Thread.__init__(self)
+        self.clientClosed = False
+        self.targetClosed = True
         self.client = socClient
-        self.addr = addr
+        self.client_buffer = ''
+        self.server = server
+        self.log = 'Connection: ' + str(addr)
 
-    def run(self):
-        target = None
+    def close(self):
         try:
-            self.client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-            self.client.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
-
-            # --- MOTOR HÍBRIDO v4.0 (Peeking) ---
-            client_buffer = b''
-            r, _, _ = select.select([self.client], [], [], 0.5)
-            
-            if r:
-                client_buffer = self.client.recv(BUFLEN)
-            
-            # Decidimos el modo basado en lo que recibimos o en el silencio
-            is_ssh = client_buffer.startswith(b'SSH-')
-            is_payload = (not is_ssh) and (len(client_buffer) > 0)
-
-            if is_payload:
-                # MODO PROXY (HTTP / CLOUDFRONT / WEBSOCKET)
-                client_buffer = collect_headers(self.client, client_buffer, 5)
-                is_ws = b'upgrade: websocket' in client_buffer.lower()
-                is_split = b'100-continue' in client_buffer.lower()
-
-                if is_split:
-                    self.client.sendall(RESPONSE_CONTINUE)
-                    second_buffer = b''
-                    second_buffer = collect_headers(self.client, second_buffer, 3)
-                    if b'websocket' in second_buffer.lower():
-                        self.client.sendall(RESPONSE_WS)
-                    else:
-                        self.client.sendall(RESPONSE_STD)
-                elif is_ws:
-                    self.client.sendall(RESPONSE_WS)
-                else:
-                    self.client.sendall(RESPONSE_STD)
-                
-                # Sincronización pequeña para separar cabeceras del flujo SSH
-                time.sleep(0.1)
-
-            # Conexión al Backend local (OpenSSH prioridad)
-            backend_ports = [22, 44, 2222]
-            for port in backend_ports:
-                try:
-                    target = socket.create_connection(('127.0.0.1', port), timeout=3)
-                    target.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-                    break
-                except: continue
-
-            if not target:
+            if not self.clientClosed:
+                self.client.shutdown(socket.SHUT_RDWR)
                 self.client.close()
-                return
-
-            # Manejo del flujo inicial
-            if is_ssh:
-                target.sendall(client_buffer)
-            elif is_payload:
-                header_end = -1
-                if b'\r\n\r\n' in client_buffer:
-                    header_end = client_buffer.find(b'\r\n\r\n') + 4
-                elif b'\n\n' in client_buffer:
-                    header_end = client_buffer.find(b'\n\n') + 2
-                
-                if header_end != -1:
-                    leftover = client_buffer[header_end:]
-                    if leftover: target.sendall(leftover)
-
-            # --- RELAY BIDIRECCIONAL SELECT ENGINE ---
-            sockets = [self.client, target]
-            while True:
-                # Timeout de inactividad de 3600s para evitar hilos zombis y memory leaks
-                r, _, e = select.select(sockets, [], sockets, 3600)
-                if not r or e: break
-                for sock in r:
-                    data = sock.recv(BUFLEN)
-                    if not data: return
-                    out = target if sock is self.client else self.client
-                    out.sendall(data)
-
         except:
             pass
         finally:
-            try: 
-                self.client.shutdown(socket.SHUT_RDWR)
-                self.client.close()
-            except: pass
-            try: 
-                if target: 
-                    target.shutdown(socket.SHUT_RDWR)
-                    target.close()
-            except: pass
+            self.clientClosed = True
 
-if __name__ == '__main__':
+        try:
+            if not self.targetClosed:
+                self.target.shutdown(socket.SHUT_RDWR)
+                self.target.close()
+        except:
+            pass
+        finally:
+            self.targetClosed = True
+
+    def run(self):
+        try:
+            self.client_buffer = self.client.recv(BUFLEN)
+
+            hostPort = self.findHeader(self.client_buffer, 'X-Real-Host')
+
+            if hostPort == '':
+                hostPort = DEFAULT_HOST
+
+            split = self.findHeader(self.client_buffer, 'X-Split')
+
+            if split != '':
+                self.client.recv(BUFLEN)
+
+            if hostPort != '':
+                passwd = self.findHeader(self.client_buffer, 'X-Pass')
+				
+                if len(PASS) != 0 and passwd == PASS:
+                    self.method_CONNECT(hostPort)
+                elif len(PASS) != 0 and passwd != PASS:
+                    self.client.send('HTTP/1.1 400 WrongPass!\r\n\r\n')
+                elif hostPort.startswith('127.0.0.1') or hostPort.startswith('localhost'):
+                    self.method_CONNECT(hostPort)
+                else:
+                    self.client.send('HTTP/1.1 403 Forbidden!\r\n\r\n')
+            else:
+                print '- No X-Real-Host!'
+                self.client.send('HTTP/1.1 400 NoXRealHost!\r\n\r\n')
+
+        except Exception as e:
+            self.log += ' - error: ' + e.strerror
+            self.server.printLog(self.log)
+	    pass
+        finally:
+            self.close()
+            self.server.removeConn(self)
+
+    def findHeader(self, head, header):
+        aux = head.find(header + ': ')
+
+        if aux == -1:
+            return ''
+
+        aux = head.find(':', aux)
+        head = head[aux+2:]
+        aux = head.find('\r\n')
+
+        if aux == -1:
+            return ''
+
+        return head[:aux];
+
+    def connect_target(self, host):
+        i = host.find(':')
+        if i != -1:
+            port = int(host[i+1:])
+            host = host[:i]
+        else:
+            if self.method=='CONNECT':
+                port = 443
+            else:
+                port = sys.argv[1]
+
+        (soc_family, soc_type, proto, _, address) = socket.getaddrinfo(host, port)[0]
+
+        self.target = socket.socket(soc_family, soc_type, proto)
+        self.targetClosed = False
+        self.target.connect(address)
+
+    def method_CONNECT(self, path):
+        self.log += ' - CONNECT ' + path
+
+        self.connect_target(path)
+        self.client.sendall(RESPONSE)
+        self.client_buffer = ''
+
+        self.server.printLog(self.log)
+        self.doCONNECT()
+
+    def doCONNECT(self):
+        socs = [self.client, self.target]
+        count = 0
+        error = False
+        while True:
+            count += 1
+            (recv, _, err) = select.select(socs, [], socs, 3)
+            if err:
+                error = True
+            if recv:
+                for in_ in recv:
+		    try:
+                        data = in_.recv(BUFLEN)
+                        if data:
+			    if in_ is self.target:
+				self.client.send(data)
+                            else:
+                                while data:
+                                    byte = self.target.send(data)
+                                    data = data[byte:]
+
+                            count = 0
+			else:
+			    break
+		    except:
+                        error = True
+                        break
+            if count == TIMEOUT:
+                error = True
+            if error:
+                break
+
+
+def print_usage():
+    print 'Usage: proxy.py -p <port>'
+    print '       proxy.py -b <bindAddr> -p <port>'
+    print '       proxy.py -b 0.0.0.0 -p 80'
+
+def parse_args(argv):
+    global LISTENING_ADDR
+    global LISTENING_PORT
+    
     try:
-        Server('0.0.0.0', LISTENING_PORT).run()
-    except:
-        pass
+        opts, args = getopt.getopt(argv,"hb:p:",["bind=","port="])
+    except getopt.GetoptError:
+        print_usage()
+        sys.exit(2)
+    for opt, arg in opts:
+        if opt == '-h':
+            print_usage()
+            sys.exit()
+        elif opt in ("-b", "--bind"):
+            LISTENING_ADDR = arg
+        elif opt in ("-p", "--port"):
+            LISTENING_PORT = int(arg)
+
+
+def main(host=LISTENING_ADDR, port=LISTENING_PORT):
+    print "\n:-------PythonProxy-------:\n"
+    print "Listening addr: " + LISTENING_ADDR
+    print "Listening port: " + str(LISTENING_PORT) + "\n"
+    print ":-------------------------:\n"
+    server = Server(LISTENING_ADDR, LISTENING_PORT)
+    server.start()
+    while True:
+        try:
+            time.sleep(2)
+        except KeyboardInterrupt:
+            print 'Stopping...'
+            server.close()
+            break
+
+ #######    parse_args(sys.argv[1:])
+if __name__ == '__main__':
+    main()
+

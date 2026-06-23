@@ -1125,43 +1125,92 @@ sub_hysteria() {
 # --- SUBMENÚ DE PROTOCOLOS ---
 menu_protocolos() {
     while true; do
-        # --- Lógica de Telemetría local ---
-        systemctl is-active --quiet mx-slowdns 2>/dev/null && st_slow="${GREEN}[ON] ${NC}" || st_slow="${RED}[OFF]${NC}"
-        if ps x | grep -w 'dns-server' | grep -v grep >/dev/null 2>&1; then st_slow="${GREEN}[ON] ${NC}"; fi
+        # --- Telemetría de Servicios ---
+        # BADVPN
+        ps aux | grep -v grep | grep -q "badvpn-udpgw" && st_badvpn="${GREEN}[ ACTIVO ]${NC}" || st_badvpn="${RED}[ OFF ]${NC}"
+        
+        # DROPBEAR
+        systemctl is-active --quiet dropbear 2>/dev/null && st_dropbear="${GREEN}[ ACTIVO ]${NC}" || st_dropbear="${RED}[ OFF ]${NC}"
+        
+        # SSL (stunnel4)
+        systemctl is-active --quiet stunnel4 2>/dev/null && st_ssl="${GREEN}[ ACTIVO ]${NC}" || st_ssl="${RED}[ OFF ]${NC}"
+        
+        # SQUID
+        (systemctl is-active --quiet squid 2>/dev/null || systemctl is-active --quiet squid3 2>/dev/null) && st_squid="${GREEN}[ ACTIVO ]${NC}" || st_squid="${RED}[ OFF ]${NC}"
+        
+        # OPENVPN
+        systemctl is-active --quiet openvpn-server@server 2>/dev/null && st_openvpn="${GREEN}[ ACTIVO ]${NC}" || st_openvpn="${RED}[ OFF ]${NC}"
+        
+        # SHADOWSOCK NORMAL
+        ps aux | grep -v grep | grep -q "ssserver" && st_ssnorm="${GREEN}[ ACTIVO ]${NC}" || st_ssnorm="${RED}[ OFF ]${NC}"
+        
+        # SHADOWSOCK LIV + OBFS
+        ps aux | grep -v grep | grep -q "ss-server" && st_sslibev="${GREEN}[ ACTIVO ]${NC}" || st_sslibev="${RED}[ OFF ]${NC}"
+        
+        # SLOWDNS
+        (systemctl is-active --quiet mx-slowdns 2>/dev/null || ps aux | grep -v grep | grep -q "dns-server") && st_slowdns="${GREEN}[ ACTIVO ]${NC}" || st_slowdns="${RED}[ OFF ]${NC}"
+        
+        # GETTUNEL
+        ps aux | grep -v grep | grep -q "PGet.py" && st_get="${GREEN}[ ACTIVO ]${NC}" || st_get="${RED}[ OFF ]${NC}"
+        
+        # TCP-OVER
+        ps aux | grep -v grep | grep -q "scktcheck" && st_tcp="${GREEN}[ ACTIVO ]${NC}" || st_tcp="${RED}[ OFF ]${NC}"
+        
+        # SSLH
+        systemctl is-active --quiet sslh 2>/dev/null && st_sslh="${GREEN}[ ACTIVO ]${NC}" || st_sslh="${RED}[ OFF ]${NC}"
+        
+        # WEBSOKET STATUS EDITABLE
+        ps aux | grep -v grep | grep -q "PDirect-*" && st_ws="${GREEN}[ ACTIVO ]${NC}" || st_ws="${RED}[ OFF ]${NC}"
+        
+        # PROXY OPENVPN
+        ps aux | grep -v grep | grep -q "POpen.py" && st_popen="${GREEN}[ ACTIVO ]${NC}" || st_popen="${RED}[ OFF ]${NC}"
+        
+        # PROXY PUBLICO
+        ps aux | grep -v grep | grep -q "PPub.py" && st_ppub="${GREEN}[ ACTIVO ]${NC}" || st_ppub="${RED}[ OFF ]${NC}"
+        
+        # PROXY PRIVADO
+        ps aux | grep -v grep | grep -q "PPriv.py" && st_ppriv="${GREEN}[ ACTIVO ]${NC}" || st_ppriv="${RED}[ OFF ]${NC}"
 
-        ps x | grep -w 'udpServer' | grep -v grep >/dev/null 2>&1 && st_so="${GREEN}[ON] ${NC}" || st_so="${RED}[OFF]${NC}"
-        ps x | grep -w 'UDP-Custom' | grep -v grep >/dev/null 2>&1 && st_cu="${GREEN}[ON] ${NC}" || st_cu="${RED}[OFF]${NC}"
-        ps x | grep -w '/bin/hysteria' | grep -v grep >/dev/null 2>&1 && st_his="${GREEN}[ON] ${NC}" || st_his="${RED}[OFF]${NC}"
-        ps x | grep -w '/bin/Hysteria2' | grep -v grep >/dev/null 2>&1 && st_his2="${GREEN}[ON] ${NC}" || st_his2="${RED}[OFF]${NC}"
-        ps x | grep -w 'ZipVPN' | grep -v grep >/dev/null 2>&1 && st_zip="${GREEN}[ON] ${NC}" || st_zip="${RED}[OFF]${NC}"
-
-        ui_header "A D M I N I S T R A D O R   D E   P R O T O C O L O S"
-        ui_hr
-        printf "  ${CYAN}[1] ${WHITE}%-18s %b  ${CYAN}[5] ${WHITE}%-18s %b\n" "UDP-REQUEST (SocksIP)" "$st_so" "UDP-ZIPVPN (ZipVPN)" "$st_zip"
-        printf "  ${CYAN}[2] ${WHITE}%-18s %b  ${CYAN}[6] ${WHITE}%-18s %b\n" "UDP-CUSTOM (Custom)" "$st_cu" "SLOWDNS MANAGER" "$st_slow"
-        printf "  ${CYAN}[3] ${WHITE}%-18s %b  ${CYAN}[7] ${WHITE}%-18s %b\n" "UDP-HYSTERIA (v1)" "$st_his" "EDITAR REGLAS UDP" ""
-        printf "  ${CYAN}[4] ${WHITE}%-18s %b  ${CYAN}[8] ${WHITE}%-18s %b\n" "UDP-HYSTERIA2" "$st_his2" "ACELERADOR UDP BUFF" ""
+        ui_header "MENU DE PROTOCOLOS"
+        echo -e "  ${CYAN}[1] >${WHITE} BADVPN --------------------------- $st_badvpn"
+        echo -e "  ${CYAN}[2] >${WHITE} DROPBEAR ------------------------- $st_dropbear"
+        echo -e "  ${CYAN}[3] >${WHITE} SSL ------------------------------ $st_ssl"
+        echo -e "  ${CYAN}[4] >${WHITE} SQUID ---------------------------- $st_squid"
+        echo -e "  ${CYAN}[5] >${WHITE} OPENVPN -------------------------- $st_openvpn"
+        echo -e "  ${CYAN}[6] >${WHITE} SHADOWSOCK NORMAL ---------------- $st_ssnorm"
+        echo -e "  ${CYAN}[7] >${WHITE} SHADOWSOCK LIV + OBFS ------------ $st_sslibev"
+        echo -e "  ${CYAN}[8] >${WHITE} SLOWDNS -------------------------- $st_slowdns"
+        echo -e "  ${CYAN}[9] >${WHITE} GETTUNEL ------------------------- $st_get"
+        echo -e "  ${CYAN}[10] >${WHITE} TCP-OVER ------------------------ $st_tcp"
+        echo -e "  ${CYAN}[11] >${WHITE} SSLH ---------------------------- $st_sslh"
         ui_subhr
-        echo -e "  ${CYAN}[9]>${WHITE} ACCEDER AL MENÚ COMPLETO UDP DE CHUMO${NC}"
+        echo -e "                            PROXY'S"
+        ui_subhr
+        echo -e "  ${CYAN}[12] >${WHITE} WEBSOKET STATUS EDITABLE -------- $st_ws"
+        echo -e "  ${CYAN}[13] >${WHITE} PROXY OPENVPN ------------------- $st_popen"
+        echo -e "  ${CYAN}[14] >${WHITE} PROXY PUBLICO ------------------- $st_ppub"
+        echo -e "  ${CYAN}[15] >${WHITE} PROXY PRIVADO ------------------- $st_ppriv"
         ui_hr
         echo -e "  ${WHITE}[0] VOLVER AL MENÚ PRINCIPAL${NC}"
         ui_hr
         ui_prompt " Selecciona una opción: " ; read opt_prot
         
         case $opt_prot in
-            1) bash /etc/MaximusVpsMx/modules/UDP_menu.sh 1 ;;
-            2) bash /etc/MaximusVpsMx/modules/UDP_menu.sh 2 ;;
-            3) bash /etc/MaximusVpsMx/modules/UDP_menu.sh 3 ;;
-            4) bash /etc/MaximusVpsMx/modules/UDP_menu.sh 4 ;;
-            5) bash /etc/MaximusVpsMx/modules/UDP_menu.sh 5 ;;
-            6) bash /etc/MaximusVpsMx/modules/SlowDNS.sh ;;
-            7) bash /etc/MaximusVpsMx/modules/UDP_menu.sh 6 ;;
-            8) bash /etc/MaximusVpsMx/modules/UDP_menu.sh 7 ;;
-            9) bash /etc/MaximusVpsMx/modules/UDP_menu.sh ;;
-            10) sub_hysteria ;;
-            11) sub_xui ;;
-            12) gestor_servicio "CHECKUSER ONLINE" "checkuser" ;;
-            13) echo "🔄 Reiniciando red..."; systemctl restart mx-proxy dropbear stunnel4 badvpn mx-slowdns ssh 2>/dev/null; sleep 0.1 ;;
+            1) bash /etc/MaximusVpsMx/modules/mx-badvpn.sh ;;
+            2) bash /etc/MaximusVpsMx/modules/mx-dropbear.sh ;;
+            3) bash /etc/MaximusVpsMx/modules/mx-stunnel.sh ;;
+            4) bash /etc/MaximusVpsMx/modules/mx-squid.sh ;;
+            5) bash /etc/MaximusVpsMx/modules/mx-openvpn.sh ;;
+            6) bash /etc/MaximusVpsMx/modules/mx-shadowsocks.sh 1 ;;
+            7) bash /etc/MaximusVpsMx/modules/mx-shadowsocks.sh 2 ;;
+            8) bash /etc/MaximusVpsMx/modules/SlowDNS.sh ;;
+            9) bash /etc/MaximusVpsMx/modules/mx-proxies.sh 9 ;;
+            10) bash /etc/MaximusVpsMx/modules/mx-proxies.sh 10 ;;
+            11) bash /etc/MaximusVpsMx/modules/mx-sslh.sh ;;
+            12) bash /etc/MaximusVpsMx/modules/mx-proxies.sh 12 ;;
+            13) bash /etc/MaximusVpsMx/modules/mx-proxies.sh 13 ;;
+            14) bash /etc/MaximusVpsMx/modules/mx-proxies.sh 14 ;;
+            15) bash /etc/MaximusVpsMx/modules/mx-proxies.sh 15 ;;
             0) return ;;
             *) continue ;;
         esac
