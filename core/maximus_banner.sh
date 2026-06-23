@@ -62,23 +62,22 @@ cat << 'EOF'
 EOF
 fi
 
-echo -e "⚡ DETALLES DE SU SERVIDOR ⚡"
-echo ""
-echo -e "🛡️ USUARIO : $display_user"
+echo -e "DETALLES DE SU SERVIDOR"
+echo -e "USUARIO : $display_user"
 
 if [ -n "$exp_date" ]; then
     today=$(date +%s)
-    exp=$(date -d "$exp_date" +%s)
+    exp=$(date -d "$exp_date" +%s 2>/dev/null)
     days_left=$(( (exp - today) / 86400 ))
     
     # Formatear la fecha a 'May 02, 2026'
-    formatted_date=$(date -d "$exp_date" "+%b %d, %Y")
+    formatted_date=$(date -d "$exp_date" "+%b %d, %Y" 2>/dev/null)
     
-    echo -e "📅 VALIDO  : $formatted_date"
-    echo -e "⏳ RESTAN  : $days_left DIAS"
+    echo -e "VALIDO  : $formatted_date"
+    echo -e "RESTAN  : $days_left DIAS"
 else
-    echo -e "📅 VALIDO  : Ilimitado"
-    echo -e "⏳ RESTAN  : Ilimitados"
+    echo -e "VALIDO  : Ilimitado"
+    echo -e "RESTAN  : Ilimitados"
 fi
 
 echo ""
