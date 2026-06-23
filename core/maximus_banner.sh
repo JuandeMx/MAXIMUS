@@ -62,25 +62,24 @@ cat << 'EOF'
 EOF
 fi
 
-echo -e "DETALLES DE SU SERVIDOR"
-echo -e "USUARIO : $display_user"
+# Combinar todos los detalles en un único bloque de texto para enviarlo en un solo paquete SSH
+banner_data="DETALLES DE SU SERVIDOR\n"
+banner_data+="USUARIO : $display_user\n"
 
 if [ -n "$exp_date" ]; then
     today=$(date +%s)
     exp=$(date -d "$exp_date" +%s 2>/dev/null)
     days_left=$(( (exp - today) / 86400 ))
-    
-    # Formatear la fecha a 'May 02, 2026'
     formatted_date=$(date -d "$exp_date" "+%b %d, %Y" 2>/dev/null)
     
-    echo -e "VALIDO  : $formatted_date"
-    echo -e "RESTAN  : $days_left DIAS"
+    banner_data+="VALIDO  : $formatted_date\n"
+    banner_data+="RESTAN  : $days_left DIAS"
 else
-    echo -e "VALIDO  : Ilimitado"
-    echo -e "RESTAN  : Ilimitados"
+    banner_data+="VALIDO  : Ilimitado\n"
+    banner_data+="RESTAN  : Ilimitados"
 fi
 
-echo ""
+echo -e "$banner_data"
 
-# Finalizar inmediatamente para no retrasar la conexión SSH
+# Finalizar inmediatamente para no retrasar la conexión SSH (ejecución silenciosa)
 exit 0
