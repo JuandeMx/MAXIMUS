@@ -88,13 +88,68 @@ activar_ssl_python() {
         return 1
     fi
 
-    # ═══════════ PASO 3: INSTALAR DROPBEAR ═══════════
+    # ═══════════ PASO 3: INSTALAR Y COMPILAR DROPBEAR ═══════════
     ui_hr
-    echo -e "${YELLOW}[1/3] Configurando Dropbear SSH en puerto $DROPBEAR_PORT...${NC}"
+    echo -e "${YELLOW}[1/3] Compilando Dropbear SSH con soporte para HTTP Custom en puerto $DROPBEAR_PORT...${NC}"
     
-    if ! systemctl is-active --quiet dropbear 2>/dev/null; then
-        # Instalar Dropbear si no está activo
-        DEBIAN_FRONTEND=noninteractive apt-get install -y dropbear >/dev/null 2>&1
+    # Instalar paquete base para obtener configuración systemd
+    DEBIAN_FRONTEND=noninteractive apt-get update -y >/dev/null 2>&1
+    DEBIAN_FRONTEND=noninteractive apt-get install -y dropbear >/dev/null 2>&1
+    
+    # Compilar desde fuente con algoritmos heredados
+    mkdir -p /var/log/MaximusVpsMx
+    echo "=== Compilación Dropbear (SSL+Python combo) ===" > /var/log/MaximusVpsMx/dropbear_compile.log
+    
+    echo -e "${YELLOW}  [+] Instalando dependencias de compilación...${NC}"
+    DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential zlib1g-dev wget bzip2 libcrypt-dev >> /var/log/MaximusVpsMx/dropbear_compile.log 2>&1
+    
+    cd /tmp
+    rm -rf dropbear-2022.83*
+    echo -e "${YELLOW}  [+] Descargando código fuente de Dropbear 2022.83...${NC}"
+    if wget -q https://matt.ucc.asn.au/dropbear/releases/dropbear-2022.83.tar.bz2 || wget -q https://dropbear.nl/mirror/releases/dropbear-2022.83.tar.bz2; then
+        tar -xf dropbear-2022.83.tar.bz2 >> /var/log/MaximusVpsMx/dropbear_compile.log 2>&1
+        cd dropbear-2022.83
+        
+        # localoptions.h con algoritmos heredados para HTTP Custom
+        cat <<'LOCALOPT' > localoptions.h
+#define DROPBEAR_ENABLE_CBC_MODE 1
+#define DROPBEAR_3DES 1
+#define DROPBEAR_SHA1_HMAC 1
+#define DROPBEAR_SHA1_96_HMAC 1
+#define DROPBEAR_RSA_SHA1 1
+#define DROPBEAR_DH_GROUP14_SHA1 1
+#define DROPBEAR_DH_GROUP14_SHA256 1
+#define DROPBEAR_DSS 1
+#define DROPBEAR_AES128 1
+#define DROPBEAR_AES256 1
+#define DROPBEAR_CHACHA20POLY1305 1
+#define DROPBEAR_ENABLE_CTR_MODE 1
+#define DROPBEAR_SHA2_256_HMAC 1
+#define DROPBEAR_RSA 1
+#define DROPBEAR_ECDSA 1
+#define DROPBEAR_ED25519 1
+LOCALOPT
+        
+        echo -e "${YELLOW}  [+] Configurando (./configure)...${NC}"
+        if ./configure >> /var/log/MaximusVpsMx/dropbear_compile.log 2>&1; then
+            echo -e "${YELLOW}  [+] Compilando binarios...${NC}"
+            if make clean >> /var/log/MaximusVpsMx/dropbear_compile.log 2>&1 && make PROGRAMS="dropbear dropbearkey" -j$(nproc) >> /var/log/MaximusVpsMx/dropbear_compile.log 2>&1; then
+                systemctl stop dropbear.socket 2>/dev/null || true
+                systemctl stop dropbear 2>/dev/null || true
+                cp -f dropbear /usr/sbin/dropbear
+                cp -f dropbearkey /usr/bin/dropbearkey
+                [ -f dropbearconvert ] && cp -f dropbearconvert /usr/bin/dropbearconvert
+                echo -e "${GREEN}  ✓ Dropbear compilado con soporte legacy exitosamente.${NC}"
+            else
+                echo -e "${RED}  ❌ Error al compilar. Se usará el binario del sistema (puede fallar con HTTP Custom).${NC}"
+                tail -n 15 /var/log/MaximusVpsMx/dropbear_compile.log
+            fi
+        else
+            echo -e "${RED}  ❌ Error en ./configure. Se usará el binario del sistema.${NC}"
+        fi
+        cd /tmp
+    else
+        echo -e "${RED}  ⚠ No se pudo descargar fuente. Se usará el binario del sistema.${NC}"
     fi
 
     mkdir -p /etc/dropbear
@@ -111,6 +166,7 @@ EOF
     
     dropbearkey -t ecdsa -f /etc/dropbear/dropbear_ecdsa_host_key >/dev/null 2>&1
     dropbearkey -t rsa -f /etc/dropbear/dropbear_rsa_host_key >/dev/null 2>&1
+    dropbearkey -t dss -f /etc/dropbear/dropbear_dss_host_key >/dev/null 2>&1
     
     systemctl stop dropbear.socket >/dev/null 2>&1 || true
     systemctl disable dropbear.socket >/dev/null 2>&1 || true
