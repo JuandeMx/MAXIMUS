@@ -38,14 +38,17 @@ mportas() {
 }
 
 ssl_stunel() {
-    # Si ya está activo, desinstalar
-    if systemctl is-active --quiet stunnel4 2>/dev/null || mportas | grep -q "stunnel"; then
+    # Si ya está instalado (comprobando existencia del binario), desinstalar
+    if [[ -f /usr/bin/stunnel4 || -f /usr/sbin/stunnel4 ]]; then
         ui_header "DESINSTALAR SSL (STUNNEL4)"
         systemctl stop stunnel4 >/dev/null 2>&1
         systemctl disable stunnel4 >/dev/null 2>&1
+        killall -9 stunnel4 >/dev/null 2>&1
+        pkill -9 stunnel4 >/dev/null 2>&1
         echo -e "${YELLOW}[+] Eliminando stunnel4...${NC}"
         DEBIAN_FRONTEND=noninteractive apt-get purge stunnel4 -y >/dev/null 2>&1
         rm -rf /etc/stunnel/* >/dev/null 2>&1
+        systemctl daemon-reload >/dev/null 2>&1
         ui_hr
         echo -e "${GREEN}✓ SSL (STUNNEL4) DESINSTALADO CON ÉXITO${NC}"
         ui_pause
