@@ -172,7 +172,7 @@ LOCALOPT
     # Escribir configuración
     cat <<EOF >/etc/default/dropbear
 NO_START=0
-DROPBEAR_EXTRA_ARGS="VAR"
+DROPBEAR_EXTRA_ARGS="-b /etc/dropbear/banner -K 30 -I 0 VAR"
 DROPBEAR_BANNER="/etc/dropbear/banner"
 DROPBEAR_RECEIVE_WINDOW=65536
 EOF

@@ -314,6 +314,20 @@ touch /etc/MaximusVpsMx/hysteria_users.db
 sed -i 's/\r$//' /etc/MaximusVpsMx/core/maximus_banner.sh 2>/dev/null
 chmod +x /etc/MaximusVpsMx/core/maximus_banner.sh
 
+# Inicializar banner chico por defecto si no existe
+if [ ! -f /etc/MaximusVpsMx/core/small_banner.txt ]; then
+    echo "[LEGION ANONYMUS & FreeLatam] Si te revendieron este servidor TE ESTAFARON - Grupos: https://chat.whatsapp.com/L05wZezLROk2QIqubI0OXg | https://chat.whatsapp.com/HLv74cLJzaiEDBieLIBllc" > /etc/MaximusVpsMx/core/small_banner.txt
+fi
+
+# Extraer, limpiar y actualizar banners estáticos para Dropbear y openSSH
+if [ -f /etc/MaximusVpsMx/core/maximus_banner.sh ]; then
+    html_content=$(sed -n "/cat << 'EOF'/,/^EOF/p" /etc/MaximusVpsMx/core/maximus_banner.sh | sed '1d;$d')
+    text_content=$(echo "$html_content" | sed -e 's/<[^>]*>//g' -e 's/&nbsp;/ /g' -e 's/&amp;/\&/g' -e 's/&lt;/</g' -e 's/&gt;/>/g' -e 's/&quot;/"/g')
+    mkdir -p /etc/dropbear
+    echo "$text_content" > /etc/dropbear/banner
+    echo "$text_content" > /etc/issue.net
+fi
+
 # Inyectar el script en el flujo de sesión SSH (session phase)
 sed -i '/maximus_banner.sh/d' /etc/pam.d/sshd
 echo "session optional pam_exec.so stdout /etc/MaximusVpsMx/core/maximus_banner.sh" >> /etc/pam.d/sshd

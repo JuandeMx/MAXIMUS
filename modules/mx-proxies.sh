@@ -58,7 +58,13 @@ ws_editable() {
             fi
         done
         
-        read -p "Introduzca el texto de estado (HTML permitido): " -e -i "By SCRIPT | LATAM" texto_soket
+        local default_status="By SCRIPT | LATAM"
+        if [ -f /etc/MaximusVpsMx/core/small_banner.txt ]; then
+            default_status=$(cat /etc/MaximusVpsMx/core/small_banner.txt | tr -d '\r\n')
+        fi
+
+        read -p "Introduzca el texto de estado (HTML permitido): " -e -i "$default_status" texto_soket
+        echo "$texto_soket" > /etc/MaximusVpsMx/core/small_banner.txt
         read -p "Digite puerto local de anclaje (ej: SSH 22 / Dropbear 44): " -e -i "444" puetoantla
         read -p "Estatus de encabezado (101, 200, 404, 500): " -e -i "200" rescabeza
         
@@ -546,7 +552,12 @@ tcp_over() {
             fi
         done
         
-        read -p "Digite banner del proxy: " -e -i "SCRIP-LATAM" passg
+        local default_status="SCRIP-LATAM"
+        if [ -f /etc/MaximusVpsMx/core/small_banner.txt ]; then
+            default_status=$(cat /etc/MaximusVpsMx/core/small_banner.txt | tr -d '\r\n')
+        fi
+        read -p "Digite banner del proxy: " -e -i "$default_status" passg
+        echo "$passg" > /etc/MaximusVpsMx/core/small_banner.txt
         
         # Comprobar e instalar sckt/scktcheck binaries
         if [[ ! -f /usr/sbin/sckt || ! -f /bin/scktcheck ]]; then

@@ -1625,6 +1625,19 @@ menu_sistema() {
                 echo -e "\n${YELLOW}▶ Abriendo editor para el Banner SSH (HTML)...${NC}"
                 sleep 0.5
                 nano /etc/MaximusVpsMx/core/maximus_banner.sh
+                
+                # Extraer, limpiar y actualizar banners estáticos para Dropbear y openSSH
+                if [ -f /etc/MaximusVpsMx/core/maximus_banner.sh ]; then
+                    echo -e "${YELLOW}▶ Actualizando banners estáticos (Dropbear y issue.net)...${NC}"
+                    local html_content
+                    html_content=$(sed -n "/cat << 'EOF'/,/^EOF/p" /etc/MaximusVpsMx/core/maximus_banner.sh | sed '1d;$d')
+                    local text_content
+                    text_content=$(echo "$html_content" | sed -e 's/<[^>]*>//g' -e 's/&nbsp;/ /g' -e 's/&amp;/\&/g' -e 's/&lt;/</g' -e 's/&gt;/>/g' -e 's/&quot;/"/g')
+                    mkdir -p /etc/dropbear
+                    echo "$text_content" > /etc/dropbear/banner
+                    echo "$text_content" > /etc/issue.net
+                fi
+                
                 echo -e "${YELLOW}▶ Reiniciando servicio SSH para aplicar el banner...${NC}"
                 systemctl restart ssh 2>/dev/null || systemctl restart sshd 2>/dev/null
                 echo -e "${GREEN}✅ Banner SSH actualizado y SSH reiniciado.${NC}"

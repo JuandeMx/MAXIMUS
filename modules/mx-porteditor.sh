@@ -135,7 +135,7 @@ edit_dropbear_port() {
     local config="/etc/default/dropbear"
     sed -i "s/^DROPBEAR_PORT=.*/DROPBEAR_PORT=$main_port/g" "$config"
     
-    local extra_args=""
+    local extra_args="-b /etc/dropbear/banner -K 30 -I 0"
     if [ -n "$extra_ports" ] && [ "$extra_ports" != "$main_port" ]; then
         for ep in $extra_ports; do
             extra_args="$extra_args -p $ep"

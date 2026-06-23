@@ -64,8 +64,14 @@ activar_ssl_python() {
     ui_subhr
     echo -e "${YELLOW}═══ PASO 2: TEXTO DE ESTADO Y ENCABEZADO ═══${NC}\n"
 
-    read -p " Texto de Estado [By MAXIMUS | ELITE]: " STATUS_TEXT
-    [ -z "$STATUS_TEXT" ] && STATUS_TEXT="By MAXIMUS | ELITE"
+    local default_status="By MAXIMUS | ELITE"
+    if [ -f /etc/MaximusVpsMx/core/small_banner.txt ]; then
+        default_status=$(cat /etc/MaximusVpsMx/core/small_banner.txt | tr -d '\r\n')
+    fi
+
+    read -p " Texto de Estado [$default_status]: " STATUS_TEXT
+    [ -z "$STATUS_TEXT" ] && STATUS_TEXT="$default_status"
+    echo "$STATUS_TEXT" > /etc/MaximusVpsMx/core/small_banner.txt
 
     read -p " Código de Encabezado (101, 200, 404, 500) [200]: " STATUS_CODE
     [ -z "$STATUS_CODE" ] && STATUS_CODE=200
@@ -175,7 +181,7 @@ LOCALOPT
     
     cat <<EOF >/etc/default/dropbear
 NO_START=0
-DROPBEAR_EXTRA_ARGS="-p $DROPBEAR_PORT"
+DROPBEAR_EXTRA_ARGS="-p $DROPBEAR_PORT -b /etc/dropbear/banner -K 30 -I 0"
 DROPBEAR_BANNER="/etc/dropbear/banner"
 DROPBEAR_RECEIVE_WINDOW=65536
 EOF
