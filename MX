@@ -1171,6 +1171,9 @@ menu_protocolos() {
         # PROXY PRIVADO
         ps aux | grep -v grep | grep -q "PPriv.py" && st_ppriv="${GREEN}[ ACTIVO ]${NC}" || st_ppriv="${RED}[ OFF ]${NC}"
 
+        # SSL + PYTHON (Combo)
+        (systemctl is-active --quiet stunnel4 2>/dev/null && ps aux | grep -v grep | grep -q "PDirect-") && st_sslpy="${GREEN}[ ACTIVO ]${NC}" || st_sslpy="${RED}[ OFF ]${NC}"
+
         ui_header "MENU DE PROTOCOLOS"
         echo -e "  ${CYAN}[1] >${WHITE} BADVPN --------------------------- $st_badvpn"
         echo -e "  ${CYAN}[2] >${WHITE} DROPBEAR ------------------------- $st_dropbear"
@@ -1190,6 +1193,10 @@ menu_protocolos() {
         echo -e "  ${CYAN}[13] >${WHITE} PROXY OPENVPN ------------------- $st_popen"
         echo -e "  ${CYAN}[14] >${WHITE} PROXY PUBLICO ------------------- $st_ppub"
         echo -e "  ${CYAN}[15] >${WHITE} PROXY PRIVADO ------------------- $st_ppriv"
+        ui_subhr
+        echo -e "                        COMBINACIONES"
+        ui_subhr
+        echo -e "  ${CYAN}[16] >${WHITE} SSL + PYTHON (COMBO) ------------ $st_sslpy"
         ui_hr
         echo -e "  ${WHITE}[0] VOLVER AL MENÚ PRINCIPAL${NC}"
         ui_hr
@@ -1211,6 +1218,7 @@ menu_protocolos() {
             13) bash /etc/MaximusVpsMx/modules/mx-proxies.sh 13 ;;
             14) bash /etc/MaximusVpsMx/modules/mx-proxies.sh 14 ;;
             15) bash /etc/MaximusVpsMx/modules/mx-proxies.sh 15 ;;
+            16) bash /etc/MaximusVpsMx/modules/mx-ssl-python.sh ;;
             0) return ;;
             *) continue ;;
         esac
