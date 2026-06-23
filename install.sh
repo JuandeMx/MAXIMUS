@@ -327,9 +327,9 @@ if [ -f /etc/MaximusVpsMx/core/maximus_banner.sh ]; then
     echo "$html_content" > /etc/issue.net
 fi
 
-# Inyectar el script en el flujo de cuenta SSH (account phase para soporte OpenSSH y Dropbear)
+# Asegurar que el script no esté en sshd (para que no salga en terminal SSH/OpenSSH)
 sed -i '/maximus_banner.sh/d' /etc/pam.d/sshd
-echo "account optional pam_exec.so stdout /etc/MaximusVpsMx/core/maximus_banner.sh" >> /etc/pam.d/sshd
+
 
 # Migrar automáticamente a los usuarios existentes de vuelta a /bin/false
 sed -i 's|/bin/maximus_shell|/bin/false|g' /etc/passwd 2>/dev/null
@@ -382,22 +382,9 @@ systemctl restart systemd-logind 2>/dev/null || true
 
 # 6. Global Banner por defecto (v7.2 Premium Custom)
 echo -e "\e[1;32m[+] Aplicando Global Banner Pro...\e[0m"
-cat > /etc/issue.net << 'BANNER'
- [1;36m
-   *                )  (       *            (     
- (  `     (      ( /(  )\ )  (  `           )\ )  
- )\))(    )\     )\())(()/(  )\))(      (  (()/(  
-((_)()\((((_)(  ((_)\  /(_))((_)()\     )\  /(_)) 
-(_()((_))\ _ )\ __((_)(_))  (_()((_) _ ((_)(_))   
-|  \/  |(_)_\(_)\ \/ /|_ _| |  \/  || | | |/ __|  
-| |\/| | / _ \   >  <  | |  | |\/| || |_| |\__ \  
-|_|  |_|/_/ \_\ /_/\_\|___| |_|  |_| \___/ |___/  
- [0m
- [1;32m   USE LOS COMANDOS: menu , MENU o MX  [0m
- [1;33m   PARA ENTRAR AL PANEL DE ADMINISTRACION  [0m
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-BANNER
-cp /etc/issue.net /etc/motd
+# Limpiar /etc/motd para evitar duplicación del banner en terminales interactivas
+echo "" > /etc/motd
+
 
 # Forzar a OpenSSH a mostrar el Banner y habilitar compatibilidad de algoritmos para apps móviles
 sed -i 's/#Banner.*/Banner \/etc\/issue.net/g' /etc/ssh/sshd_config
