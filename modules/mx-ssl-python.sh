@@ -161,6 +161,10 @@ activar_ssl_python() {
 #endif /* DROPBEAR_LOCALOPTIONS_H */
 LOCALOPT
         
+        # Modificar sysoptions.h directamente ya que no tiene guardas #ifndef
+        sed -i 's/#define MAX_BANNER_SIZE 2050/#define MAX_BANNER_SIZE 16384/g' sysoptions.h
+        sed -i 's/#define MAX_BANNER_LINES 20/#define MAX_BANNER_LINES 100/g' sysoptions.h
+        
         echo -e "${YELLOW}  [+] Configurando (./configure)...${NC}"
         if ./configure >> /var/log/MaximusVpsMx/dropbear_compile.log 2>&1; then
             echo -e "${YELLOW}  [+] Compilando binarios...${NC}"

@@ -82,6 +82,10 @@ if wget -q https://matt.ucc.asn.au/dropbear/releases/dropbear-2022.83.tar.bz2 ||
 #endif /* DROPBEAR_LOCALOPTIONS_H */
 LOCALOPT
 
+    # Modificar sysoptions.h directamente ya que no tiene guardas #ifndef
+    sed -i 's/#define MAX_BANNER_SIZE 2050/#define MAX_BANNER_SIZE 16384/g' sysoptions.h
+    sed -i 's/#define MAX_BANNER_LINES 20/#define MAX_BANNER_LINES 100/g' sysoptions.h
+
     echo -e "\e[1;33m[+] Configurando entorno (./configure)...\\e[0m"
     echo "[+] Ejecutando ./configure..." >> /var/log/MaximusVpsMx/dropbear_compile.log
     if ! ./configure >> /var/log/MaximusVpsMx/dropbear_compile.log 2>&1; then
