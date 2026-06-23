@@ -194,7 +194,10 @@ ui_header() {
 get_telemetry() {
     # Cache para no consultar internet en cada refresco de menú
     if [ -z "$GLOBAL_IP" ]; then
-        GLOBAL_IP=$(curl -s4 ipv4.icanhazip.com 2>/dev/null || wget -qO- ipv4.icanhazip.com 2>/dev/null)
+        GLOBAL_IP=$(curl -s4 --connect-timeout 2 --max-time 3 ipv4.icanhazip.com 2>/dev/null || wget -qO- --timeout=2 --tries=1 ipv4.icanhazip.com 2>/dev/null)
+        if [ -z "$GLOBAL_IP" ]; then
+            GLOBAL_IP=$(ip route get 1.1.1.1 2>/dev/null | grep -oP 'src \K\S+' || hostname -I | awk '{print $1}')
+        fi
         [ -z "$GLOBAL_IP" ] && GLOBAL_IP="127.0.0.1"
     fi
     IP="$GLOBAL_IP"
@@ -219,7 +222,7 @@ get_telemetry() {
     if [ -f /proc/loadavg ]; then
         local load1
         load1=$(awk '{print $1}' /proc/loadavg)
-        CPU_USE=$(awk -v l1="$load1" '{printf "%.2f%%", l1 * 10}')
+        CPU_USE=$(awk -v l1="$load1" 'BEGIN {printf "%.2f%%", l1 * 10}')
     else
         CPU_USE="0.00%"
     fi
