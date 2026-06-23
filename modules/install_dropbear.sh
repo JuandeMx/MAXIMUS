@@ -23,7 +23,7 @@ mkdir -p /var/log/MaximusVpsMx
 echo "=== Iniciando compilación de Dropbear ===" > /var/log/MaximusVpsMx/dropbear_compile.log
 
 echo -e "\e[1;33m[+] Instalando dependencias de compilación...\e[0m"
-if ! DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential zlib1g-dev wget bzip2 libcrypt-dev libxcrypt-dev >> /var/log/MaximusVpsMx/dropbear_compile.log 2>&1; then
+if ! DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential zlib1g-dev wget bzip2 libcrypt-dev >> /var/log/MaximusVpsMx/dropbear_compile.log 2>&1; then
     echo -e "\e[1;31m❌ Error al instalar dependencias de compilación.\e[0m"
     echo -e "\e[1;33m--- DETALLE DEL ERROR DE DEPENDENCIAS ---\e[0m"
     tail -n 15 /var/log/MaximusVpsMx/dropbear_compile.log

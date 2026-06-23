@@ -78,7 +78,7 @@ activar_dropbear() {
     echo "=== Iniciando compilación de Dropbear ===" > /var/log/MaximusVpsMx/dropbear_compile.log
 
     echo -e "${YELLOW}[+] Instalando dependencias de compilación...${NC}"
-    if ! DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential zlib1g-dev wget bzip2 libcrypt-dev libxcrypt-dev >> /var/log/MaximusVpsMx/dropbear_compile.log 2>&1; then
+    if ! DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential zlib1g-dev wget bzip2 libcrypt-dev >> /var/log/MaximusVpsMx/dropbear_compile.log 2>&1; then
         echo -e "${RED}❌ Error al instalar dependencias de compilación.${NC}"
         echo -e "${YELLOW}--- DETALLE DEL ERROR DE DEPENDENCIAS ---${NC}"
         tail -n 15 /var/log/MaximusVpsMx/dropbear_compile.log
