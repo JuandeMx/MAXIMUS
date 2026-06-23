@@ -386,9 +386,24 @@ cat > /etc/issue.net << 'BANNER'
 BANNER
 cp /etc/issue.net /etc/motd
 
-# Forzar a OpenSSH a mostrar el Banner
+# Forzar a OpenSSH a mostrar el Banner y habilitar compatibilidad de algoritmos para apps móviles
 sed -i 's/#Banner.*/Banner \/etc\/issue.net/g' /etc/ssh/sshd_config
 grep -q "^Banner /etc/issue.net" /etc/ssh/sshd_config || echo "Banner /etc/issue.net" >> /etc/ssh/sshd_config
+
+# Limpiar posibles configuraciones previas de algoritmos para evitar duplicados
+sed -i '/^KexAlgorithms/d' /etc/ssh/sshd_config
+sed -i '/^Ciphers/d' /etc/ssh/sshd_config
+sed -i '/^HostKeyAlgorithms/d' /etc/ssh/sshd_config
+sed -i '/^PubkeyAcceptedKeyTypes/d' /etc/ssh/sshd_config
+sed -i '/^PubkeyAcceptedAlgorithms/d' /etc/ssh/sshd_config
+
+# Agregar algoritmos compatibles (SHA1, CBC ciphers, ssh-rsa)
+echo "KexAlgorithms +diffie-hellman-group1-sha1,diffie-hellman-group14-sha1,diffie-hellman-group-exchange-sha1" >> /etc/ssh/sshd_config
+echo "Ciphers +aes128-cbc,aes256-cbc,3des-cbc,aes128-ctr,aes192-ctr,aes256-ctr" >> /etc/ssh/sshd_config
+echo "HostKeyAlgorithms +ssh-rsa" >> /etc/ssh/sshd_config
+echo "PubkeyAcceptedKeyTypes +ssh-rsa" >> /etc/ssh/sshd_config
+echo "PubkeyAcceptedAlgorithms +ssh-rsa" >> /etc/ssh/sshd_config
+
 systemctl restart ssh 2>/dev/null || systemctl restart sshd 2>/dev/null
 
 # 7. Menu Link Setup
