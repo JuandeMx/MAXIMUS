@@ -14,8 +14,52 @@ fi
 
 echo -e "\n\e[1;32m[+] Instalando y configurando motor Dropbear en puerto $drop_port...\e[0m"
 
-# Instalar paquete Dropbear
+# Instalar paquete Dropbear del sistema para obtener configuraciones e integración de systemd
 DEBIAN_FRONTEND=noninteractive apt-get install -y dropbear 2>/dev/null
+
+# Compilar Dropbear con soporte para algoritmos antiguos (compatibilidad con HTTP Custom)
+echo -e "\e[1;33m[+] Compilando Dropbear desde código fuente con algoritmos heredados (KEX, Ciphers)...\e[0m"
+DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential zlib1g-dev wget bzip2 >/dev/null 2>&1
+
+cd /tmp
+rm -rf dropbear-2025.89*
+if wget -q https://matt.ucc.asn.au/dropbear/releases/dropbear-2025.89.tar.bz2 || wget -q https://dropbear.nl/mirror/releases/dropbear-2025.89.tar.bz2; then
+    tar -xf dropbear-2025.89.tar.bz2
+    cd dropbear-2025.89
+    
+    # Escribir localoptions.h para habilitar todos los algoritmos antiguos
+    cat <<EOF > localoptions.h
+#define DROPBEAR_DH_GROUP1 1
+#define DROPBEAR_DH_GROUP1_SHA1 1
+#define DROPBEAR_DH_GROUP14 1
+#define DROPBEAR_DH_GROUP14_SHA1 1
+#define DROPBEAR_DH_GROUP14_SHA256 1
+#define DROPBEAR_ENABLE_CBC_MODE 1
+#define DROPBEAR_AES128_CBC 1
+#define DROPBEAR_AES256_CBC 1
+#define DROPBEAR_3DES 1
+#define DROPBEAR_BLOWFISH 1
+#define DROPBEAR_RSA 1
+#define DROPBEAR_RSA_SHA1 1
+EOF
+
+    ./configure >/dev/null 2>&1
+    if make -j$(nproc) >/dev/null 2>&1; then
+        systemctl stop dropbear.socket 2>/dev/null || true
+        systemctl stop dropbear 2>/dev/null || true
+        cp -f dropbear /usr/sbin/dropbear
+        cp -f dropbearkey /usr/bin/dropbearkey
+        cp -f dropbearconvert /usr/bin/dropbearconvert
+        echo -e "\e[1;32m[✓] Dropbear optimizado y compilado exitosamente.\e[0m"
+    else
+        echo -e "\e[1;31m❌ Error al compilar. Se usará el binario predeterminado del sistema.\e[0m"
+    fi
+else
+    echo -e "\e[1;31m❌ No se pudo descargar el código fuente. Se usará el binario predeterminado del sistema.\e[0m"
+fi
+cd /tmp
+
+
 
 # Generar llaves criptográficas de Dropbear (por si falta)
 mkdir -p /etc/dropbear

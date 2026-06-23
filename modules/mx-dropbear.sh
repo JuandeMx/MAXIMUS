@@ -73,6 +73,48 @@ activar_dropbear() {
     DEBIAN_FRONTEND=noninteractive apt-get update -y >/dev/null 2>&1
     DEBIAN_FRONTEND=noninteractive apt-get install dropbear -y >/dev/null 2>&1
     
+    echo -e "${YELLOW}[+] Compilando Dropbear desde código fuente para compatibilidad con HTTP Custom...${NC}"
+    DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential zlib1g-dev wget bzip2 >/dev/null 2>&1
+
+    cd /tmp
+    rm -rf dropbear-2025.89*
+    if wget -q https://matt.ucc.asn.au/dropbear/releases/dropbear-2025.89.tar.bz2 || wget -q https://dropbear.nl/mirror/releases/dropbear-2025.89.tar.bz2; then
+        tar -xf dropbear-2025.89.tar.bz2
+        cd dropbear-2025.89
+        
+        # Escribir localoptions.h para habilitar todos los algoritmos antiguos
+        cat <<EOF > localoptions.h
+#define DROPBEAR_DH_GROUP1 1
+#define DROPBEAR_DH_GROUP1_SHA1 1
+#define DROPBEAR_DH_GROUP14 1
+#define DROPBEAR_DH_GROUP14_SHA1 1
+#define DROPBEAR_DH_GROUP14_SHA256 1
+#define DROPBEAR_ENABLE_CBC_MODE 1
+#define DROPBEAR_AES128_CBC 1
+#define DROPBEAR_AES256_CBC 1
+#define DROPBEAR_3DES 1
+#define DROPBEAR_BLOWFISH 1
+#define DROPBEAR_RSA 1
+#define DROPBEAR_RSA_SHA1 1
+EOF
+
+        ./configure >/dev/null 2>&1
+        if make -j$(nproc) >/dev/null 2>&1; then
+            systemctl stop dropbear.socket 2>/dev/null || true
+            systemctl stop dropbear 2>/dev/null || true
+            cp -f dropbear /usr/sbin/dropbear
+            cp -f dropbearkey /usr/bin/dropbearkey
+            cp -f dropbearconvert /usr/bin/dropbearconvert
+            echo -e "${GREEN}✓ Dropbear optimizado y compilado exitosamente.${NC}"
+        else
+            echo -e "${RED}❌ Error al compilar. Se usará el binario predeterminado del sistema.${NC}"
+        fi
+    else
+        echo -e "${RED}❌ No se pudo descargar el código fuente. Se usará el binario predeterminado del sistema.${NC}"
+    fi
+    cd /tmp
+
+    
     mkdir -p /etc/dropbear
     touch /etc/dropbear/banner
     
