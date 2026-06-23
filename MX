@@ -1098,7 +1098,7 @@ sub_hysteria() {
                 sed -i "/^$user_del:/d" /etc/MaximusVpsMx/hysteria_users.db
                 echo -e "${RED}✅ Usuario $user_del eliminado.${NC}"; sleep 0.1 ;;
             3)
-                echo -e "\n${YELLOW}▶ Cuentas Activas Hysteria v2${NC}"
+               echo -e "\n${YELLOW}▶ Cuentas Activas Hysteria v2${NC}"
                 echo -e "${CYAN}-------------------------------------------------------${NC}"
                 printf "${WHITE}%-12s | %-12s | %-10s | %-10s\n${NC}" "USUARIO" "EXPIRACIÓN" "LIMIT UP" "LIMIT DOWN"
                 echo -e "${CYAN}-------------------------------------------------------${NC}"
@@ -1126,79 +1126,37 @@ sub_hysteria() {
 menu_protocolos() {
     while true; do
         # --- Lógica de Telemetría local ---
-        P_SSH=$(grep "^Port" /etc/ssh/sshd_config 2>/dev/null | awk '{print $2}' | head -1)
-        [ -z "$P_SSH" ] && P_SSH="22"
-        if netstat -tuln 2>/dev/null | grep -q ":${P_SSH} "; then st_ssh="${GREEN}[ON] ${NC}"; else st_ssh="${RED}[OFF]${NC}"; P_SSH="--"; fi
+        systemctl is-active --quiet mx-slowdns 2>/dev/null && st_slow="${GREEN}[ON] ${NC}" || st_slow="${RED}[OFF]${NC}"
+        if ps x | grep -w 'dns-server' | grep -v grep >/dev/null 2>&1; then st_slow="${GREEN}[ON] ${NC}"; fi
 
-        if dpkg -l dropbear 2>/dev/null | grep -q "^ii"; then
-            P_DROP=$(grep "DROPBEAR_PORT=" /etc/default/dropbear 2>/dev/null | cut -d= -f2 | tr -d '"' | xargs)
-            [ -z "$P_DROP" ] && P_DROP="44"
-            if netstat -tuln 2>/dev/null | grep -q ":${P_DROP} "; then st_drop="${GREEN}[ON] ${NC}"; else st_drop="${RED}[OFF]${NC}"; P_DROP="--"; fi
-        else P_DROP="--"; st_drop="${RED}[OFF]${NC}"; fi
-
-        if [ -f /etc/systemd/system/mx-proxy.service ]; then
-            P_PROXY=$(grep "ExecStart=" /etc/systemd/system/mx-proxy.service 2>/dev/null | awk '{print $NF}')
-            P_PROXY="${P_PROXY%%-*}"; [ -z "$P_PROXY" ] && P_PROXY="80"
-            if netstat -tuln 2>/dev/null | grep -q ":${P_PROXY} "; then st_proxy="${GREEN}[ON] ${NC}"; else st_proxy="${RED}[OFF]${NC}"; P_PROXY="--"; fi
-        else P_PROXY="--"; st_proxy="${RED}[OFF]${NC}"; fi
-
-        if [ -f /etc/stunnel/stunnel.conf ] && dpkg -l stunnel4 2>/dev/null | grep -q "^ii"; then
-            P_STUN=$(grep "accept =" /etc/stunnel/stunnel.conf 2>/dev/null | awk '{print $3}' | head -1)
-            [ -z "$P_STUN" ] && P_STUN="443"
-            if netstat -tuln 2>/dev/null | grep -q ":${P_STUN} "; then st_stun="${GREEN}[ON] ${NC}"; else st_stun="${RED}[OFF]${NC}"; P_STUN="--"; fi
-        else P_STUN="--"; st_stun="${RED}[OFF]${NC}"; fi
-
-
-        if [ -f /usr/local/bin/badvpn-udpgw ]; then
-            if ps -ef | grep -q "[b]advpn-udpgw"; then
-                P_BAD=$(ps -ef | grep badvpn-udpgw | grep -v grep | awk -F'listen-addr ' '{print $2}' | awk -F':' '{print $2}' | awk '{print $1}')
-                [ -z "$P_BAD" ] && P_BAD="7300"; st_udp="${GREEN}[ON] ${NC}"
-            else P_BAD="--"; st_udp="${RED}[OFF]${NC}"; fi
-        else P_BAD="--"; st_udp="${RED}[OFF]${NC}"; fi
-
-        systemctl is-active --quiet mx-slowdns && st_dns="${GREEN}[ON] ${NC}" || st_dns="${RED}[OFF]${NC}"
-        systemctl is-active --quiet ws-epro && st_ws="${GREEN}[ON] ${NC}" || st_ws="${RED}[OFF]${NC}"
-        if systemctl is-active --quiet udp-custom 2>/dev/null; then P_UDPC="7100-7200"; st_udpc="${GREEN}[ON] ${NC}"; else P_UDPC="--"; st_udpc="${RED}[OFF]${NC}"; fi
-        if [ -f /etc/hysteria/hysteria ]; then
-            if systemctl is-active --quiet hysteria 2>/dev/null; then P_HY="2000-5000"; st_udph="${GREEN}[ON] ${NC}"; else P_HY="--"; st_udph="${RED}[OFF]${NC}"; fi
-        else P_HY="--"; st_udph="${RED}[OFF]${NC}"; fi
-
-        P_OVPN="--"
-        if [ -f /etc/openvpn/server/server.conf ]; then
-            OVPN_PORT=$(grep -E '^port ' /etc/openvpn/server/server.conf 2>/dev/null|awk '{print $2}'|head -1)
-            OVPN_PROTO=$(grep -E '^proto ' /etc/openvpn/server/server.conf 2>/dev/null|awk '{print $2}'|head -1)
-            [ -z "$OVPN_PORT" ] && OVPN_PORT="1194"
-            if systemctl is-active --quiet openvpn-server@server 2>/dev/null; then
-                st_ovpn="${GREEN}[ON] ${NC}"; P_OVPN="${OVPN_PORT}/${OVPN_PROTO}"
-            else st_ovpn="${RED}[OFF]${NC}"; P_OVPN="--"; fi
-        else st_ovpn="${RED}[OFF]${NC}"; P_OVPN="--"; fi
+        ps x | grep -w 'udpServer' | grep -v grep >/dev/null 2>&1 && st_so="${GREEN}[ON] ${NC}" || st_so="${RED}[OFF]${NC}"
+        ps x | grep -w 'UDP-Custom' | grep -v grep >/dev/null 2>&1 && st_cu="${GREEN}[ON] ${NC}" || st_cu="${RED}[OFF]${NC}"
+        ps x | grep -w '/bin/hysteria' | grep -v grep >/dev/null 2>&1 && st_his="${GREEN}[ON] ${NC}" || st_his="${RED}[OFF]${NC}"
+        ps x | grep -w '/bin/Hysteria2' | grep -v grep >/dev/null 2>&1 && st_his2="${GREEN}[ON] ${NC}" || st_his2="${RED}[OFF]${NC}"
+        ps x | grep -w 'ZipVPN' | grep -v grep >/dev/null 2>&1 && st_zip="${GREEN}[ON] ${NC}" || st_zip="${RED}[OFF]${NC}"
 
         ui_header "A D M I N I S T R A D O R   D E   P R O T O C O L O S"
-        echo -e " ${CYAN}SSH:${WHITE} $P_SSH  ${CYAN}DROB:${WHITE} $P_DROP  ${CYAN}PROXY:${WHITE} $P_PROXY  ${CYAN}SSL:${WHITE} $P_STUN${NC}"
-        echo -e " ${CYAN}UDPG:${WHITE} $P_BAD  ${CYAN}UDPC:${WHITE} $P_UDPC  ${CYAN}HYST:${WHITE} $P_HY  ${CYAN}OVPN:${WHITE} $P_OVPN${NC}"
         ui_hr
-        printf "  ${CYAN}[1] ${WHITE}%-15s %b  ${CYAN}[7] ${WHITE}%-15s %b\n" "SSH" "$st_ssh" "OPENVPN" "$st_ovpn"
-        printf "  ${CYAN}[2] ${WHITE}%-15s %b  ${CYAN}[8] ${WHITE}%-15s %b\n" "DROPBEAR" "$st_drop" "SLOWDNS" "$st_dns"
-        printf "  ${CYAN}[3] ${WHITE}%-15s %b  ${CYAN}[9] ${WHITE}%-15s %b\n" "WS-EPRO" "$st_ws" "UDP-CUSTOM" "$st_udpc"
-        printf "  ${CYAN}[4] ${WHITE}%-15s %b  ${CYAN}[10] ${WHITE}%-15s %b\n" "PYTHON PROXY" "$st_proxy" "HYSTERIA v2" "$st_udph"
-        printf "  ${CYAN}[5] ${WHITE}%-15s %b  ${CYAN}[11] ${WHITE}%-15s %b\n" "STUNNEL4" "$st_stun" "PANEL X-UI" "$st_xui"
-        printf "  ${CYAN}[6] ${WHITE}%-15s %b  ${CYAN}[12] ${WHITE}%-15s %b\n" "BADVPN" "$st_udp" "CHECKUSER" "$st_chk"
+        printf "  ${CYAN}[1] ${WHITE}%-18s %b  ${CYAN}[5] ${WHITE}%-18s %b\n" "UDP-REQUEST (SocksIP)" "$st_so" "UDP-ZIPVPN (ZipVPN)" "$st_zip"
+        printf "  ${CYAN}[2] ${WHITE}%-18s %b  ${CYAN}[6] ${WHITE}%-18s %b\n" "UDP-CUSTOM (Custom)" "$st_cu" "SLOWDNS MANAGER" "$st_slow"
+        printf "  ${CYAN}[3] ${WHITE}%-18s %b  ${CYAN}[7] ${WHITE}%-18s %b\n" "UDP-HYSTERIA (v1)" "$st_his" "EDITAR REGLAS UDP" ""
+        printf "  ${CYAN}[4] ${WHITE}%-18s %b  ${CYAN}[8] ${WHITE}%-18s %b\n" "UDP-HYSTERIA2" "$st_his2" "ACELERADOR UDP BUFF" ""
         ui_subhr
-        echo -e "  ${CYAN}[13]>${WHITE} REINICIAR TODOS LOS SERVICIOS${NC}"
+        echo -e "  ${CYAN}[9]>${WHITE} ACCEDER AL MENÚ COMPLETO UDP DE CHUMO${NC}"
         ui_hr
         echo -e "  ${WHITE}[0] VOLVER AL MENÚ PRINCIPAL${NC}"
         ui_hr
         ui_prompt " Selecciona una opción: " ; read opt_prot
         
         case $opt_prot in
-            1) gestor_servicio "SSH" "ssh" ;;
-            2) gestor_servicio "DROPBEAR" "dropbear" ;;
-            3) gestor_servicio "WS-EPRO" "ws-epro" ;;
-            4) gestor_servicio "SOCKS PYTHON" "mx-proxy" ;;
-            5) gestor_servicio "STUNNEL (SSL)" "stunnel4" ;;
-            6) gestor_servicio "BADVPN-UDPGW" "badvpn" ;;
-            7) gestor_servicio "OPENVPN" "openvpn" ;;
-            8) bash /etc/MaximusVpsMx/modules/SlowDNS.sh ;;
+            1) bash /etc/MaximusVpsMx/modules/UDP_menu.sh 1 ;;
+            2) bash /etc/MaximusVpsMx/modules/UDP_menu.sh 2 ;;
+            3) bash /etc/MaximusVpsMx/modules/UDP_menu.sh 3 ;;
+            4) bash /etc/MaximusVpsMx/modules/UDP_menu.sh 4 ;;
+            5) bash /etc/MaximusVpsMx/modules/UDP_menu.sh 5 ;;
+            6) bash /etc/MaximusVpsMx/modules/SlowDNS.sh ;;
+            7) bash /etc/MaximusVpsMx/modules/UDP_menu.sh 6 ;;
+            8) bash /etc/MaximusVpsMx/modules/UDP_menu.sh 7 ;;
             9) bash /etc/MaximusVpsMx/modules/UDP_menu.sh ;;
             10) sub_hysteria ;;
             11) sub_xui ;;

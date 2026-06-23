@@ -1009,10 +1009,14 @@ unset port
   msg -bar3
   echo -ne "$(msg -verd "  [0]") $(msg -verm2 "=>>") " && msg -bra "\033[1;41m Volver "
   msg -bar3
-  opcion=$(selection_fun 7)
+  if [ -n "$1" ]; then
+      opcion="$1"
+  else
+      opcion=$(selection_fun 7)
+  fi
   case $opcion in
-  1)source <(curl -sSL https://www.dropbox.com/s/vyzxgbdw7oz8fmr/UDPserver.org.sh) && break;;
-  2)source <(curl -sSL https://www.dropbox.com/s/tiskirto505v3p7/udp-custom.sh) && break;;
+  1)source <(curl -sSL https://www.dropbox.com/s/vyzxgbdw7oz8fmr/UDPserver.org.sh) ;;
+  2)source <(curl -sSL https://www.dropbox.com/s/tiskirto505v3p7/udp-custom.sh) ;;
   3)[[ $(ps x | grep -w "/bin/hysteria"| grep -v grep) ]] && _menuH || _hysteria ;;
   4)[[ $(ps x | grep -w "/bin/Hysteria2"| grep -v grep) ]] && _menuH2 || _hysteria2 ;;
   5)[[ $(ps x | grep -w "/bin/ZipVPN"| grep -v grep) ]] && _menuH3 || zip_udp ;;
@@ -1020,4 +1024,8 @@ unset port
   7)OptimizedUDP ;;
   0)break;;
   esac  
+  if [ -n "$1" ]; then
+      break
+  fi
 done
+
