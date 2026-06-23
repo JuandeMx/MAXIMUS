@@ -1796,7 +1796,7 @@ menu_mantenimiento() {
                     rm -rf "$TEMP_DIR" 2>/dev/null
                     
                     echo -e "${CYAN}[MAESTRO] Descargando última versión de GitHub...${NC}"
-                    if git clone --depth=1 -q "$URL_REPO" "$TEMP_DIR"; then
+                    if timeout 15 git clone -4 --depth=1 -q "$URL_REPO" "$TEMP_DIR"; then
                         echo -e "${GREEN}[OK] Descarga exitosa. Preparando reemplazo seguro...${NC}"
                         
                         exec bash -c "
