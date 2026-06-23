@@ -62,7 +62,7 @@ cat << 'EOF'
 EOF
 fi
 
-# Combinar todos los detalles en un único bloque de texto HTML para enviarlo en un solo paquete SSH compatible
+# Combinar el banner visual y los detalles en una única tarjeta HTML ligera (evita saturación y se ve integrado)
 if [ -n "$exp_date" ]; then
     today=$(date +%s)
     exp=$(date -d "$exp_date" +%s 2>/dev/null)
@@ -74,10 +74,17 @@ else
     restan_html="<font color=\"#00ffff\"><b>Ilimitados</b></font>"
 fi
 
-banner_data="<div style=\"text-align: center; font-family: 'Courier New', Courier, monospace; background-color: #0b001a; color: #d8b4fe; padding: 8px; border-top: 1px dashed #ffaa00; font-size: 0.9em; line-height: 1.35;\">"
-banner_data+="<font color=\"#ffaa00\"><b>📊 DETALLES DE CUENTA 📊</b></font><br>"
-banner_data+="👤 USUARIO : <font color=\"#ffffff\">$display_user</font><br>"
-banner_data+="📅 VALIDO  : <font color=\"#ffffff\">$formatted_date</font><br>"
+banner_data="<div style=\"text-align: center; font-family: 'Courier New', Courier, monospace; background-color: #0b001a; color: #d8b4fe; padding: 10px; border: 1px solid #ffaa00; border-radius: 5px; line-height: 1.35;\">"
+banner_data+="<font size=\"4\" color=\"#ffaa00\"><b>🏴‍☠️ 𝕃𝕖𝕘𝕚ó𝕟 𝔸ℕ𝕆ℕ𝕐𝕄𝕌𝕊 🛠️</b></font><br>"
+banner_data+="<font size=\"2\" color=\"#ff0055\"><b>[ AMATERAZU & TEAM ELYSA YAYLOR ]</b></font><br>"
+banner_data+="<font size=\"2\" color=\"#00ff00\"><b>🤝 ALIANZA OFICIAL 🤝</b></font><br>"
+banner_data+="<font size=\"2\" color=\"#ffffff\">Legión ANONYMUS & FreeLatam</font><br>"
+banner_data+="<font size=\"2\" color=\"#ffaa00\">▼ GRUPO OFICIAL ▼</font><br>"
+banner_data+="<a href=\"https://chat.whatsapp.com/L05wZezLROk2QIqubI0OXg\" style=\"color: #00ffff; font-size: 0.85em; text-decoration: none;\">https://chat.whatsapp.com/L05wZezLROk2QIqubI0OXg</a><br>"
+banner_data+="<font color=\"#ffaa00\"><b>───────────────────────</b></font><br>"
+banner_data+="<font size=\"3\" color=\"#00ffff\"><b>📊 DETALLES DE CUENTA 📊</b></font><br>"
+banner_data+="👤 USUARIO : <font color=\"#ffffff\"><b>$display_user</b></font><br>"
+banner_data+="📅 VALIDO  : <font color=\"#ffffff\"><b>$formatted_date</b></font><br>"
 banner_data+="⏳ RESTAN  : $restan_html"
 banner_data+="</div>"
 
