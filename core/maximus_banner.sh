@@ -33,8 +33,7 @@ else
     fi
 fi
 
-# Ocultar el bloque HTML durante el inicio de sesión de PAM para evitar duplicados y código HTML crudo en terminales/logs de texto plano.
-if [ -z "$PAM_USER" ]; then
+# Banner HTML completo - se muestra siempre como Server Message en HTTP Custom
 cat << 'EOF'
 <div style="text-align: center; font-family: 'Courier New', Courier, monospace; background-color: #0b001a; color: #d8b4fe; padding: 10px; line-height: 1.15;">
 <font size="5" style="font-weight: bold; text-shadow: 0 0 8px #ffaa00;"><font color="#ffaa00">🏴‍☠️ 𝕃</font><font color="#ffffff">𝕖</font><font color="#ffaa00">𝕘</font><font color="#ffffff">𝕚</font><font color="#ffaa00">ó</font><font color="#ffffff">𝕟</font> <font color="#ff0055">𝔸ℕ𝕆ℕ𝕐𝕄𝕌𝕊</font> 🛠️</font><br>
@@ -58,7 +57,6 @@ cat << 'EOF'
 <font size="2" color="#ffaa00" style="font-weight: bold; text-shadow: 0 0 4px #ffaa00;">⚡ [JUANDE_MX] ⚡</font>
 </div>
 EOF
-fi
 
 echo ""
 echo -e "⚡ DETALLES DE SU SERVIDOR ⚡"

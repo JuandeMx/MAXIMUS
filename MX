@@ -1623,23 +1623,29 @@ menu_sistema() {
             1) sub_optimizacion ;;
             2)
                 echo -e "\n${YELLOW}▶ Abriendo editor para el Banner SSH (HTML)...${NC}"
-                sleep 0.5
+                echo -e "${WHITE}  Edita el contenido HTML entre las líneas 'cat << EOF' y 'EOF'${NC}"
+                echo -e "${WHITE}  Guarda con CTRL+O y sal con CTRL+X${NC}"
+                sleep 1
                 nano /etc/MaximusVpsMx/core/maximus_banner.sh
                 
                 # Extraer y actualizar banners estáticos para Dropbear y openSSH
                 if [ -f /etc/MaximusVpsMx/core/maximus_banner.sh ]; then
-                    echo -e "${YELLOW}▶ Actualizando banners estáticos (Dropbear y issue.net)...${NC}"
+                    echo -e "\n${YELLOW}▶ Extrayendo HTML y actualizando banners...${NC}"
                     local html_content
                     html_content=$(sed -n "/cat << 'EOF'/,/^EOF/p" /etc/MaximusVpsMx/core/maximus_banner.sh | sed '1d;$d')
                     mkdir -p /etc/dropbear
                     echo "$html_content" > /etc/dropbear/banner
                     echo "$html_content" > /etc/issue.net
+                    echo -e "${GREEN}  ✔ /etc/dropbear/banner actualizado${NC}"
+                    echo -e "${GREEN}  ✔ /etc/issue.net actualizado${NC}"
                 fi
                 
-                echo -e "${YELLOW}▶ Reiniciando servicio SSH para aplicar el banner...${NC}"
+                echo -e "${YELLOW}▶ Reiniciando servicios SSH y Dropbear...${NC}"
                 systemctl restart ssh 2>/dev/null || systemctl restart sshd 2>/dev/null
-                echo -e "${GREEN}✅ Banner SSH actualizado y SSH reiniciado.${NC}"
-                sleep 1.5
+                systemctl restart dropbear 2>/dev/null
+                echo -e "${GREEN}✅ Banner SSH actualizado. SSH y Dropbear reiniciados.${NC}"
+                sleep 1
+                ui_pause
                 ;;
             3)
                 echo -e "\n${YELLOW}▶ Generando Backup...${NC}"
@@ -1720,6 +1726,7 @@ menu_mantenimiento() {
                 if [ -f /etc/MaximusVpsMx/.master_node ]; then
                     echo -e "${CYAN}[MAESTRO] Descargando código fresco desde GitHub...${NC}"
                     URL_REPO="https://github.com/JuandeMx/MAXIMUS.git"
+                    cd /tmp
                     if git clone --depth=1 -q "$URL_REPO" "$TEMP_DIR"; then
                         echo -e "${GREEN}[OK] Descarga exitosa. Aplicando actualización rápida...${NC}"
                         
@@ -1805,6 +1812,7 @@ menu_mantenimiento() {
                     URL_REPO="https://github.com/JuandeMx/MAXIMUS.git"
                     TEMP_DIR="/tmp/MaximusVpsMx_temp"
                     rm -rf "$TEMP_DIR" 2>/dev/null
+                    cd /tmp
                     
                     echo -e "${CYAN}[MAESTRO] Descargando última versión de GitHub...${NC}"
                     if timeout 15 git clone -4 --depth=1 -q "$URL_REPO" "$TEMP_DIR"; then
