@@ -1,8 +1,8 @@
 #!/bin/bash
-# Script de compilación no interactivo para Dropbear con límite de banner de 16KB
-echo "=== Compilando Dropbear con límites de banner aumentados ==="
+# Script de compilación no interactivo para Dropbear con límite de banner de 16KB y soporte PAM
+echo "=== Compilando Dropbear con límites de banner aumentados y soporte PAM ==="
 DEBIAN_FRONTEND=noninteractive apt-get update -y >/dev/null 2>&1
-DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential zlib1g-dev wget bzip2 libcrypt-dev >/dev/null 2>&1
+DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential zlib1g-dev wget bzip2 libcrypt-dev libpam0g-dev >/dev/null 2>&1
 
 cd /tmp
 rm -rf dropbear-2022.83*
@@ -38,6 +38,13 @@ cat <<'LOCALOPT' > localoptions.h
 #undef DROPBEAR_DSS
 #define DROPBEAR_DSS 1
 
+/* Habilitar soporte PAM y deshabilitar PASSWORD directo */
+#undef DROPBEAR_SVR_PAM_AUTH
+#define DROPBEAR_SVR_PAM_AUTH 1
+
+#undef DROPBEAR_SVR_PASSWORD_AUTH
+#define DROPBEAR_SVR_PASSWORD_AUTH 0
+
 /* Aumentar límites de Banner para soportar HTML banners grandes */
 #undef MAX_BANNER_SIZE
 #define MAX_BANNER_SIZE 16384
@@ -52,8 +59,8 @@ LOCALOPT
 sed -i 's/#define MAX_BANNER_SIZE 2050/#define MAX_BANNER_SIZE 16384/g' sysoptions.h
 sed -i 's/#define MAX_BANNER_LINES 20/#define MAX_BANNER_LINES 100/g' sysoptions.h
 
-echo "▶ Ejecutando ./configure..."
-./configure >/dev/null 2>&1
+echo "▶ Ejecutando ./configure --enable-pam..."
+./configure --enable-pam >/dev/null 2>&1
 echo "▶ Ejecutando make..."
 make clean >/dev/null 2>&1
 if make PROGRAMS="dropbear dropbearkey" -j$(nproc) >/dev/null 2>&1; then
@@ -61,8 +68,18 @@ if make PROGRAMS="dropbear dropbearkey" -j$(nproc) >/dev/null 2>&1; then
     systemctl stop dropbear 2>/dev/null || true
     cp -f dropbear /usr/sbin/dropbear
     cp -f dropbearkey /usr/bin/dropbearkey
+    
+    # Crear configuración PAM para Dropbear si no existe
+    mkdir -p /etc/pam.d
+    cat <<'PAMEOF' >/etc/pam.d/dropbear
+@include common-auth
+@include common-account
+@include common-session
+session optional pam_exec.so stdout /etc/MaximusVpsMx/core/maximus_banner.sh
+PAMEOF
+
     systemctl restart dropbear
-    echo "✅ DROPBEAR RECOMPILADO CON ÉXITO Y REINICIADO."
+    echo "✅ DROPBEAR RECOMPILADO CON ÉXITO Y REINICIADO (Soporte PAM activo)."
 else
     echo "❌ ERROR AL COMPILAR DROPBEAR."
 fi

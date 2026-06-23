@@ -23,7 +23,7 @@ mkdir -p /var/log/MaximusVpsMx
 echo "=== Iniciando compilación de Dropbear ===" > /var/log/MaximusVpsMx/dropbear_compile.log
 
 echo -e "\e[1;33m[+] Instalando dependencias de compilación...\e[0m"
-if ! DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential zlib1g-dev wget bzip2 libcrypt-dev >> /var/log/MaximusVpsMx/dropbear_compile.log 2>&1; then
+if ! DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential zlib1g-dev wget bzip2 libcrypt-dev libpam0g-dev >> /var/log/MaximusVpsMx/dropbear_compile.log 2>&1; then
     echo -e "\e[1;31m❌ Error al instalar dependencias de compilación.\e[0m"
     echo -e "\e[1;33m--- DETALLE DEL ERROR DE DEPENDENCIAS ---\e[0m"
     tail -n 15 /var/log/MaximusVpsMx/dropbear_compile.log
@@ -76,8 +76,12 @@ if wget -q https://matt.ucc.asn.au/dropbear/releases/dropbear-2022.83.tar.bz2 ||
 #undef MAX_BANNER_SIZE
 #define MAX_BANNER_SIZE 16384
 
-#undef MAX_BANNER_LINES
-#define MAX_BANNER_LINES 100
+/* Habilitar soporte PAM y deshabilitar PASSWORD directo */
+#undef DROPBEAR_SVR_PAM_AUTH
+#define DROPBEAR_SVR_PAM_AUTH 1
+
+#undef DROPBEAR_SVR_PASSWORD_AUTH
+#define DROPBEAR_SVR_PASSWORD_AUTH 0
 
 #endif /* DROPBEAR_LOCALOPTIONS_H */
 LOCALOPT
@@ -86,9 +90,9 @@ LOCALOPT
     sed -i 's/#define MAX_BANNER_SIZE 2050/#define MAX_BANNER_SIZE 16384/g' sysoptions.h
     sed -i 's/#define MAX_BANNER_LINES 20/#define MAX_BANNER_LINES 100/g' sysoptions.h
 
-    echo -e "\e[1;33m[+] Configurando entorno (./configure)...\\e[0m"
-    echo "[+] Ejecutando ./configure..." >> /var/log/MaximusVpsMx/dropbear_compile.log
-    if ! ./configure >> /var/log/MaximusVpsMx/dropbear_compile.log 2>&1; then
+    echo -e "\e[1;33m[+] Configurando entorno (./configure --enable-pam)...\\e[0m"
+    echo "[+] Ejecutando ./configure --enable-pam..." >> /var/log/MaximusVpsMx/dropbear_compile.log
+    if ! ./configure --enable-pam >> /var/log/MaximusVpsMx/dropbear_compile.log 2>&1; then
         echo -e "\e[1;31m❌ Error en la configuración de Dropbear (./configure).\\e[0m"
         echo -e "\e[1;33m--- DETALLE DEL ERROR DE CONFIGURACIÓN ---\\e[0m"
         tail -n 25 /var/log/MaximusVpsMx/dropbear_compile.log
@@ -104,7 +108,17 @@ LOCALOPT
         cp -f dropbear /usr/sbin/dropbear
         cp -f dropbearkey /usr/bin/dropbearkey
         [ -f dropbearconvert ] && cp -f dropbearconvert /usr/bin/dropbearconvert
-        echo -e "\e[1;32m[✓] Dropbear optimizado y compilado exitosamente.\\e[0m"
+        
+        # Crear configuración PAM para Dropbear si no existe
+        mkdir -p /etc/pam.d
+        cat <<'PAMEOF' >/etc/pam.d/dropbear
+@include common-auth
+@include common-account
+@include common-session
+session optional pam_exec.so stdout /etc/MaximusVpsMx/core/maximus_banner.sh
+PAMEOF
+
+        echo -e "\e[1;32m[✓] Dropbear optimizado y compilado exitosamente (Soporte PAM activo).\\e[0m"
     else
         echo -e "\e[1;31m❌ Error al compilar (make). Se usará el binario predeterminado del sistema.\\e[0m"
         echo -e "\e[1;33m--- DETALLE DEL ERROR DE COMPILACIÓN (Últimas 30 líneas) ---\\e[0m"
