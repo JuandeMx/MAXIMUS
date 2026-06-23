@@ -33,32 +33,9 @@ else
     fi
 fi
 
-# El banner visual ahora se sirve desde /etc/dropbear/banner (pre-auth)
-# Aquí solo enviamos los datos de la cuenta del usuario (ligero, sin HTML)
-# El bloque de abajo sirve para que el menú de Maximus lo extraiga a /etc/dropbear/banner
+# El banner estático pre-auth se deja vacío para evitar duplicidad y que todo salga en una sola tarjeta al conectar
 if [ -z "$PAM_USER" ]; then
 cat << 'EOF'
-<div style="text-align: center; font-family: 'Courier New', Courier, monospace; background-color: #0b001a; color: #d8b4fe; padding: 10px; line-height: 1.15;">
-<font size="5" style="font-weight: bold; text-shadow: 0 0 8px #ffaa00;"><font color="#ffaa00">🏴‍☠️ 𝕃</font><font color="#ffffff">𝕖</font><font color="#ffaa00">𝕘</font><font color="#ffffff">𝕚</font><font color="#ffaa00">ó</font><font color="#ffffff">𝕟</font> <font color="#ff0055">𝔸ℕ𝕆ℕ𝕐𝕄𝕌𝕊</font> 🛠️</font><br>
-<span style="color: #ff0055; background-color: #1a0033; padding: 1px 5px; font-weight: bold; border: 1px solid #ffaa00; font-size: 0.85em; text-shadow: 0 0 5px #ff0055;">🥷 [ AMATERAZU & TEAM ELYSA YAYLOR ] 🥷</span><br>
-<font size="3" color="#ffaa00" style="text-shadow: 0 0 4px #ffaa00; font-weight: bold;">(⪧ • ⩊ • ⪦)∫</font><br>
-<font size="3" color="#ff0055" style="text-shadow: 0 0 6px #ff0055;">🔥 ─── ⚡ 𝔅ℑ𝔈𝔑𝔙𝔈𝔑ℑ𝔇𝔒𝔖 ⚡ ─── 🔥</font><br>
-<font size="2"><span style="color: #ffaa00; font-weight: bold; text-shadow: 0 0 3px #ffaa00;">♛ ANONYMUS ♛</span> • <span style="color: #00ffff; text-shadow: 0 0 3px #00ffff;">♜ 𝘀𝘀𝗵_𝘀𝗲𝗿𝘃𝗲𝗿𝘀 ♜</span> • <span style="color: #9d4edd;">♞ 𝗢𝗡𝗟𝗜𝗡𝗘_𝗚𝗔𝗠𝗘𝗦 ♞</span> • <span style="color: #00ff00; text-shadow: 0 0 3px #00ff00;">♟ 𝗣𝗥𝗘𝗠𝗜𝗨𝗠 ♟</span></font><br><br>
-<span style="color: #0b001a; background-color: #ffaa00; padding: 5px 10px; font-weight: bold; font-size: 1em; box-shadow: 0 0 10px #ffaa00; border-radius: 3px;">♗ [ 𝙋𝘼𝙍𝘼 𝙏𝙊𝘿𝙊𝙎 𝙎𝙄𝙉 𝘾𝙊𝙎𝙏𝙊 ] ♗</span><br><br>
-
-<font size="3" color="#00ff00" style="font-weight: bold; text-shadow: 0 0 6px #00ff00;">🤝 ⚡ ALIANZA OFICIAL ⚡ 🤝</font><br>
-<font size="2" color="#ffffff" style="font-weight: bold;">Legión ANONYMUS & FreeLatam</font><br><br>
-
-<font size="2" color="#ffaa00" style="text-shadow: 0 0 3px #ffaa00;">▼ LEGIÓN ANONYMUS ▼</font><br>
-<a href="https://chat.whatsapp.com/L05wZezLROk2QIqubI0OXg" style="color: #ffaa00; font-weight: bold; text-decoration: none; text-shadow: 0 0 4px #ffaa00; font-size: 0.85em;">https://chat.whatsapp.com/L05wZezLROk2QIqubI0OXg</a><br><br>
-
-<font size="2" color="#00ffff" style="text-shadow: 0 0 3px #00ffff;">▼ GRUPO OFICIAL FREELATAM ▼</font><br>
-<a href="https://chat.whatsapp.com/HLv74cLJzaiEDBieLIBllc" style="color: #00ff00; font-weight: bold; text-decoration: none; text-shadow: 0 0 4px #00ff00; font-size: 0.85em;">https://chat.whatsapp.com/HLv74cLJzaiEDBieLIBllc</a><br><br>
-
-<font size="3" color="#ff0055" style="font-weight: bold; text-shadow: 0 0 6px #ff0055;">♖ MAXIMUS VPS ♖</font><br>
-<font size="2" color="#ffffff"><i>"¡SI TE VENDIERON ESTE SERVIDOR ERES UN PENDEJO!"</i></font><br>
-<font size="2" color="#ffaa00" style="font-weight: bold; text-shadow: 0 0 4px #ffaa00;">⚡ [JUANDE_MX] ⚡</font>
-</div>
 EOF
 fi
 
@@ -78,9 +55,11 @@ banner_data="<div style=\"text-align: center; font-family: 'Courier New', Courie
 banner_data+="<font size=\"4\" color=\"#ffaa00\"><b>🏴‍☠️ 𝕃𝕖𝕘𝕚ó𝕟 𝔸ℕ𝕆ℕ𝕐𝕄𝕌𝕊 🛠️</b></font><br>"
 banner_data+="<font size=\"2\" color=\"#ff0055\"><b>[ AMATERAZU & TEAM ELYSA YAYLOR ]</b></font><br>"
 banner_data+="<font size=\"2\" color=\"#00ff00\"><b>🤝 ALIANZA OFICIAL 🤝</b></font><br>"
-banner_data+="<font size=\"2\" color=\"#ffffff\">Legión ANONYMUS & FreeLatam</font><br>"
-banner_data+="<font size=\"2\" color=\"#ffaa00\">▼ GRUPO OFICIAL ▼</font><br>"
-banner_data+="<a href=\"https://chat.whatsapp.com/L05wZezLROk2QIqubI0OXg\" style=\"color: #00ffff; font-size: 0.85em; text-decoration: none;\">https://chat.whatsapp.com/L05wZezLROk2QIqubI0OXg</a><br>"
+banner_data+="<font size=\"2\" color=\"#ffffff\">Legión ANONYMUS & FreeLatam</font><br><br>"
+banner_data+="<font size=\"2\" color=\"#ffaa00\">▼ LEGIÓN ANONYMUS ▼</font><br>"
+banner_data+="<a href=\"https://chat.whatsapp.com/L05wZezLROk2QIqubI0OXg\" style=\"color: #00ffff; font-size: 0.85em; text-decoration: none;\">https://chat.whatsapp.com/L05wZezLROk2QIqubI0OXg</a><br><br>"
+banner_data+="<font size=\"2\" color=\"#00ffff\">▼ GRUPO OFICIAL FREELATAM ▼</font><br>"
+banner_data+="<a href=\"https://chat.whatsapp.com/HLv74cLJzaiEDBieLIBllc\" style=\"color: #00ff00; font-size: 0.85em; text-decoration: none;\">https://chat.whatsapp.com/HLv74cLJzaiEDBieLIBllc</a><br>"
 banner_data+="<font color=\"#ffaa00\"><b>───────────────────────</b></font><br>"
 banner_data+="<font size=\"3\" color=\"#00ffff\"><b>📊 DETALLES DE CUENTA 📊</b></font><br>"
 banner_data+="👤 USUARIO : <font color=\"#ffffff\"><b>$display_user</b></font><br>"
