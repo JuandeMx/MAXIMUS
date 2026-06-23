@@ -22,10 +22,17 @@ echo -e "\e[1;33m[+] Compilando Dropbear desde código fuente con algoritmos her
 mkdir -p /var/log/MaximusVpsMx
 echo "=== Iniciando compilación de Dropbear ===" > /var/log/MaximusVpsMx/dropbear_compile.log
 
-DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential zlib1g-dev wget bzip2 libcrypt-dev libxcrypt-dev >> /var/log/MaximusVpsMx/dropbear_compile.log 2>&1
+echo -e "\e[1;33m[+] Instalando dependencias de compilación...\e[0m"
+if ! DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential zlib1g-dev wget bzip2 libcrypt-dev libxcrypt-dev >> /var/log/MaximusVpsMx/dropbear_compile.log 2>&1; then
+    echo -e "\e[1;31m❌ Error al instalar dependencias de compilación.\e[0m"
+    echo -e "\e[1;33m--- DETALLE DEL ERROR DE DEPENDENCIAS ---\e[0m"
+    tail -n 15 /var/log/MaximusVpsMx/dropbear_compile.log
+    exit 1
+fi
 
 cd /tmp
 rm -rf dropbear-2025.89*
+echo -e "\e[1;33m[+] Descargando código fuente de Dropbear 2025.89...\e[0m"
 if wget -q https://matt.ucc.asn.au/dropbear/releases/dropbear-2025.89.tar.bz2 || wget -q https://dropbear.nl/mirror/releases/dropbear-2025.89.tar.bz2; then
     tar -xf dropbear-2025.89.tar.bz2 >> /var/log/MaximusVpsMx/dropbear_compile.log 2>&1
     cd dropbear-2025.89
@@ -45,9 +52,17 @@ if wget -q https://matt.ucc.asn.au/dropbear/releases/dropbear-2025.89.tar.bz2 ||
 #define DROPBEAR_RSA_SHA1 1
 EOF
 
+    echo -e "\e[1;33m[+] Configurando entorno (./configure)...\e[0m"
     echo "[+] Ejecutando ./configure..." >> /var/log/MaximusVpsMx/dropbear_compile.log
-    ./configure >> /var/log/MaximusVpsMx/dropbear_compile.log 2>&1
+    if ! ./configure >> /var/log/MaximusVpsMx/dropbear_compile.log 2>&1; then
+        echo -e "\e[1;31m❌ Error en la configuración de Dropbear (./configure).\e[0m"
+        echo -e "\e[1;33m--- DETALLE DEL ERROR DE CONFIGURACIÓN ---\e[0m"
+        tail -n 25 /var/log/MaximusVpsMx/dropbear_compile.log
+        cd /tmp
+        exit 1
+    fi
     
+    echo -e "\e[1;33m[+] Compilando binarios (make)...\e[0m"
     echo "[+] Ejecutando make..." >> /var/log/MaximusVpsMx/dropbear_compile.log
     if make -j$(nproc) >> /var/log/MaximusVpsMx/dropbear_compile.log 2>&1; then
         systemctl stop dropbear.socket 2>/dev/null || true
@@ -57,14 +72,18 @@ EOF
         cp -f dropbearconvert /usr/bin/dropbearconvert
         echo -e "\e[1;32m[✓] Dropbear optimizado y compilado exitosamente.\e[0m"
     else
-        echo -e "\e[1;31m❌ Error al compilar. Se usará el binario predeterminado del sistema.\e[0m"
-        echo -e "\e[1;33m--- DETALLE DEL ERROR DE COMPILACIÓN (Últimas 20 líneas) ---\e[0m"
-        tail -n 20 /var/log/MaximusVpsMx/dropbear_compile.log
+        echo -e "\e[1;31m❌ Error al compilar (make). Se usará el binario predeterminado del sistema.\e[0m"
+        echo -e "\e[1;33m--- DETALLE DEL ERROR DE COMPILACIÓN ---\e[0m"
+        tail -n 25 /var/log/MaximusVpsMx/dropbear_compile.log
+        cd /tmp
+        exit 1
     fi
 else
     echo -e "\e[1;31m❌ No se pudo descargar el código fuente. Se usará el binario predeterminado del sistema.\e[0m"
+    exit 1
 fi
 cd /tmp
+
 
 
 
