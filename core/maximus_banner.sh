@@ -62,22 +62,24 @@ cat << 'EOF'
 EOF
 fi
 
-# Combinar todos los detalles en un único bloque de texto para enviarlo en un solo paquete SSH
-banner_data="DETALLES DE SU SERVIDOR\n"
-banner_data+="USUARIO : $display_user\n"
-
+# Combinar todos los detalles en un único bloque de texto HTML para enviarlo en un solo paquete SSH compatible
 if [ -n "$exp_date" ]; then
     today=$(date +%s)
     exp=$(date -d "$exp_date" +%s 2>/dev/null)
     days_left=$(( (exp - today) / 86400 ))
     formatted_date=$(date -d "$exp_date" "+%b %d, %Y" 2>/dev/null)
-    
-    banner_data+="VALIDO  : $formatted_date\n"
-    banner_data+="RESTAN  : $days_left DIAS"
+    restan_html="<font color=\"#00ff00\"><b>$days_left DIAS</b></font>"
 else
-    banner_data+="VALIDO  : Ilimitado\n"
-    banner_data+="RESTAN  : Ilimitados"
+    formatted_date="Ilimitado"
+    restan_html="<font color=\"#00ffff\"><b>Ilimitados</b></font>"
 fi
+
+banner_data="<div style=\"text-align: center; font-family: 'Courier New', Courier, monospace; background-color: #0b001a; color: #d8b4fe; padding: 8px; border-top: 1px dashed #ffaa00; font-size: 0.9em; line-height: 1.35;\">"
+banner_data+="<font color=\"#ffaa00\"><b>📊 DETALLES DE CUENTA 📊</b></font><br>"
+banner_data+="👤 USUARIO : <font color=\"#ffffff\">$display_user</font><br>"
+banner_data+="📅 VALIDO  : <font color=\"#ffffff\">$formatted_date</font><br>"
+banner_data+="⏳ RESTAN  : $restan_html"
+banner_data+="</div>"
 
 echo -e "$banner_data"
 
