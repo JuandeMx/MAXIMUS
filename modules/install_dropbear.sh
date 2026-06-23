@@ -19,12 +19,15 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y dropbear 2>/dev/null
 
 # Compilar Dropbear con soporte para algoritmos antiguos (compatibilidad con HTTP Custom)
 echo -e "\e[1;33m[+] Compilando Dropbear desde código fuente con algoritmos heredados (KEX, Ciphers)...\e[0m"
-DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential zlib1g-dev wget bzip2 >/dev/null 2>&1
+mkdir -p /var/log/MaximusVpsMx
+echo "=== Iniciando compilación de Dropbear ===" > /var/log/MaximusVpsMx/dropbear_compile.log
+
+DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential zlib1g-dev wget bzip2 >> /var/log/MaximusVpsMx/dropbear_compile.log 2>&1
 
 cd /tmp
 rm -rf dropbear-2025.89*
 if wget -q https://matt.ucc.asn.au/dropbear/releases/dropbear-2025.89.tar.bz2 || wget -q https://dropbear.nl/mirror/releases/dropbear-2025.89.tar.bz2; then
-    tar -xf dropbear-2025.89.tar.bz2
+    tar -xf dropbear-2025.89.tar.bz2 >> /var/log/MaximusVpsMx/dropbear_compile.log 2>&1
     cd dropbear-2025.89
     
     # Escribir localoptions.h para habilitar todos los algoritmos antiguos
@@ -43,8 +46,11 @@ if wget -q https://matt.ucc.asn.au/dropbear/releases/dropbear-2025.89.tar.bz2 ||
 #define DROPBEAR_RSA_SHA1 1
 EOF
 
-    ./configure >/dev/null 2>&1
-    if make -j$(nproc) >/dev/null 2>&1; then
+    echo "[+] Ejecutando ./configure..." >> /var/log/MaximusVpsMx/dropbear_compile.log
+    ./configure >> /var/log/MaximusVpsMx/dropbear_compile.log 2>&1
+    
+    echo "[+] Ejecutando make..." >> /var/log/MaximusVpsMx/dropbear_compile.log
+    if make -j$(nproc) >> /var/log/MaximusVpsMx/dropbear_compile.log 2>&1; then
         systemctl stop dropbear.socket 2>/dev/null || true
         systemctl stop dropbear 2>/dev/null || true
         cp -f dropbear /usr/sbin/dropbear
@@ -53,11 +59,14 @@ EOF
         echo -e "\e[1;32m[✓] Dropbear optimizado y compilado exitosamente.\e[0m"
     else
         echo -e "\e[1;31m❌ Error al compilar. Se usará el binario predeterminado del sistema.\e[0m"
+        echo -e "\e[1;33m--- DETALLE DEL ERROR DE COMPILACIÓN (Últimas 20 líneas) ---\e[0m"
+        tail -n 20 /var/log/MaximusVpsMx/dropbear_compile.log
     fi
 else
     echo -e "\e[1;31m❌ No se pudo descargar el código fuente. Se usará el binario predeterminado del sistema.\e[0m"
 fi
 cd /tmp
+
 
 
 
