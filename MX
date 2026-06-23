@@ -262,7 +262,7 @@ get_telemetry() {
                 fi
             # Es fecha estándar YYYY-MM-DD
             elif [[ "$d_exp" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
-                if [[ "$d_exp" >= "$fecha_actual_ymd" ]]; then
+                if ! [[ "$d_exp" < "$fecha_actual_ymd" ]]; then
                     ACTIVA=$((ACTIVA+1))
                 else
                     EXPIRADA=$((EXPIRADA+1))
