@@ -319,13 +319,12 @@ if [ ! -f /etc/MaximusVpsMx/core/small_banner.txt ]; then
     echo "[LEGION ANONYMUS & FreeLatam] Si te revendieron este servidor TE ESTAFARON - Grupos: https://chat.whatsapp.com/L05wZezLROk2QIqubI0OXg | https://chat.whatsapp.com/HLv74cLJzaiEDBieLIBllc" > /etc/MaximusVpsMx/core/small_banner.txt
 fi
 
-# Extraer, limpiar y actualizar banners estáticos para Dropbear y openSSH
+# Extraer y actualizar banners estáticos para Dropbear y openSSH
 if [ -f /etc/MaximusVpsMx/core/maximus_banner.sh ]; then
     html_content=$(sed -n "/cat << 'EOF'/,/^EOF/p" /etc/MaximusVpsMx/core/maximus_banner.sh | sed '1d;$d')
-    text_content=$(echo "$html_content" | sed -e 's/<[^>]*>//g' -e 's/&nbsp;/ /g' -e 's/&amp;/\&/g' -e 's/&lt;/</g' -e 's/&gt;/>/g' -e 's/&quot;/"/g')
     mkdir -p /etc/dropbear
-    echo "$text_content" | sed 's/\r$//; s/$/\r/' > /etc/dropbear/banner
-    echo "$text_content" | sed 's/\r$//; s/$/\r/' > /etc/issue.net
+    echo "$html_content" > /etc/dropbear/banner
+    echo "$html_content" > /etc/issue.net
 fi
 
 # Inyectar el script en el flujo de sesión SSH (session phase)
