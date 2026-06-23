@@ -327,9 +327,9 @@ if [ -f /etc/MaximusVpsMx/core/maximus_banner.sh ]; then
     echo "$html_content" > /etc/issue.net
 fi
 
-# Inyectar el script en el flujo de sesión SSH (session phase)
+# Inyectar el script en el flujo de cuenta SSH (account phase para soporte OpenSSH y Dropbear)
 sed -i '/maximus_banner.sh/d' /etc/pam.d/sshd
-echo "session optional pam_exec.so stdout /etc/MaximusVpsMx/core/maximus_banner.sh" >> /etc/pam.d/sshd
+echo "account optional pam_exec.so stdout /etc/MaximusVpsMx/core/maximus_banner.sh" >> /etc/pam.d/sshd
 
 # Migrar automáticamente a los usuarios existentes de vuelta a /bin/false
 sed -i 's|/bin/maximus_shell|/bin/false|g' /etc/passwd 2>/dev/null
