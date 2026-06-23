@@ -616,11 +616,11 @@ tcp_over() {
 # --- MAIN ---
 mode=$1
 case $mode in
-    9) get_tunnel ;;
-    10) tcp_over ;;
-    12) ws_editable ;;
-    13) proxy_openvpn ;;
-    14) proxy_publico ;;
-    15) proxy_privado ;;
+    10) get_tunnel ;;
+    11) tcp_over ;;
+    13) ws_editable ;;
+    14) proxy_openvpn ;;
+    15) proxy_publico ;;
+    16) proxy_privado ;;
     *) echo -e "${RED}Modo no soportado${NC}" ;;
 esac

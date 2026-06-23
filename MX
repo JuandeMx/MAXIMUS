@@ -1212,25 +1212,22 @@ menu_protocolos() {
         echo -e "  ${CYAN}[1] >${WHITE} BADVPN --------------------------- $st_badvpn"
         echo -e "  ${CYAN}[2] >${WHITE} DROPBEAR ------------------------- $st_dropbear"
         echo -e "  ${CYAN}[3] >${WHITE} SSL ------------------------------ $st_ssl"
-        echo -e "  ${CYAN}[4] >${WHITE} SQUID ---------------------------- $st_squid"
-        echo -e "  ${CYAN}[5] >${WHITE} OPENVPN -------------------------- $st_openvpn"
-        echo -e "  ${CYAN}[6] >${WHITE} SHADOWSOCK NORMAL ---------------- $st_ssnorm"
-        echo -e "  ${CYAN}[7] >${WHITE} SHADOWSOCK LIV + OBFS ------------ $st_sslibev"
-        echo -e "  ${CYAN}[8] >${WHITE} SLOWDNS -------------------------- $st_slowdns"
-        echo -e "  ${CYAN}[9] >${WHITE} GETTUNEL ------------------------- $st_get"
-        echo -e "  ${CYAN}[10] >${WHITE} TCP-OVER ------------------------ $st_tcp"
-        echo -e "  ${CYAN}[11] >${WHITE} SSLH ---------------------------- $st_sslh"
+        echo -e "  ${CYAN}[4] >${WHITE} SSL + PYTHON --------------------- $st_sslpy"
+        echo -e "  ${CYAN}[5] >${WHITE} SQUID ---------------------------- $st_squid"
+        echo -e "  ${CYAN}[6] >${WHITE} OPENVPN -------------------------- $st_openvpn"
+        echo -e "  ${CYAN}[7] >${WHITE} SHADOWSOCK NORMAL ---------------- $st_ssnorm"
+        echo -e "  ${CYAN}[8] >${WHITE} SHADOWSOCK LIV + OBFS ------------ $st_sslibev"
+        echo -e "  ${CYAN}[9] >${WHITE} SLOWDNS -------------------------- $st_slowdns"
+        echo -e "  ${CYAN}[10] >${WHITE} GETTUNEL ------------------------- $st_get"
+        echo -e "  ${CYAN}[11] >${WHITE} TCP-OVER ------------------------ $st_tcp"
+        echo -e "  ${CYAN}[12] >${WHITE} SSLH ---------------------------- $st_sslh"
         ui_subhr
         echo -e "                            PROXY'S"
         ui_subhr
-        echo -e "  ${CYAN}[12] >${WHITE} WEBSOKET STATUS EDITABLE -------- $st_ws"
-        echo -e "  ${CYAN}[13] >${WHITE} PROXY OPENVPN ------------------- $st_popen"
-        echo -e "  ${CYAN}[14] >${WHITE} PROXY PUBLICO ------------------- $st_ppub"
-        echo -e "  ${CYAN}[15] >${WHITE} PROXY PRIVADO ------------------- $st_ppriv"
-        ui_subhr
-        echo -e "                        COMBINACIONES"
-        ui_subhr
-        echo -e "  ${CYAN}[16] >${WHITE} SSL + PYTHON (COMBO) ------------ $st_sslpy"
+        echo -e "  ${CYAN}[13] >${WHITE} WEBSOKET STATUS EDITABLE -------- $st_ws"
+        echo -e "  ${CYAN}[14] >${WHITE} PROXY OPENVPN ------------------- $st_popen"
+        echo -e "  ${CYAN}[15] >${WHITE} PROXY PUBLICO ------------------- $st_ppub"
+        echo -e "  ${CYAN}[16] >${WHITE} PROXY PRIVADO ------------------- $st_ppriv"
         ui_hr
         echo -e "  ${WHITE}[0] VOLVER AL MENÚ PRINCIPAL${NC}"
         ui_hr
@@ -1240,19 +1237,19 @@ menu_protocolos() {
             1) bash /etc/MaximusVpsMx/modules/mx-badvpn.sh ;;
             2) bash /etc/MaximusVpsMx/modules/mx-dropbear.sh ;;
             3) bash /etc/MaximusVpsMx/modules/mx-stunnel.sh ;;
-            4) bash /etc/MaximusVpsMx/modules/mx-squid.sh ;;
-            5) bash /etc/MaximusVpsMx/modules/mx-openvpn.sh ;;
-            6) bash /etc/MaximusVpsMx/modules/mx-shadowsocks.sh 1 ;;
-            7) bash /etc/MaximusVpsMx/modules/mx-shadowsocks.sh 2 ;;
-            8) bash /etc/MaximusVpsMx/modules/SlowDNS.sh ;;
-            9) bash /etc/MaximusVpsMx/modules/mx-proxies.sh 9 ;;
+            4) bash /etc/MaximusVpsMx/modules/mx-ssl-python.sh ;;
+            5) bash /etc/MaximusVpsMx/modules/mx-squid.sh ;;
+            6) bash /etc/MaximusVpsMx/modules/mx-openvpn.sh ;;
+            7) bash /etc/MaximusVpsMx/modules/mx-shadowsocks.sh 1 ;;
+            8) bash /etc/MaximusVpsMx/modules/mx-shadowsocks.sh 2 ;;
+            9) bash /etc/MaximusVpsMx/modules/SlowDNS.sh ;;
             10) bash /etc/MaximusVpsMx/modules/mx-proxies.sh 10 ;;
-            11) bash /etc/MaximusVpsMx/modules/mx-sslh.sh ;;
-            12) bash /etc/MaximusVpsMx/modules/mx-proxies.sh 12 ;;
+            11) bash /etc/MaximusVpsMx/modules/mx-proxies.sh 11 ;;
+            12) bash /etc/MaximusVpsMx/modules/mx-sslh.sh ;;
             13) bash /etc/MaximusVpsMx/modules/mx-proxies.sh 13 ;;
             14) bash /etc/MaximusVpsMx/modules/mx-proxies.sh 14 ;;
             15) bash /etc/MaximusVpsMx/modules/mx-proxies.sh 15 ;;
-            16) bash /etc/MaximusVpsMx/modules/mx-ssl-python.sh ;;
+            16) bash /etc/MaximusVpsMx/modules/mx-proxies.sh 16 ;;
             0) return ;;
             *) continue ;;
         esac
