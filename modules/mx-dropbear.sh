@@ -128,6 +128,13 @@ activar_dropbear() {
 #undef DROPBEAR_DSS
 #define DROPBEAR_DSS 1
 
+/* Aumentar límites de Banner para soportar HTML banners grandes */
+#undef MAX_BANNER_SIZE
+#define MAX_BANNER_SIZE 16384
+
+#undef MAX_BANNER_LINES
+#define MAX_BANNER_LINES 100
+
 #endif /* DROPBEAR_LOCALOPTIONS_H */
 LOCALOPT
 
