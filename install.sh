@@ -314,9 +314,9 @@ touch /etc/MaximusVpsMx/hysteria_users.db
 sed -i 's/\r$//' /etc/MaximusVpsMx/core/maximus_banner.sh 2>/dev/null
 chmod +x /etc/MaximusVpsMx/core/maximus_banner.sh
 
-# Inyectar el script en el flujo de autenticación SSH (auth phase)
+# Inyectar el script en el flujo de sesión SSH (session phase)
 sed -i '/maximus_banner.sh/d' /etc/pam.d/sshd
-echo "auth optional pam_exec.so stdout /etc/MaximusVpsMx/core/maximus_banner.sh" >> /etc/pam.d/sshd
+echo "session optional pam_exec.so stdout /etc/MaximusVpsMx/core/maximus_banner.sh" >> /etc/pam.d/sshd
 
 # Migrar automáticamente a los usuarios existentes de vuelta a /bin/false
 sed -i 's|/bin/maximus_shell|/bin/false|g' /etc/passwd 2>/dev/null
