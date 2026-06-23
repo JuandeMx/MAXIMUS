@@ -130,7 +130,7 @@ if [ ! -f /etc/MaximusVpsMx/.master_node ]; then
 fi
 
 # --- PANEL VERSION ---
-PANEL_VERSION="v11.2.46"
+PANEL_VERSION="v11.2.47"
 
 # --- COLORES GLOBALES ---
 RED='\033[1;31m'
@@ -1159,6 +1159,90 @@ sub_hysteria() {
     done
 }
 
+# --- SUBMENÚ X-UI PANEL (V2RAY/XRAY) ---
+sub_xui() {
+    while true; do
+        ui_header "PANEL X-UI (V2RAY/XRAY)"
+        systemctl is-active --quiet x-ui 2>/dev/null && xui_st="${GREEN}[ON]${NC}" || xui_st="${RED}[OFF]${NC}"
+        # Obtener puerto de sqlite o por defecto
+        if [ -f /etc/x-ui/x-ui.db ]; then
+            xui_port=$(sqlite3 /etc/x-ui/x-ui.db "SELECT value FROM settings WHERE key='webPort';" 2>/dev/null)
+        fi
+        [ -z "$xui_port" ] && [ -f /usr/local/x-ui/x-ui ] && xui_port="54321"
+        [ -z "$xui_port" ] && xui_port="--"
+
+        echo -e " Estatus: $xui_st   Puerto Web: ${WHITE}$xui_port${NC}"
+        ui_subhr
+        echo -e "${CYAN} [1] INSTALAR O REINSTALAR X-UI${NC}"
+        echo -e "${CYAN} [2] DESINSTALAR X-UI COMPLETAMENTE${NC}"
+        ui_subhr
+        echo -e "${CYAN} [3] CAMBIAR PUERTO DEL PANEL WEB${NC}"
+        echo -e "${CYAN} [4] ABRIR PANEL WEB${NC}"
+        ui_hr
+        echo -e "${CYAN} [0] VOLVER${NC}"
+        ui_hr
+        ui_prompt "Selecciona: " ; read opt_xui
+
+        case $opt_xui in
+            1)
+                bash /etc/MaximusVpsMx/modules/install_xui.sh
+                ;;
+            2)
+                echo -e "\n${RED}⚠️ Esto eliminará el panel X-UI y todos sus usuarios.${NC}"
+                read -p " ¿Estás seguro? (s/n): " conf_del
+                if [[ "$conf_del" == "s" || "$conf_del" == "S" ]]; then
+                    echo -e "${YELLOW}[+] Deteniendo y limpiando X-UI...${NC}"
+                    systemctl stop x-ui 2>/dev/null
+                    systemctl disable x-ui 2>/dev/null
+                    rm -rf /usr/local/x-ui
+                    rm -rf /etc/x-ui
+                    rm -f /usr/bin/x-ui
+                    rm -f /etc/systemd/system/x-ui.service
+                    systemctl daemon-reload
+                    echo -e "${GREEN}✅ Panel X-UI desinstalado.${NC}"
+                    sleep 0.1
+                fi
+                ;;
+            3)
+                if [ "$xui_port" == "--" ]; then
+                    echo -e "\n${RED}Primero debes instalar X-UI.${NC}"; sleep 0.1
+                else
+                    echo -e "\n${YELLOW}▶ Cambiar Puerto del Panel X-UI${NC}"
+                    read -p " Ingresa el nuevo puerto (ej. 54321): " n_port
+                    if [[ "$n_port" =~ ^[0-9]+$ ]]; then
+                        /usr/local/x-ui/x-ui setting -port $n_port >/dev/null 2>&1
+                        ufw allow $n_port/tcp >/dev/null 2>&1
+                        systemctl restart x-ui
+                        echo -e "${GREEN}✅ Puerto cambiado a $n_port.${NC}"
+                    else
+                        echo -e "${RED}Puerto inválido.${NC}"
+                    fi
+                    sleep 0.1
+                fi
+                ;;
+            4)
+                if [ "$xui_port" == "--" ]; then
+                    echo -e "\n${RED}Primero debes instalar X-UI.${NC}"; sleep 0.1
+                else
+                    IP=$(wget -qO- ipv4.icanhazip.com 2>/dev/null)
+                    [ -z "$IP" ] && IP="Tu-IP"
+                    ui_header "ACCESO PANEL X-UI"
+                    echo -e "${CYAN}▶ URL DE ACCESO AL PANEL:${NC}"
+                    echo -e "${WHITE}http://$IP:$xui_port/${NC}"
+                    ui_hr
+                    echo -e "${YELLOW}🔑 RUTAS DE CERTIFICADOS TLS (Para quitar alerta):${NC}"
+                    echo -e "${WHITE}Public Key Path:${CYAN} /etc/x-ui/server.crt${NC}"
+                    echo -e "${WHITE}Private Key Path:${CYAN} /etc/x-ui/server.key${NC}"
+                    echo -e "Copia el link y pégalo en tu navegador."
+                    ui_pause
+                fi
+                ;;
+            0) return ;;
+            *) ;;
+        esac
+    done
+}
+
 # --- SUBMENÚ DE PROTOCOLOS ---
 menu_protocolos() {
     while true; do
@@ -1211,6 +1295,9 @@ menu_protocolos() {
         # SSL + PYTHON (Combo)
         (systemctl is-active --quiet stunnel4 2>/dev/null && ps aux | grep -v grep | grep -q "PDirect-") && st_sslpy="${GREEN}[ ACTIVO ]${NC}" || st_sslpy="${RED}[ OFF ]${NC}"
 
+        # PANEL X-UI
+        systemctl is-active --quiet x-ui 2>/dev/null && st_xui="${GREEN}[ ACTIVO ]${NC}" || st_xui="${RED}[ OFF ]${NC}"
+
         ui_header "MENU DE PROTOCOLOS"
         echo -e "  ${CYAN}[1] >${WHITE} BADVPN --------------------------- $st_badvpn"
         echo -e "  ${CYAN}[2] >${WHITE} DROPBEAR ------------------------- $st_dropbear"
@@ -1231,6 +1318,7 @@ menu_protocolos() {
         echo -e "  ${CYAN}[14] >${WHITE} PROXY OPENVPN ------------------- $st_popen"
         echo -e "  ${CYAN}[15] >${WHITE} PROXY PUBLICO ------------------- $st_ppub"
         echo -e "  ${CYAN}[16] >${WHITE} PROXY PRIVADO ------------------- $st_ppriv"
+        echo -e "  ${CYAN}[17] >${WHITE} PANEL X-UI (V2RAY/XRAY) --------- $st_xui"
         ui_hr
         echo -e "  ${WHITE}[0] VOLVER AL MENÚ PRINCIPAL${NC}"
         ui_hr
@@ -1253,6 +1341,7 @@ menu_protocolos() {
             14) bash /etc/MaximusVpsMx/modules/mx-proxies.sh 14 ;;
             15) bash /etc/MaximusVpsMx/modules/mx-proxies.sh 15 ;;
             16) bash /etc/MaximusVpsMx/modules/mx-proxies.sh 16 ;;
+            17) sub_xui ;;
             0) return ;;
             *) continue ;;
         esac
