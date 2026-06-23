@@ -329,6 +329,9 @@ class ConnectionHandler(threading.Thread):
                 host = '127.0.0.1'
                 port = ${DROPBEAR_PORT}
 
+            if host == 'localhost':
+                host = '127.0.0.1'
+
             target = socket.create_connection((host, port), timeout=3)
             target.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 

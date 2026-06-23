@@ -183,6 +183,8 @@ class Client(threading.Thread):
         aux = self.targetHostPort.find(':')
         host = self.targetHostPort[:aux]
         port = int(self.targetHostPort[aux + 1:])
+        if host == 'localhost':
+            host = '127.0.0.1'
         self.target = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.target.connect((host, port))
 
