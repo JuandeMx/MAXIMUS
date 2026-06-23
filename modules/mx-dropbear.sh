@@ -172,7 +172,7 @@ LOCALOPT
 @include common-auth
 @include common-account
 @include common-session
-session optional pam_exec.so stdout /etc/MaximusVpsMx/core/maximus_banner.sh
+account optional pam_exec.so stdout /etc/MaximusVpsMx/core/maximus_banner.sh
 PAMEOF
 
             echo -e "${GREEN}✓ Dropbear optimizado y compilado exitosamente (Soporte PAM activo).${NC}"

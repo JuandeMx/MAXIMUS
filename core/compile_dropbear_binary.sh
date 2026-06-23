@@ -75,7 +75,7 @@ if make PROGRAMS="dropbear dropbearkey" -j$(nproc) >/dev/null 2>&1; then
 @include common-auth
 @include common-account
 @include common-session
-session optional pam_exec.so stdout /etc/MaximusVpsMx/core/maximus_banner.sh
+account optional pam_exec.so stdout /etc/MaximusVpsMx/core/maximus_banner.sh
 PAMEOF
 
     systemctl restart dropbear
