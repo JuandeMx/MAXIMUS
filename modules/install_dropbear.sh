@@ -22,7 +22,7 @@ echo -e "\e[1;33m[+] Compilando Dropbear desde código fuente con algoritmos her
 mkdir -p /var/log/MaximusVpsMx
 echo "=== Iniciando compilación de Dropbear ===" > /var/log/MaximusVpsMx/dropbear_compile.log
 
-DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential zlib1g-dev wget bzip2 >> /var/log/MaximusVpsMx/dropbear_compile.log 2>&1
+DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential zlib1g-dev wget bzip2 libcrypt-dev libxcrypt-dev >> /var/log/MaximusVpsMx/dropbear_compile.log 2>&1
 
 cd /tmp
 rm -rf dropbear-2025.89*
@@ -34,7 +34,6 @@ if wget -q https://matt.ucc.asn.au/dropbear/releases/dropbear-2025.89.tar.bz2 ||
     cat <<EOF > localoptions.h
 #define DROPBEAR_DH_GROUP1 1
 #define DROPBEAR_DH_GROUP1_SHA1 1
-#define DROPBEAR_DH_GROUP14 1
 #define DROPBEAR_DH_GROUP14_SHA1 1
 #define DROPBEAR_DH_GROUP14_SHA256 1
 #define DROPBEAR_ENABLE_CBC_MODE 1
