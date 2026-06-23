@@ -68,14 +68,19 @@ ws_editable() {
         # Escribir script Python dinámico
         cat <<EOF >/etc/MaximusVpsMx/core/PDirect-${porta_socket}.py
 # -*- coding: utf-8 -*-
-import socket, threading, select, sys, time, getopt
+import socket, threading, select, sys, time
 
+# Config
 LISTENING_ADDR = '0.0.0.0'
-LISTENING_PORT = '${porta_socket}'
+LISTENING_PORT = ${porta_socket}
 BUFLEN = 16384
 TIMEOUT = 60
 DEFAULT_HOST = '127.0.0.1:${puetoantla}'
-RESPONSE = 'HTTP/1.1 ${rescabeza} <strong>${texto_soket}</strong>\r\nContent-length: 0\r\n\r\nHTTP/1.1 ${rescabeza} Connection established\r\n\r\n'
+
+# Responses based on user status configuration
+RESPONSE_WS = f'HTTP/1.1 101 ${texto_soket}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n'.encode('utf-8')
+RESPONSE_STD = f'HTTP/1.1 ${rescabeza} ${texto_soket}\r\nContent-length: 0\r\n\r\n'.encode('utf-8')
+RESPONSE_CONTINUE = b'HTTP/1.1 100 Continue\r\n\r\n'
 
 class Server(threading.Thread):
     def __init__(self, host, port):
@@ -83,90 +88,142 @@ class Server(threading.Thread):
         self.running = False
         self.host = host
         self.port = port
-        self.threads = []
-        self.threadsLock = threading.Lock()
-        self.logLock = threading.Lock()
 
     def run(self):
-        self.soc = socket.socket(socket.AF_INET)
-        self.soc.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.soc.settimeout(2)
-        self.soc.bind((self.host, int(self.port)))
-        self.soc.listen(100)
-        self.running = True
         try:
+            self.soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.soc.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            self.soc.settimeout(2)
+            self.soc.bind((self.host, self.port))
+            self.soc.listen(100)
+            self.running = True
             while self.running:
                 try:
                     c, addr = self.soc.accept()
                     c.setblocking(1)
                 except socket.timeout:
                     continue
-                conn = ConnectionHandler(c, self, addr)
+                conn = ConnectionHandler(c, addr)
+                conn.daemon = True
                 conn.start()
-                self.addConn(conn)
+        except:
+            pass
         finally:
             self.running = False
             self.soc.close()
 
-    def addConn(self, conn):
-        self.threadsLock.acquire()
-        if self.running:
-            self.threads.append(conn)
-        self.threadsLock.release()
-
-    def removeConn(self, conn):
-        self.threadsLock.acquire()
-        if conn in self.threads:
-            self.threads.remove(conn)
-        self.threadsLock.release()
-
-    def close(self):
-        self.running = False
-        self.threadsLock.acquire()
-        for c in list(self.threads):
-            c.close()
-        self.threadsLock.release()
+def collect_headers(sock, initial_buffer, timeout_sec):
+    buf = initial_buffer
+    deadline = time.time() + timeout_sec
+    while b'\r\n\r\n' not in buf and b'\n\n' not in buf:
+        remaining = deadline - time.time()
+        if remaining <= 0: break
+        r, _, _ = select.select([sock], [], [], min(remaining, 0.5))
+        if sock in r:
+            chunk = sock.recv(BUFLEN)
+            if not chunk: break
+            buf += chunk
+        else:
+            break
+    return buf
 
 class ConnectionHandler(threading.Thread):
-    def __init__(self, socClient, server, addr):
+    def __init__(self, socClient, addr):
         threading.Thread.__init__(self)
-        self.clientClosed = False
-        self.targetClosed = True
         self.client = socClient
-        self.client_buffer = b''
-        self.server = server
-        self.method = 'CONNECT'
-
-    def close(self):
-        try:
-            if not self.clientClosed:
-                self.client.shutdown(socket.SHUT_RDWR)
-                self.client.close()
-        except: pass
-        self.clientClosed = True
-        try:
-            if not self.targetClosed:
-                self.target.shutdown(socket.SHUT_RDWR)
-                self.target.close()
-        except: pass
-        self.targetClosed = True
+        self.addr = addr
 
     def run(self):
+        target = None
         try:
-            self.client_buffer = self.client.recv(BUFLEN)
-            hostPort = self.findHeader(self.client_buffer, 'X-Real-Host')
-            if hostPort == '':
-                hostPort = DEFAULT_HOST
+            self.client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+            self.client.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+
+            # Peeking the initial packet
+            client_buffer = b''
+            r, _, _ = select.select([self.client], [], [], 0.5)
+            if r:
+                client_buffer = self.client.recv(BUFLEN)
+
+            is_ssh = client_buffer.startswith(b'SSH-')
+            is_payload = (not is_ssh) and (len(client_buffer) > 0)
+
+            if is_payload:
+                client_buffer = collect_headers(self.client, client_buffer, 5)
+                is_ws = b'upgrade: websocket' in client_buffer.lower()
+                is_split = b'100-continue' in client_buffer.lower()
+
+                if is_split:
+                    self.client.sendall(RESPONSE_CONTINUE)
+                    second_buffer = b''
+                    second_buffer = collect_headers(self.client, second_buffer, 3)
+                    if b'websocket' in second_buffer.lower():
+                        self.client.sendall(RESPONSE_WS)
+                    else:
+                        self.client.sendall(RESPONSE_STD)
+                elif is_ws:
+                    self.client.sendall(RESPONSE_WS)
+                else:
+                    self.client.sendall(RESPONSE_STD)
+                
+                time.sleep(0.1)
+
+            # Parse backend from X-Real-Host if present, else fallback
+            hostPort = ''
+            if is_payload:
+                hostPort = self.findHeader(client_buffer, 'X-Real-Host')
             
-            if hostPort != '':
-                self.method_CONNECT(hostPort)
+            if not hostPort:
+                hostPort = DEFAULT_HOST
+
+            i = hostPort.find(':')
+            if i != -1:
+                port = int(hostPort[i+1:])
+                host = hostPort[:i]
             else:
-                self.client.send(b'HTTP/1.1 400 NoXRealHost!\r\n\r\n')
+                host = '127.0.0.1'
+                port = ${puetoantla}
+
+            target = socket.create_connection((host, port), timeout=3)
+            target.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+
+            # Send initial data to backend
+            if is_ssh:
+                target.sendall(client_buffer)
+            elif is_payload:
+                header_end = -1
+                if b'\r\n\r\n' in client_buffer:
+                    header_end = client_buffer.find(b'\r\n\r\n') + 4
+                elif b'\n\n' in client_buffer:
+                    header_end = client_buffer.find(b'\n\n') + 2
+                
+                if header_end != -1:
+                    leftover = client_buffer[header_end:]
+                    if leftover: target.sendall(leftover)
+
+            # Relay loop
+            sockets = [self.client, target]
+            while True:
+                r, _, e = select.select(sockets, [], sockets, 3600)
+                if not r or e: break
+                for sock in r:
+                    data = sock.recv(BUFLEN)
+                    if not data: return
+                    out = target if sock is self.client else self.client
+                    out.sendall(data)
+
         except:
             pass
         finally:
-            self.close()
-            self.server.removeConn(self)
+            try:
+                self.client.shutdown(socket.SHUT_RDWR)
+                self.client.close()
+            except: pass
+            try:
+                if target:
+                    target.shutdown(socket.SHUT_RDWR)
+                    target.close()
+            except: pass
 
     def findHeader(self, head, header):
         try:
@@ -182,59 +239,14 @@ class ConnectionHandler(threading.Thread):
         except:
             return ''
 
-    def connect_target(self, host):
-        i = host.find(':')
-        if i != -1:
-            port = int(host[i+1:])
-            host = host[:i]
-        else:
-            port = ${puetoantla}
-        soc_family, soc_type, proto, _, address = socket.getaddrinfo(host, port)[0]
-        self.target = socket.socket(soc_family, soc_type, proto)
-        self.targetClosed = False
-        self.target.connect(address)
-
-    def method_CONNECT(self, path):
-        self.connect_target(path)
-        self.client.sendall(RESPONSE.encode('utf-8'))
-        self.doCONNECT()
-
-    def doCONNECT(self):
-        socs = [self.client, self.target]
-        count = 0
-        error = False
-        while True:
-            count += 1
-            recv, _, err = select.select(socs, [], socs, 3)
-            if err: error = True
-            if recv:
-                for in_ in recv:
-                    try:
-                        data = in_.recv(BUFLEN)
-                        if data:
-                            if in_ is self.target:
-                                self.client.send(data)
-                            else:
-                                while data:
-                                    byte = self.target.send(data)
-                                    data = data[byte:]
-                            count = 0
-                        else:
-                            break
-                    except:
-                        error = True
-                        break
-            if count == TIMEOUT: error = True
-            if error: break
-
 if __name__ == '__main__':
-    server = Server(LISTENING_ADDR, int(LISTENING_PORT))
-    server.start()
-    while True:
-        try: time.sleep(2)
-        except KeyboardInterrupt:
-            server.close()
-            break
+    try:
+        server = Server(LISTENING_ADDR, LISTENING_PORT)
+        server.start()
+        while True:
+            time.sleep(2)
+    except:
+        pass
 EOF
 
         chmod +x /etc/MaximusVpsMx/core/PDirect-${porta_socket}.py

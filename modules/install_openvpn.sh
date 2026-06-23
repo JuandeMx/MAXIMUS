@@ -131,12 +131,53 @@ write_server_conf() {
 
   mkdir -p "$OVPN_DIR" 2>/dev/null
 
+  # Buscar el plugin PAM de OpenVPN de forma robusta
+  local PLUGIN=""
+  for path in \
+    "/usr/lib/openvpn/openvpn-plugin-auth-pam.so" \
+    "/usr/lib/openvpn/plugins/openvpn-plugin-auth-pam.so" \
+    "/usr/lib/x86_64-linux-gnu/openvpn/plugins/openvpn-plugin-auth-pam.so" \
+    "/usr/lib/aarch64-linux-gnu/openvpn/plugins/openvpn-plugin-auth-pam.so" \
+    "/usr/lib/i386-linux-gnu/openvpn/plugins/openvpn-plugin-auth-pam.so" \
+    "/usr/lib/arm-linux-gnueabihf/openvpn/plugins/openvpn-plugin-auth-pam.so" \
+    "/usr/lib/openvpn/openvpn-auth-pam.so"; do
+    if [ -f "$path" ]; then
+      PLUGIN="$path"
+      break
+    fi
+  done
+  if [ -z "$PLUGIN" ]; then
+    if command -v locate >/dev/null 2>&1; then
+      if command -v updatedb >/dev/null 2>&1; then
+        updatedb >/dev/null 2>&1
+      fi
+      PLUGIN=$(locate openvpn-plugin-auth-pam.so 2>/dev/null | head -n 1)
+    fi
+  fi
+  if [ -z "$PLUGIN" ]; then
+    PLUGIN=$(find /usr/ -name "openvpn-plugin-auth-pam.so" 2>/dev/null | head -n 1)
+  fi
+
+  # Verificar versión de OpenVPN para compatibilidad con la directiva de certificado
+  local ovpn_ver
+  ovpn_ver=$(openvpn --version 2>/dev/null | head -n 1 | awk '{print $2}')
+  local cert_opt="client-cert-not-required"
+  if [[ "$ovpn_ver" =~ ^2\.[5-9] || "$ovpn_ver" =~ ^[3-9]\. ]]; then
+    cert_opt="verify-client-cert none"
+  fi
+
+  # Configuración base de OpenVPN (comentar user/group si usa PAM)
+  local run_as_root=""
+  if [[ -n "$PLUGIN" ]]; then
+    run_as_root="# "
+  fi
+
   cat > "${OVPN_DIR}/server.conf" <<EOF
 port ${port}
 proto ${proto}
 dev tun
-user nobody
-group nogroup
+${run_as_root}user nobody
+${run_as_root}group nogroup
 persist-key
 persist-tun
 
@@ -167,6 +208,15 @@ verb 3
 status /var/log/openvpn/openvpn-status.log
 log-append /var/log/MaximusVpsMx/openvpn.log
 EOF
+
+  if [[ -n "$PLUGIN" ]]; then
+    cat <<EOF >> "${OVPN_DIR}/server.conf"
+client-to-client
+$cert_opt
+username-as-common-name
+plugin $PLUGIN login
+EOF
+  fi
 
   mkdir -p /var/log/openvpn 2>/dev/null
 }
@@ -206,6 +256,7 @@ nobind
 persist-key
 persist-tun
 remote-cert-tls server
+auth-user-pass
 auth SHA256
 cipher AES-256-GCM
 verb 3
