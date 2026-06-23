@@ -7,9 +7,9 @@ username="$PAM_USER"
 # Si no hay usuario, salir silenciosamente
 [ -z "$username" ] && exit 0
 
-# Excepción para el root y usuarios administradores (sudoers)
+# Excepción para el root y usuarios administradores (sudoers) -> salir silenciosamente para no salir en el log de consola SSH
 if [ "$username" == "root" ] || id -nG "$username" 2>/dev/null | grep -qw "sudo"; then
-    display_user="$username (Admin)"
+    exit 0
 else
     db_line=$(grep "^${username}:" /etc/MaximusVpsMx/users.db 2>/dev/null)
     

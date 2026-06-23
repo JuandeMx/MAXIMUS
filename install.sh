@@ -327,8 +327,9 @@ if [ -f /etc/MaximusVpsMx/core/maximus_banner.sh ]; then
     echo "$html_content" > /etc/issue.net
 fi
 
-# Asegurar que el script no esté en sshd (para que no salga en terminal SSH/OpenSSH)
+# Inyectar el script en el flujo de sesión SSH (solo se mostrará para usuarios normales de VPN, no para administradores de consola)
 sed -i '/maximus_banner.sh/d' /etc/pam.d/sshd
+echo "session optional pam_exec.so stdout /etc/MaximusVpsMx/core/maximus_banner.sh" >> /etc/pam.d/sshd
 
 
 # Migrar automáticamente a los usuarios existentes de vuelta a /bin/false
