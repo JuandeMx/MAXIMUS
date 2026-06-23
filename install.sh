@@ -307,6 +307,7 @@ cp -r "$SCRIPT_DIR/"* /etc/MaximusVpsMx/
 chmod +x /etc/MaximusVpsMx/MX
 chmod +x /etc/MaximusVpsMx/core/*.sh 2>/dev/null
 chmod +x /etc/MaximusVpsMx/core/*.py 2>/dev/null
+chmod +x /etc/MaximusVpsMx/modules/*.sh 2>/dev/null
 touch /etc/MaximusVpsMx/hysteria_users.db
 
 # Configurar Banner Dinámico vía PAM
@@ -398,6 +399,7 @@ ln -sf /etc/MaximusVpsMx/MX /usr/local/bin/MENU
 chmod 700 /etc/MaximusVpsMx/MX
 chmod +x /etc/MaximusVpsMx/core/*.sh 2>/dev/null
 chmod +x /etc/MaximusVpsMx/core/*.py 2>/dev/null
+chmod +x /etc/MaximusVpsMx/modules/*.sh 2>/dev/null
 # Create universal HWID user for invisible authentication
 if ! id "mxhwid" &>/dev/null; then
     useradd -M -s /bin/false -e 2099-12-31 mxhwid 2>/dev/null

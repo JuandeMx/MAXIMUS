@@ -1,5 +1,5 @@
 #!/bin/bash
-# MaximusVpsMx - Super Panel v11.2.41 (Premium)
+# MaximusVpsMx - Super Panel v11.2.42 (Premium)
 # Modificado para Submenús y Funciones Avanzadas + Hysteria v2 Manager
 
 # SEGURIDAD: Solo root puede ejecutar este panel
@@ -130,7 +130,7 @@ if [ ! -f /etc/MaximusVpsMx/.master_node ]; then
 fi
 
 # --- PANEL VERSION ---
-PANEL_VERSION="v11.2.41"
+PANEL_VERSION="v11.2.42"
 
 # --- COLORES GLOBALES ---
 RED='\033[1;31m'
@@ -1198,8 +1198,8 @@ menu_protocolos() {
             5) gestor_servicio "STUNNEL (SSL)" "stunnel4" ;;
             6) gestor_servicio "BADVPN-UDPGW" "badvpn" ;;
             7) gestor_servicio "OPENVPN" "openvpn" ;;
-            8) sub_slowdns ;;
-            9) gestor_servicio "UDP-CUSTOM" "udp-custom" ;;
+            8) bash /etc/MaximusVpsMx/modules/SlowDNS.sh ;;
+            9) bash /etc/MaximusVpsMx/modules/UDP_menu.sh ;;
             10) sub_hysteria ;;
             11) sub_xui ;;
             12) gestor_servicio "CHECKUSER ONLINE" "checkuser" ;;
@@ -1610,6 +1610,10 @@ menu_sistema() {
             echo -e "  ${CYAN} [9]>${YELLOW} Diagnóstico de Conexión Bot WA${NC}"
         fi
         echo -e "  ${CYAN}[10]>${WHITE} Generador de Payloads (15 Métodos)${NC}"
+        echo -e "  ${CYAN}[11]>${WHITE} Acelerador TCP BBR / NetSpeed (Optimizar Conexión)${NC}"
+        echo -e "  ${CYAN}[12]>${WHITE} Cortafuegos Avanzado (Anti-Torrent / Anti-SPAM)${NC}"
+        echo -e "  ${CYAN}[13]>${WHITE} Redefinir Puertos Activos (SSH, Dropbear, Squid)${NC}"
+        echo -e "  ${CYAN}[14]>${WHITE} Ajustar Horario Local / Zona Horaria${NC}"
         ui_hr
         echo -e "  ${WHITE}[0] VOLVER AL MENÚ PRINCIPAL${NC}"
         ui_hr
@@ -1664,6 +1668,10 @@ CFEOF
             8) sub_zombies ;;
             9) [ -f /etc/MaximusVpsMx/.master_node ] && check_bot_connection || continue ;;
             10) generar_payloads ;;
+            11) bash /etc/MaximusVpsMx/modules/mx-bbr.sh ;;
+            12) bash /etc/MaximusVpsMx/modules/mx-firewall.sh ;;
+            13) bash /etc/MaximusVpsMx/modules/mx-porteditor.sh ;;
+            14) bash /etc/MaximusVpsMx/modules/mx-timezone.sh ;;
             0) return ;;
             * ) continue ;;
         esac
