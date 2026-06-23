@@ -324,8 +324,8 @@ if [ -f /etc/MaximusVpsMx/core/maximus_banner.sh ]; then
     html_content=$(sed -n "/cat << 'EOF'/,/^EOF/p" /etc/MaximusVpsMx/core/maximus_banner.sh | sed '1d;$d')
     text_content=$(echo "$html_content" | sed -e 's/<[^>]*>//g' -e 's/&nbsp;/ /g' -e 's/&amp;/\&/g' -e 's/&lt;/</g' -e 's/&gt;/>/g' -e 's/&quot;/"/g')
     mkdir -p /etc/dropbear
-    echo "$text_content" > /etc/dropbear/banner
-    echo "$text_content" > /etc/issue.net
+    echo "$text_content" | sed 's/\r$//; s/$/\r/' > /etc/dropbear/banner
+    echo "$text_content" | sed 's/\r$//; s/$/\r/' > /etc/issue.net
 fi
 
 # Inyectar el script en el flujo de sesión SSH (session phase)
