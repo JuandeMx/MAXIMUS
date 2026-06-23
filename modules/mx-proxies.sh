@@ -133,7 +133,9 @@ class ConnectionHandler(threading.Thread):
         self.clientClosed = False
         self.targetClosed = True
         self.client = socClient
+        self.client_buffer = b''
         self.server = server
+        self.method = 'CONNECT'
 
     def close(self):
         try:
@@ -159,7 +161,7 @@ class ConnectionHandler(threading.Thread):
             if hostPort != '':
                 self.method_CONNECT(hostPort)
             else:
-                self.client.send('HTTP/1.1 400 NoXRealHost!\r\n\r\n')
+                self.client.send(b'HTTP/1.1 400 NoXRealHost!\r\n\r\n')
         except:
             pass
         finally:
@@ -167,13 +169,18 @@ class ConnectionHandler(threading.Thread):
             self.server.removeConn(self)
 
     def findHeader(self, head, header):
-        aux = head.find(header + ': ')
-        if aux == -1: return ''
-        aux = head.find(':', aux)
-        head = head[aux+2:]
-        aux = head.find('\r\n')
-        if aux == -1: return ''
-        return head[:aux]
+        try:
+            if isinstance(head, bytes):
+                head = head.decode('utf-8', errors='ignore')
+            aux = head.find(header + ': ')
+            if aux == -1: return ''
+            aux = head.find(':', aux)
+            head = head[aux+2:]
+            aux = head.find('\r\n')
+            if aux == -1: return ''
+            return head[:aux]
+        except:
+            return ''
 
     def connect_target(self, host):
         i = host.find(':')
@@ -189,7 +196,7 @@ class ConnectionHandler(threading.Thread):
 
     def method_CONNECT(self, path):
         self.connect_target(path)
-        self.client.sendall(RESPONSE)
+        self.client.sendall(RESPONSE.encode('utf-8'))
         self.doCONNECT()
 
     def doCONNECT(self):

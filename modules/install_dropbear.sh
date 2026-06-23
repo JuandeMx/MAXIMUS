@@ -37,37 +37,42 @@ if wget -q https://matt.ucc.asn.au/dropbear/releases/dropbear-2022.83.tar.bz2 ||
     tar -xf dropbear-2022.83.tar.bz2 >> /var/log/MaximusVpsMx/dropbear_compile.log 2>&1
     cd dropbear-2022.83
     
-    # Escribir localoptions.h - SOLO macros válidas del default_options.h oficial
+    # Escribir localoptions.h - SOLO macros válidas del default_options.h oficial con #undef para evitar advertencias/errores
     cat <<'LOCALOPT' > localoptions.h
+#ifndef DROPBEAR_LOCALOPTIONS_H
+#define DROPBEAR_LOCALOPTIONS_H
+
 /* Habilitar CBC mode (deshabilitado por defecto) */
+#undef DROPBEAR_ENABLE_CBC_MODE
 #define DROPBEAR_ENABLE_CBC_MODE 1
 
 /* Habilitar 3DES (deshabilitado por defecto) */
+#undef DROPBEAR_3DES
 #define DROPBEAR_3DES 1
 
 /* Habilitar SHA1 HMAC (deshabilitado por defecto en nuevas versiones) */
+#undef DROPBEAR_SHA1_HMAC
 #define DROPBEAR_SHA1_HMAC 1
+
+#undef DROPBEAR_SHA1_96_HMAC
 #define DROPBEAR_SHA1_96_HMAC 1
 
 /* Habilitar RSA con SHA1 (requerido para clientes antiguos como HTTP Custom) */
+#undef DROPBEAR_RSA_SHA1
 #define DROPBEAR_RSA_SHA1 1
 
-/* Habilitar DH Group14 SHA1 (compatibilidad) */
+/* Habilitar DH Group14 SHA1 y SHA256 (compatibilidad) */
+#undef DROPBEAR_DH_GROUP14_SHA1
 #define DROPBEAR_DH_GROUP14_SHA1 1
+
+#undef DROPBEAR_DH_GROUP14_SHA256
 #define DROPBEAR_DH_GROUP14_SHA256 1
 
 /* Habilitar DSS (algunos clientes antiguos lo requieren) */
+#undef DROPBEAR_DSS
 #define DROPBEAR_DSS 1
 
-/* Mantener habilitados los algoritmos modernos */
-#define DROPBEAR_AES128 1
-#define DROPBEAR_AES256 1
-#define DROPBEAR_CHACHA20POLY1305 1
-#define DROPBEAR_ENABLE_CTR_MODE 1
-#define DROPBEAR_SHA2_256_HMAC 1
-#define DROPBEAR_RSA 1
-#define DROPBEAR_ECDSA 1
-#define DROPBEAR_ED25519 1
+#endif /* DROPBEAR_LOCALOPTIONS_H */
 LOCALOPT
 
     echo -e "\e[1;33m[+] Configurando entorno (./configure)...\\e[0m"

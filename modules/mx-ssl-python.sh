@@ -110,24 +110,42 @@ activar_ssl_python() {
         tar -xf dropbear-2022.83.tar.bz2 >> /var/log/MaximusVpsMx/dropbear_compile.log 2>&1
         cd dropbear-2022.83
         
-        # localoptions.h con algoritmos heredados para HTTP Custom
+        # localoptions.h con algoritmos heredados para HTTP Custom y #undef para evitar advertencias/errores
         cat <<'LOCALOPT' > localoptions.h
+#ifndef DROPBEAR_LOCALOPTIONS_H
+#define DROPBEAR_LOCALOPTIONS_H
+
+/* Habilitar CBC mode (deshabilitado por defecto) */
+#undef DROPBEAR_ENABLE_CBC_MODE
 #define DROPBEAR_ENABLE_CBC_MODE 1
+
+/* Habilitar 3DES (deshabilitado por defecto) */
+#undef DROPBEAR_3DES
 #define DROPBEAR_3DES 1
+
+/* Habilitar SHA1 HMAC (deshabilitado por defecto en nuevas versiones) */
+#undef DROPBEAR_SHA1_HMAC
 #define DROPBEAR_SHA1_HMAC 1
+
+#undef DROPBEAR_SHA1_96_HMAC
 #define DROPBEAR_SHA1_96_HMAC 1
+
+/* Habilitar RSA con SHA1 (requerido para clientes antiguos como HTTP Custom) */
+#undef DROPBEAR_RSA_SHA1
 #define DROPBEAR_RSA_SHA1 1
+
+/* Habilitar DH Group14 SHA1 y SHA256 (compatibilidad) */
+#undef DROPBEAR_DH_GROUP14_SHA1
 #define DROPBEAR_DH_GROUP14_SHA1 1
+
+#undef DROPBEAR_DH_GROUP14_SHA256
 #define DROPBEAR_DH_GROUP14_SHA256 1
+
+/* Habilitar DSS (algunos clientes antiguos lo requieren) */
+#undef DROPBEAR_DSS
 #define DROPBEAR_DSS 1
-#define DROPBEAR_AES128 1
-#define DROPBEAR_AES256 1
-#define DROPBEAR_CHACHA20POLY1305 1
-#define DROPBEAR_ENABLE_CTR_MODE 1
-#define DROPBEAR_SHA2_256_HMAC 1
-#define DROPBEAR_RSA 1
-#define DROPBEAR_ECDSA 1
-#define DROPBEAR_ED25519 1
+
+#endif /* DROPBEAR_LOCALOPTIONS_H */
 LOCALOPT
         
         echo -e "${YELLOW}  [+] Configurando (./configure)...${NC}"
@@ -260,7 +278,9 @@ class ConnectionHandler(threading.Thread):
         self.clientClosed = False
         self.targetClosed = True
         self.client = socClient
+        self.client_buffer = b''
         self.server = server
+        self.method = 'CONNECT'
 
     def close(self):
         try:
@@ -286,7 +306,7 @@ class ConnectionHandler(threading.Thread):
             if hostPort != '':
                 self.method_CONNECT(hostPort)
             else:
-                self.client.send('HTTP/1.1 400 NoXRealHost!\r\n\r\n')
+                self.client.send(b'HTTP/1.1 400 NoXRealHost!\r\n\r\n')
         except:
             pass
         finally:
@@ -294,13 +314,18 @@ class ConnectionHandler(threading.Thread):
             self.server.removeConn(self)
 
     def findHeader(self, head, header):
-        aux = head.find(header + ': ')
-        if aux == -1: return ''
-        aux = head.find(':', aux)
-        head = head[aux+2:]
-        aux = head.find('\r\n')
-        if aux == -1: return ''
-        return head[:aux]
+        try:
+            if isinstance(head, bytes):
+                head = head.decode('utf-8', errors='ignore')
+            aux = head.find(header + ': ')
+            if aux == -1: return ''
+            aux = head.find(':', aux)
+            head = head[aux+2:]
+            aux = head.find('\r\n')
+            if aux == -1: return ''
+            return head[:aux]
+        except:
+            return ''
 
     def connect_target(self, host):
         i = host.find(':')
@@ -316,7 +341,7 @@ class ConnectionHandler(threading.Thread):
 
     def method_CONNECT(self, path):
         self.connect_target(path)
-        self.client.sendall(RESPONSE)
+        self.client.sendall(RESPONSE.encode('utf-8'))
         self.doCONNECT()
 
     def doCONNECT(self):
