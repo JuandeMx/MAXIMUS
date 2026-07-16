@@ -502,10 +502,20 @@ if [[ "$set_root" == "s" || "$set_root" == "S" ]]; then
     if [[ "$root_pass1" == "$root_pass2" && -n "$root_pass1" ]]; then
         echo "root:$root_pass1" | chpasswd
         if [ $? -eq 0 ]; then
+            # Habilitar login por SSH forzando las opciones
             sed -i 's/^#*PermitRootLogin.*/PermitRootLogin yes/g' /etc/ssh/sshd_config
             sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+            
+            # Asegurar que existan si no estaban comentadas
+            grep -q "^PermitRootLogin" /etc/ssh/sshd_config || echo "PermitRootLogin yes" >> /etc/ssh/sshd_config
+            grep -q "^PasswordAuthentication" /etc/ssh/sshd_config || echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config
+            
             if [ -d /etc/ssh/sshd_config.d ]; then
                 sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/g' /etc/ssh/sshd_config.d/*.conf 2>/dev/null
+                sed -i 's/^#*PermitRootLogin.*/PermitRootLogin yes/g' /etc/ssh/sshd_config.d/*.conf 2>/dev/null
+                # Archivo definitivo para overriding en Cloud
+                echo "PermitRootLogin yes" > /etc/ssh/sshd_config.d/99-maximus-root.conf
+                echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config.d/99-maximus-root.conf
             fi
             systemctl restart ssh 2>/dev/null || systemctl restart sshd 2>/dev/null
             echo -e "\e[1;32m[+] Contraseña de root actualizada y acceso SSH habilitado.\e[0m"
