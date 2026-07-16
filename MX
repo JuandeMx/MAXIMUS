@@ -1703,6 +1703,7 @@ menu_sistema() {
         echo -e "  ${CYAN}[12]>${WHITE} Cortafuegos Avanzado (Anti-Torrent / Anti-SPAM)${NC}"
         echo -e "  ${CYAN}[13]>${WHITE} Redefinir Puertos Activos (SSH, Dropbear, Squid)${NC}"
         echo -e "  ${CYAN}[14]>${WHITE} Ajustar Horario Local / Zona Horaria${NC}"
+        echo -e "  ${CYAN}[15]>${WHITE} Cambiar Contraseña de ROOT y Acceso SSH${NC}"
         ui_hr
         echo -e "  ${WHITE}[0] VOLVER AL MENÚ PRINCIPAL${NC}"
         ui_hr
@@ -1786,6 +1787,7 @@ CFEOF
             12) bash /etc/MaximusVpsMx/modules/mx-firewall.sh ;;
             13) bash /etc/MaximusVpsMx/modules/mx-porteditor.sh ;;
             14) bash /etc/MaximusVpsMx/modules/mx-timezone.sh ;;
+            15) bash /etc/MaximusVpsMx/core/change_root.sh ;;
             0) return ;;
             * ) continue ;;
         esac

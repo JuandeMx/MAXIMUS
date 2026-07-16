@@ -487,6 +487,36 @@ if [ -f "/etc/MaximusVpsMx/.master_node" ]; then
     fi
 fi
 
+# Configuracion de root
+echo -e "\n\e[1;36m=========================================================\e[0m"
+echo -e "\e[1;33m       CONFIGURACIÓN DE ACCESO ROOT (VPS CLOUD)          \e[0m"
+echo -e "\e[1;36m=========================================================\e[0m"
+echo -e "\e[1;37m¿Deseas configurar/cambiar la contraseña de root y habilitar el login SSH por contraseña?\e[0m"
+echo -e "\e[1;37m(Recomendado si usas AWS, Google Cloud, Azure u Oracle)\e[0m"
+read -p "Opción [s/n]: " set_root
+if [[ "$set_root" == "s" || "$set_root" == "S" ]]; then
+    read -s -p "Ingresa la nueva contraseña para root: " root_pass1
+    echo ""
+    read -s -p "Confirma la contraseña: " root_pass2
+    echo ""
+    if [[ "$root_pass1" == "$root_pass2" && -n "$root_pass1" ]]; then
+        echo "root:$root_pass1" | chpasswd
+        if [ $? -eq 0 ]; then
+            sed -i 's/^#*PermitRootLogin.*/PermitRootLogin yes/g' /etc/ssh/sshd_config
+            sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+            if [ -d /etc/ssh/sshd_config.d ]; then
+                sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/g' /etc/ssh/sshd_config.d/*.conf 2>/dev/null
+            fi
+            systemctl restart ssh 2>/dev/null || systemctl restart sshd 2>/dev/null
+            echo -e "\e[1;32m[+] Contraseña de root actualizada y acceso SSH habilitado.\e[0m"
+        else
+            echo -e "\e[1;31m[!] Error al cambiar la contraseña de root.\e[0m"
+        fi
+    else
+        echo -e "\e[1;31m[!] Las contraseñas no coinciden o están vacías. Saltando paso...\e[0m"
+    fi
+fi
+
 # Fin de Instalación
 echo -e "\n\e[1;36m=========================================================\e[0m"
 echo -e "\e[1;32m   [+] INSTALACIÓN DE MAXIMUS ELITE PANEL COMPLETADA.    \e[0m"
