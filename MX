@@ -1962,14 +1962,21 @@ menu_mantenimiento() {
                             systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api maximus-keyserver maximus-tunnel 2>/dev/null
                             systemctl disable stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api maximus-keyserver maximus-tunnel 2>/dev/null
                             systemctl daemon-reload 2>/dev/null
-                            killall -9 badvpn-udpgw hysteria udp-custom stunnel4 2>/dev/null
+                            killall -9 badvpn-udpgw hysteria udp-custom stunnel4 dropbear 2>/dev/null
                             pkill -9 badvpn-udpgw 2>/dev/null
                             pkill -9 hysteria 2>/dev/null
                             pkill -9 udp-custom 2>/dev/null
                             pkill -9 stunnel4 2>/dev/null
+                            pkill -9 -f '[P]Direct' >/dev/null 2>&1
+                            pkill -9 -f '[P]Open' >/dev/null 2>&1
+                            pkill -9 -f '[P]Pub' >/dev/null 2>&1
+                            pkill -9 -f '[P]Priv' >/dev/null 2>&1
+                            pkill -9 -f '[P]Get' >/dev/null 2>&1
+                            pkill -9 -f '[w]s-epro' >/dev/null 2>&1
                             pkill -9 -f '[k]ey_server.py' >/dev/null 2>&1
                             pkill -9 -f '[b]ot.py' >/dev/null 2>&1
                             pkill -9 -f '[c]loudflared' >/dev/null 2>&1
+                            screen -wipe >/dev/null 2>&1
                             
                             rm -rf /etc/MaximusVpsMx
                             rm -f /usr/local/bin/MX
@@ -2099,14 +2106,21 @@ menu_mantenimiento() {
                             systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api maximus-keyserver maximus-tunnel 2>/dev/null
                             systemctl disable stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api maximus-keyserver maximus-tunnel 2>/dev/null
                             systemctl daemon-reload 2>/dev/null
-                            killall -9 badvpn-udpgw hysteria udp-custom stunnel4 2>/dev/null
+                            killall -9 badvpn-udpgw hysteria udp-custom stunnel4 dropbear 2>/dev/null
                             pkill -9 badvpn-udpgw 2>/dev/null
                             pkill -9 hysteria 2>/dev/null
                             pkill -9 udp-custom 2>/dev/null
                             pkill -9 stunnel4 2>/dev/null
+                            pkill -9 -f '[P]Direct' >/dev/null 2>&1
+                            pkill -9 -f '[P]Open' >/dev/null 2>&1
+                            pkill -9 -f '[P]Pub' >/dev/null 2>&1
+                            pkill -9 -f '[P]Priv' >/dev/null 2>&1
+                            pkill -9 -f '[P]Get' >/dev/null 2>&1
+                            pkill -9 -f '[w]s-epro' >/dev/null 2>&1
                             pkill -9 -f '[b]ot.py' >/dev/null 2>&1
                             pkill -9 -f '[k]ey_server.py' >/dev/null 2>&1
                             pkill -9 -f '[c]loudflared' >/dev/null 2>&1
+                            screen -wipe >/dev/null 2>&1
                             fuser -k 6767/tcp >/dev/null 2>&1
                             fuser -k 80/tcp >/dev/null 2>&1
                             fuser -k 443/tcp >/dev/null 2>&1
