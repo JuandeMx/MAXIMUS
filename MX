@@ -2169,14 +2169,18 @@ menu_mantenimiento() {
                         exec bash -c "
                             cd /root || cd /tmp
                             echo -e '${RED}🔥 Iniciando limpieza y deteniendo servicios del Maestro...${NC}'
-                            systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api maximus-keyserver maximus-tunnel 2>/dev/null
-                            systemctl disable stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api maximus-keyserver maximus-tunnel 2>/dev/null
+                            systemctl stop stunnel4 dropbear squid squid3 mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api maximus-keyserver maximus-tunnel x-ui openvpn-server@server openvpn sslh 2>/dev/null
+                            systemctl disable stunnel4 dropbear squid squid3 mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api maximus-keyserver maximus-tunnel x-ui openvpn-server@server openvpn sslh 2>/dev/null
                             systemctl daemon-reload 2>/dev/null
-                            killall -9 badvpn-udpgw hysteria udp-custom stunnel4 dropbear 2>/dev/null
+                            
+                            killall -9 badvpn-udpgw hysteria udp-custom stunnel4 dropbear squid squid3 dns-server sslh 2>/dev/null
                             pkill -9 badvpn-udpgw 2>/dev/null
                             pkill -9 hysteria 2>/dev/null
                             pkill -9 udp-custom 2>/dev/null
                             pkill -9 stunnel4 2>/dev/null
+                            pkill -9 dropbear 2>/dev/null
+                            pkill -9 squid 2>/dev/null
+                            pkill -9 dns-server 2>/dev/null
                             pkill -9 -f '[P]Direct' >/dev/null 2>&1
                             pkill -9 -f '[P]Open' >/dev/null 2>&1
                             pkill -9 -f '[P]Pub' >/dev/null 2>&1
@@ -2187,9 +2191,15 @@ menu_mantenimiento() {
                             pkill -9 -f '[k]ey_server.py' >/dev/null 2>&1
                             pkill -9 -f '[c]loudflared' >/dev/null 2>&1
                             screen -wipe >/dev/null 2>&1
+                            
                             fuser -k 6767/tcp >/dev/null 2>&1
+                            fuser -k 3128/tcp >/dev/null 2>&1
                             fuser -k 80/tcp >/dev/null 2>&1
                             fuser -k 443/tcp >/dev/null 2>&1
+                            fuser -k 53/udp >/dev/null 2>&1
+                            
+                            # Limpiar instalación antigua y configuraciones previas
+                            rm -rf /etc/stunnel /etc/dropbear /etc/squid /etc/openvpn 2>/dev/null
                             
                             # Limpiar instalación antigua
                             rm -rf /etc/MaximusVpsMx
@@ -2251,15 +2261,37 @@ menu_mantenimiento() {
                         exec bash -c "
                             cd /root || cd /tmp
                             echo -e '${RED}🔥 Iniciando limpieza y deteniendo servicios del Cliente...${NC}'
-                            systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api 2>/dev/null
-                            systemctl disable stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api 2>/dev/null
+                            systemctl stop stunnel4 dropbear squid squid3 mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api maximus-keyserver maximus-tunnel x-ui openvpn-server@server openvpn sslh 2>/dev/null
+                            systemctl disable stunnel4 dropbear squid squid3 mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api maximus-keyserver maximus-tunnel x-ui openvpn-server@server openvpn sslh 2>/dev/null
                             systemctl daemon-reload 2>/dev/null
-                            killall -9 badvpn-udpgw hysteria udp-custom stunnel4 2>/dev/null
+                            
+                            killall -9 badvpn-udpgw hysteria udp-custom stunnel4 dropbear squid squid3 dns-server sslh 2>/dev/null
                             pkill -9 badvpn-udpgw 2>/dev/null
                             pkill -9 hysteria 2>/dev/null
                             pkill -9 udp-custom 2>/dev/null
                             pkill -9 stunnel4 2>/dev/null
+                            pkill -9 dropbear 2>/dev/null
+                            pkill -9 squid 2>/dev/null
+                            pkill -9 dns-server 2>/dev/null
+                            pkill -9 -f '[P]Direct' >/dev/null 2>&1
+                            pkill -9 -f '[P]Open' >/dev/null 2>&1
+                            pkill -9 -f '[P]Pub' >/dev/null 2>&1
+                            pkill -9 -f '[P]Priv' >/dev/null 2>&1
+                            pkill -9 -f '[P]Get' >/dev/null 2>&1
+                            pkill -9 -f '[w]s-epro' >/dev/null 2>&1
                             pkill -9 -f '[b]ot.py' >/dev/null 2>&1
+                            pkill -9 -f '[k]ey_server.py' >/dev/null 2>&1
+                            pkill -9 -f '[c]loudflared' >/dev/null 2>&1
+                            screen -wipe >/dev/null 2>&1
+                            
+                            fuser -k 6767/tcp >/dev/null 2>&1
+                            fuser -k 3128/tcp >/dev/null 2>&1
+                            fuser -k 80/tcp >/dev/null 2>&1
+                            fuser -k 443/tcp >/dev/null 2>&1
+                            fuser -k 53/udp >/dev/null 2>&1
+                            
+                            # Limpiar instalación antigua y configuraciones previas
+                            rm -rf /etc/stunnel /etc/dropbear /etc/squid /etc/openvpn 2>/dev/null
                             
                             # Limpiar instalación antigua
                             rm -rf /etc/MaximusVpsMx
