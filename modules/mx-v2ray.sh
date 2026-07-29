@@ -118,8 +118,8 @@ EOF
                 -subj "/CN=127.0.0.1" >/dev/null 2>&1
         fi
         
-        # Corregir certificateFile vacíos
-        clean_json=$(jq 'walk(if type == "object" and has("certificateFile") and .certificateFile == "" then .certificateFile = "/etc/MaximusVpsMx/v2ray/server.crt" | .keyFile = "/etc/MaximusVpsMx/v2ray/server.key" else . end)' "$V2RAY_CONF" 2>/dev/null)
+        # Corregir certificateFile vacíos y eliminar inbounds duplicados por tag o puerto
+        clean_json=$(jq 'walk(if type == "object" and has("certificateFile") and .certificateFile == "" then .certificateFile = "/etc/MaximusVpsMx/v2ray/server.crt" | .keyFile = "/etc/MaximusVpsMx/v2ray/server.key" else . end) | .inbounds |= unique_by(.tag)' "$V2RAY_CONF" 2>/dev/null)
         [ -n "$clean_json" ] && echo "$clean_json" > "$V2RAY_CONF"
     fi
 }
@@ -292,7 +292,7 @@ EOF
     echo "$inbound_json" > "$tmp_file"
 
     if [ "$net" == "ws" ]; then
-        tmp_json=$(jq --arg path "$path" --arg host "$host_header" '.streamSettings.wsSettings = {"path": $path, "headers": {"Host": $host}}' "$tmp_file")
+        tmp_json=$(jq --arg path "$path" --arg host "$host_header" '.streamSettings.wsSettings = {"path": $path, "host": $host}' "$tmp_file")
         echo "$tmp_json" > "$tmp_file"
     elif [ "$net" == "grpc" ]; then
         tmp_json=$(jq --arg sname "$service_name" '.streamSettings.grpcSettings = {"serviceName": $sname}' "$tmp_file")
@@ -325,6 +325,10 @@ EOF
     # Agregar nuevo inbound al config.json de Xray
     final_inbound=$(cat "$tmp_file")
     rm -f "$tmp_file"
+
+    # Limpiar inbound previo en el mismo puerto o tag para evitar error de tag duplicado
+    clean_existing=$(jq --arg tag "$tag_id" --argjson port "$port" '.inbounds |= map(select(.tag != $tag and .port != $port))' "$V2RAY_CONF")
+    echo "$clean_existing" > "$V2RAY_CONF"
 
     updated_config=$(jq --argjson new_in "$final_inbound" '.inbounds += [$new_in]' "$V2RAY_CONF")
     echo "$updated_config" > "$V2RAY_CONF"
