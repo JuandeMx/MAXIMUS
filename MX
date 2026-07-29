@@ -2199,6 +2199,17 @@ menu_mantenimiento() {
                             fuser -k 443/tcp >/dev/null 2>&1
                             fuser -k 53/udp >/dev/null 2>&1
                             
+                            # Limpiar usuarios creados por el panel en Linux
+                            echo -e '${RED}[+] Eliminando usuarios SSH creados anteriormente...${NC}'
+                            if [ -f /etc/MaximusVpsMx/users.db ]; then
+                                awk -F'|' '{print $1}' /etc/MaximusVpsMx/users.db 2>/dev/null | while read -r usr; do
+                                    [ -n "$usr" ] && userdel -f "$usr" 2>/dev/null
+                                done
+                            fi
+                            awk -F: '$3 >= 1000 && $7 ~ /false/ {print $1}' /etc/passwd 2>/dev/null | while read -r usr; do
+                                [ "$usr" != "nobody" ] && userdel -f "$usr" 2>/dev/null
+                            done
+                            
                             # Limpiar instalación antigua y configuraciones previas
                             rm -rf /etc/stunnel /etc/dropbear /etc/squid /etc/openvpn 2>/dev/null
                             
@@ -2291,6 +2302,17 @@ menu_mantenimiento() {
                             fuser -k 443/tcp >/dev/null 2>&1
                             fuser -k 53/udp >/dev/null 2>&1
                             
+                            # Limpiar usuarios creados por el panel en Linux
+                            echo -e '${RED}[+] Eliminando usuarios SSH creados anteriormente...${NC}'
+                            if [ -f /etc/MaximusVpsMx/users.db ]; then
+                                awk -F'|' '{print $1}' /etc/MaximusVpsMx/users.db 2>/dev/null | while read -r usr; do
+                                    [ -n "$usr" ] && userdel -f "$usr" 2>/dev/null
+                                done
+                            fi
+                            awk -F: '$3 >= 1000 && $7 ~ /false/ {print $1}' /etc/passwd 2>/dev/null | while read -r usr; do
+                                [ "$usr" != "nobody" ] && userdel -f "$usr" 2>/dev/null
+                            done
+
                             # Limpiar instalación antigua y configuraciones previas
                             rm -rf /etc/stunnel /etc/dropbear /etc/squid /etc/openvpn 2>/dev/null
                             
@@ -2364,7 +2386,16 @@ menu_mantenimiento() {
                         fuser -k 53/udp >/dev/null 2>&1
                         rm -f /root/setup 2>/dev/null
                         
-                        echo -e '${RED}[+] Eliminando paquetes, carpetas de configuración y temporales...${NC}'
+                        echo -e '${RED}[+] Eliminando paquetes, usuarios SSH, carpetas de configuración y temporales...${NC}'
+                        if [ -f /etc/MaximusVpsMx/users.db ]; then
+                            awk -F'|' '{print $1}' /etc/MaximusVpsMx/users.db 2>/dev/null | while read -r usr; do
+                                [ -n "$usr" ] && userdel -f "$usr" 2>/dev/null
+                            done
+                        fi
+                        awk -F: '$3 >= 1000 && $7 ~ /false/ {print $1}' /etc/passwd 2>/dev/null | while read -r usr; do
+                            [ "$usr" != "nobody" ] && userdel -f "$usr" 2>/dev/null
+                        done
+
                         rm -rf /usr/local/x-ui /etc/x-ui /usr/bin/x-ui 2>/dev/null
                         rm -rf /usr/local/hysteria /etc/hysteria 2>/dev/null
                         rm -rf /etc/stunnel /etc/dropbear /etc/squid /etc/openvpn 2>/dev/null
