@@ -81,7 +81,7 @@ if wget -q https://matt.ucc.asn.au/dropbear/releases/dropbear-2022.83.tar.bz2 ||
 #define DROPBEAR_SVR_PAM_AUTH 1
 
 #undef DROPBEAR_SVR_PASSWORD_AUTH
-#define DROPBEAR_SVR_PASSWORD_AUTH 1
+#define DROPBEAR_SVR_PASSWORD_AUTH 0
 
 #endif /* DROPBEAR_LOCALOPTIONS_H */
 LOCALOPT
