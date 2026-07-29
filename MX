@@ -1407,6 +1407,13 @@ menu_protocolos() {
             st_xui="${RED}[ OFF ]${NC}"
         fi
 
+        # V2RAY NATIVO (XRAY CLI 100% TERMINAL)
+        if systemctl is-active --quiet maximus-v2ray 2>/dev/null; then
+            st_v2ray="${GREEN}[ ACTIVO : 8880,2082,2083 ]${NC}"
+        else
+            st_v2ray="${RED}[ OFF ]${NC}"
+        fi
+
         ui_header "MENU DE PROTOCOLOS"
         active_tcp_ports=$(ss -tlnp 2>/dev/null | awk 'NR>1 {print $4}' | awk -F':' '{print $NF}' | grep -E '^[0-9]+$' | sort -u -n | tr '\n' ' ')
         [ -z "$active_tcp_ports" ] && active_tcp_ports="Ninguno"
@@ -1425,13 +1432,14 @@ menu_protocolos() {
         echo -e "  ${CYAN}[11] >${WHITE} TCP-OVER ------------------------ $st_tcp"
         echo -e "  ${CYAN}[12] >${WHITE} SSLH ---------------------------- $st_sslh"
         ui_subhr
-        echo -e "                            PROXY'S"
+        echo -e "                            PROXY'S & V2RAY"
         ui_subhr
         echo -e "  ${CYAN}[13] >${WHITE} WEBSOKET STATUS EDITABLE -------- $st_ws"
         echo -e "  ${CYAN}[14] >${WHITE} PROXY OPENVPN ------------------- $st_popen"
         echo -e "  ${CYAN}[15] >${WHITE} PROXY PUBLICO ------------------- $st_ppub"
         echo -e "  ${CYAN}[16] >${WHITE} PROXY PRIVADO ------------------- $st_ppriv"
-        echo -e "  ${CYAN}[17] >${WHITE} PANEL X-UI (V2RAY/XRAY) --------- $st_xui"
+        echo -e "  ${CYAN}[17] >${WHITE} PANEL X-UI (WEB UI) ------------- $st_xui"
+        echo -e "  ${CYAN}[18] >${WHITE} V2RAY / XRAY NATIVO (TERMINAL) -- $st_v2ray"
         ui_hr
         echo -e "  ${WHITE}[0] VOLVER AL MENÚ PRINCIPAL${NC}"
         ui_hr
@@ -1455,6 +1463,7 @@ menu_protocolos() {
             15) bash /etc/MaximusVpsMx/modules/mx-proxies.sh 15 ;;
             16) bash /etc/MaximusVpsMx/modules/mx-proxies.sh 16 ;;
             17) sub_xui ;;
+            18) bash /etc/MaximusVpsMx/modules/mx-v2ray.sh ;;
             0) return ;;
             *) continue ;;
         esac
