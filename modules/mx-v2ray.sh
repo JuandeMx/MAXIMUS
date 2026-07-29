@@ -449,11 +449,17 @@ EOF
     echo -e "${CYAN} EXPIRACIÓN:${WHITE} $exp_date ($dias Días)${NC}"
     ui_subhr
     echo -e "${YELLOW} ENLACE DE CONEXIÓN GENERADO (URL):${NC}"
-    echo -e "${WHITE}$final_link${NC}"
+    echo -e "${WHITE}$(echo "$final_link" | fold -w 75)${NC}"
     ui_subhr
     echo -e "${YELLOW} CÓDIGO QR PARA ESCANEAR EN APP (v2rayNG / HTTP Custom):${NC}"
+    echo ""
     if command -v qrencode >/dev/null 2>&1; then
-        qrencode -t ANSI256 "$final_link" 2>/dev/null || qrencode -t UTF8 "$final_link" 2>/dev/null
+        qrencode -t UTF8i -m 1 "$final_link" 2>/dev/null || \
+        qrencode -t ANSIi -m 1 "$final_link" 2>/dev/null || \
+        qrencode -t UTF8 -m 1 "$final_link" 2>/dev/null || \
+        qrencode -t ANSI -m 1 "$final_link" 2>/dev/null
+    else
+        echo -e "${RED}(Instala qrencode para ver el código QR impreso)${NC}"
     fi
     ui_hr
     ui_pause
