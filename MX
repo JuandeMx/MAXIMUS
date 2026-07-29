@@ -2022,8 +2022,9 @@ menu_mantenimiento() {
                     if timeout 15 git clone -4 --depth=1 -q "$URL_REPO" "$TEMP_DIR"; then
                         echo -e "${GREEN}[OK] Descarga exitosa. Preparando reemplazo seguro...${NC}"
                         
+                        cd /tmp
                         exec bash -c "
-                            cd /root || cd /tmp
+                            cd /tmp
                             echo -e '${RED}[!] Deteniendo todos los servicios y procesos vivos...${NC}'
                             systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api maximus-keyserver maximus-tunnel 2>/dev/null
                             systemctl disable stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api maximus-keyserver maximus-tunnel 2>/dev/null
@@ -2033,15 +2034,15 @@ menu_mantenimiento() {
                             pkill -9 hysteria 2>/dev/null
                             pkill -9 udp-custom 2>/dev/null
                             pkill -9 stunnel4 2>/dev/null
-                            pkill -9 -f '[P]Direct' >/dev/null 2>&1
-                            pkill -9 -f '[P]Open' >/dev/null 2>&1
-                            pkill -9 -f '[P]Pub' >/dev/null 2>&1
-                            pkill -9 -f '[P]Priv' >/dev/null 2>&1
-                            pkill -9 -f '[P]Get' >/dev/null 2>&1
-                            pkill -9 -f '[w]s-epro' >/dev/null 2>&1
-                            pkill -9 -f '[k]ey_server.py' >/dev/null 2>&1
-                            pkill -9 -f '[b]ot.py' >/dev/null 2>&1
-                            pkill -9 -f '[c]loudflared' >/dev/null 2>&1
+                            pkill -9 -f 'python.*PDirect' >/dev/null 2>&1
+                            pkill -9 -f 'python.*POpen' >/dev/null 2>&1
+                            pkill -9 -f 'python.*PPub' >/dev/null 2>&1
+                            pkill -9 -f 'python.*PPriv' >/dev/null 2>&1
+                            pkill -9 -f 'python.*PGet' >/dev/null 2>&1
+                            pkill -9 -f 'python.*ws-epro' >/dev/null 2>&1
+                            pkill -9 -f 'python.*key_server.py' >/dev/null 2>&1
+                            pkill -9 -f 'python.*bot.py' >/dev/null 2>&1
+                            pkill -9 -f 'cloudflared' >/dev/null 2>&1
                             screen -wipe >/dev/null 2>&1
                             
                             rm -rf /etc/MaximusVpsMx
@@ -2166,8 +2167,9 @@ menu_mantenimiento() {
                         # NODO MAESTRO
                         echo -e "${RED}🔥 INICIANDO LIMPIEZA TOTAL Y REINSTALACIÓN DE MAESTRO...${NC}"
                         
+                        cd /tmp
                         exec bash -c "
-                            cd /root || cd /tmp
+                            cd /tmp
                             echo -e '${RED}🔥 Iniciando limpieza y deteniendo servicios del Maestro...${NC}'
                             systemctl stop stunnel4 dropbear squid squid3 mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api maximus-keyserver maximus-tunnel x-ui openvpn-server@server openvpn sslh 2>/dev/null
                             systemctl disable stunnel4 dropbear squid squid3 mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api maximus-keyserver maximus-tunnel x-ui openvpn-server@server openvpn sslh 2>/dev/null
@@ -2181,15 +2183,15 @@ menu_mantenimiento() {
                             pkill -9 dropbear 2>/dev/null
                             pkill -9 squid 2>/dev/null
                             pkill -9 dns-server 2>/dev/null
-                            pkill -9 -f '[P]Direct' >/dev/null 2>&1
-                            pkill -9 -f '[P]Open' >/dev/null 2>&1
-                            pkill -9 -f '[P]Pub' >/dev/null 2>&1
-                            pkill -9 -f '[P]Priv' >/dev/null 2>&1
-                            pkill -9 -f '[P]Get' >/dev/null 2>&1
-                            pkill -9 -f '[w]s-epro' >/dev/null 2>&1
-                            pkill -9 -f '[b]ot.py' >/dev/null 2>&1
-                            pkill -9 -f '[k]ey_server.py' >/dev/null 2>&1
-                            pkill -9 -f '[c]loudflared' >/dev/null 2>&1
+                            pkill -9 -f 'python.*PDirect' >/dev/null 2>&1
+                            pkill -9 -f 'python.*POpen' >/dev/null 2>&1
+                            pkill -9 -f 'python.*PPub' >/dev/null 2>&1
+                            pkill -9 -f 'python.*PPriv' >/dev/null 2>&1
+                            pkill -9 -f 'python.*PGet' >/dev/null 2>&1
+                            pkill -9 -f 'python.*ws-epro' >/dev/null 2>&1
+                            pkill -9 -f 'python.*bot.py' >/dev/null 2>&1
+                            pkill -9 -f 'python.*key_server.py' >/dev/null 2>&1
+                            pkill -9 -f 'cloudflared' >/dev/null 2>&1
                             screen -wipe >/dev/null 2>&1
                             
                             fuser -k 6767/tcp >/dev/null 2>&1
@@ -2258,8 +2260,9 @@ menu_mantenimiento() {
                             continue
                         fi
                         
+                        cd /tmp
                         exec bash -c "
-                            cd /root || cd /tmp
+                            cd /tmp
                             echo -e '${RED}🔥 Iniciando limpieza y deteniendo servicios del Cliente...${NC}'
                             systemctl stop stunnel4 dropbear squid squid3 mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api maximus-keyserver maximus-tunnel x-ui openvpn-server@server openvpn sslh 2>/dev/null
                             systemctl disable stunnel4 dropbear squid squid3 mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api maximus-keyserver maximus-tunnel x-ui openvpn-server@server openvpn sslh 2>/dev/null
@@ -2273,15 +2276,15 @@ menu_mantenimiento() {
                             pkill -9 dropbear 2>/dev/null
                             pkill -9 squid 2>/dev/null
                             pkill -9 dns-server 2>/dev/null
-                            pkill -9 -f '[P]Direct' >/dev/null 2>&1
-                            pkill -9 -f '[P]Open' >/dev/null 2>&1
-                            pkill -9 -f '[P]Pub' >/dev/null 2>&1
-                            pkill -9 -f '[P]Priv' >/dev/null 2>&1
-                            pkill -9 -f '[P]Get' >/dev/null 2>&1
-                            pkill -9 -f '[w]s-epro' >/dev/null 2>&1
-                            pkill -9 -f '[b]ot.py' >/dev/null 2>&1
-                            pkill -9 -f '[k]ey_server.py' >/dev/null 2>&1
-                            pkill -9 -f '[c]loudflared' >/dev/null 2>&1
+                            pkill -9 -f 'python.*PDirect' >/dev/null 2>&1
+                            pkill -9 -f 'python.*POpen' >/dev/null 2>&1
+                            pkill -9 -f 'python.*PPub' >/dev/null 2>&1
+                            pkill -9 -f 'python.*PPriv' >/dev/null 2>&1
+                            pkill -9 -f 'python.*PGet' >/dev/null 2>&1
+                            pkill -9 -f 'python.*ws-epro' >/dev/null 2>&1
+                            pkill -9 -f 'python.*bot.py' >/dev/null 2>&1
+                            pkill -9 -f 'python.*key_server.py' >/dev/null 2>&1
+                            pkill -9 -f 'cloudflared' >/dev/null 2>&1
                             screen -wipe >/dev/null 2>&1
                             
                             fuser -k 6767/tcp >/dev/null 2>&1
@@ -2328,8 +2331,9 @@ menu_mantenimiento() {
                 if [[ "$desc" == "S" || "$desc" == "s" ]]; then
                     echo -e "${RED}🔥 INICIANDO PURGA MASIVA Y LIMPIEZA TOTAL...${NC}"
                     
+                    cd /tmp
                     exec bash -c "
-                        cd /root || cd /tmp
+                        cd /tmp
                         echo -e '${RED}[+] Deteniendo todos los servicios del sistema...${NC}'
                         systemctl stop stunnel4 dropbear squid squid3 mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api maximus-keyserver maximus-tunnel x-ui openvpn-server@server openvpn sslh 2>/dev/null
                         systemctl disable stunnel4 dropbear squid squid3 mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api maximus-keyserver maximus-tunnel x-ui openvpn-server@server openvpn sslh 2>/dev/null
@@ -2344,15 +2348,15 @@ menu_mantenimiento() {
                         pkill -9 dropbear 2>/dev/null
                         pkill -9 squid 2>/dev/null
                         pkill -9 dns-server 2>/dev/null
-                        pkill -9 -f '[P]Direct' >/dev/null 2>&1
-                        pkill -9 -f '[P]Open' >/dev/null 2>&1
-                        pkill -9 -f '[P]Pub' >/dev/null 2>&1
-                        pkill -9 -f '[P]Priv' >/dev/null 2>&1
-                        pkill -9 -f '[P]Get' >/dev/null 2>&1
-                        pkill -9 -f '[w]s-epro' >/dev/null 2>&1
-                        pkill -9 -f '[k]ey_server.py' >/dev/null 2>&1
-                        pkill -9 -f '[b]ot.py' >/dev/null 2>&1
-                        pkill -9 -f '[c]loudflared' >/dev/null 2>&1
+                        pkill -9 -f 'python.*PDirect' >/dev/null 2>&1
+                        pkill -9 -f 'python.*POpen' >/dev/null 2>&1
+                        pkill -9 -f 'python.*PPub' >/dev/null 2>&1
+                        pkill -9 -f 'python.*PPriv' >/dev/null 2>&1
+                        pkill -9 -f 'python.*PGet' >/dev/null 2>&1
+                        pkill -9 -f 'python.*ws-epro' >/dev/null 2>&1
+                        pkill -9 -f 'python.*key_server.py' >/dev/null 2>&1
+                        pkill -9 -f 'python.*bot.py' >/dev/null 2>&1
+                        pkill -9 -f 'cloudflared' >/dev/null 2>&1
                         screen -wipe >/dev/null 2>&1
                         
                         fuser -k 6767/tcp >/dev/null 2>&1
