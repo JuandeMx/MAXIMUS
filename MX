@@ -2334,17 +2334,61 @@ menu_mantenimiento() {
                     echo -e "${RED}🔥 INICIANDO PURGA MASIVA Y LIMPIEZA TOTAL...${NC}"
                     
                     cd /tmp
-                        
-                        rm -rf /etc/MaximusVpsMx
-                        rm -f /usr/local/bin/MX /usr/local/bin/menu /usr/local/bin/MENU
-                        
-                        apt-get purge stunnel4 dropbear openvpn squid squid3 -y 2>/dev/null
-                        apt-get autoremove -y 2>/dev/null
-                        
-                        systemctl daemon-reload
-                        echo -e '${GREEN}✅ VUELO COMPLETADO. El servidor ha sido restaurado de fábrica.${NC}'
-                        exit 0
-                    "
+                    echo -e "${RED}[+] Deteniendo todos los servicios del sistema...${NC}"
+                    systemctl stop stunnel4 dropbear squid squid3 mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api maximus-keyserver maximus-tunnel x-ui openvpn-server@server openvpn sslh 2>/dev/null
+                    systemctl disable stunnel4 dropbear squid squid3 mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api maximus-keyserver maximus-tunnel x-ui openvpn-server@server openvpn sslh 2>/dev/null
+                    systemctl daemon-reload 2>/dev/null
+                    
+                    echo -e "${RED}[+] Matando todos los procesos en segundo plano y sockets...${NC}"
+                    killall -9 badvpn-udpgw hysteria udp-custom squid squid3 dns-server 2>/dev/null
+                    pkill -9 badvpn-udpgw 2>/dev/null
+                    pkill -9 hysteria 2>/dev/null
+                    pkill -9 udp-custom 2>/dev/null
+                    pkill -9 squid 2>/dev/null
+                    pkill -9 dns-server 2>/dev/null
+                    pkill -9 -f 'python.*PDirect' >/dev/null 2>&1
+                    pkill -9 -f 'python.*POpen' >/dev/null 2>&1
+                    pkill -9 -f 'python.*PPub' >/dev/null 2>&1
+                    pkill -9 -f 'python.*PPriv' >/dev/null 2>&1
+                    pkill -9 -f 'python.*PGet' >/dev/null 2>&1
+                    pkill -9 -f 'python.*ws-epro' >/dev/null 2>&1
+                    pkill -9 -f 'python.*key_server.py' >/dev/null 2>&1
+                    pkill -9 -f 'python.*bot.py' >/dev/null 2>&1
+                    pkill -9 -f 'cloudflared' >/dev/null 2>&1
+                    screen -wipe >/dev/null 2>&1
+                    
+                    rm -f /root/setup 2>/dev/null
+                    
+                    echo -e "${RED}[+] Eliminando paquetes, usuarios SSH, carpetas de configuración y temporales...${NC}"
+                    if [ -f /etc/MaximusVpsMx/users.db ]; then
+                        awk -F':' '{print $1}' /etc/MaximusVpsMx/users.db 2>/dev/null | while read -r usr; do
+                            [ -n "$usr" ] && userdel -f "$usr" 2>/dev/null
+                        done
+                    fi
+                    if [ -f /etc/MaximusVpsMx/hysteria_users.db ]; then
+                        awk -F':' '{print $1}' /etc/MaximusVpsMx/hysteria_users.db 2>/dev/null | while read -r usr; do
+                            [ -n "$usr" ] && userdel -f "$usr" 2>/dev/null
+                        done
+                    fi
+                    awk -F: '$3 >= 1000 && ($7 ~ /false/ || $7 ~ /nologin/) {print $1}' /etc/passwd 2>/dev/null | while read -r usr; do
+                        [ "$usr" != "nobody" ] && userdel -f "$usr" 2>/dev/null
+                    done
+                    rm -rf /tmp/MX_BACKUP /var/MaximusVpsMx_backup 2>/dev/null
+
+                    rm -rf /usr/local/x-ui /etc/x-ui /usr/bin/x-ui 2>/dev/null
+                    rm -rf /usr/local/hysteria /etc/hysteria 2>/dev/null
+                    rm -rf /etc/stunnel /etc/dropbear /etc/squid /etc/openvpn 2>/dev/null
+                    rm -f /etc/systemd/system/x-ui.service /etc/systemd/system/hysteria.service /etc/systemd/system/udp-custom.service /etc/systemd/system/maximus-*.service 2>/dev/null
+                    
+                    rm -rf /etc/MaximusVpsMx
+                    rm -f /usr/local/bin/MX /usr/local/bin/menu /usr/local/bin/MENU /usr/bin/MX /usr/bin/menu /usr/bin/MENU 2>/dev/null
+                    
+                    apt-get purge stunnel4 dropbear openvpn squid squid3 -y 2>/dev/null
+                    apt-get autoremove -y 2>/dev/null
+                    
+                    systemctl daemon-reload
+                    echo -e "${GREEN}✅ VUELO COMPLETADO. El servidor ha sido restaurado de fábrica.${NC}"
+                    exit 0
                 fi ;;
             0) return ;;
         esac
