@@ -2298,40 +2298,50 @@ menu_mantenimiento() {
                     
                     exec bash -c "
                         cd /root || cd /tmp
-                        # Detener y deshabilitar servicios complejos y matar todo
-                        systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api 2>/dev/null
-                        systemctl stop x-ui openvpn-server@server 2>/dev/null
-                        systemctl disable x-ui openvpn-server@server hysteria udp-custom ws-epro stunnel4 dropbear mx-proxy badvpn mx-slowdns maximus-bot maximus-wa maximus-api 2>/dev/null
+                        echo -e '${RED}[+] Deteniendo todos los servicios del sistema...${NC}'
+                        systemctl stop stunnel4 dropbear squid squid3 mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api maximus-keyserver maximus-tunnel x-ui openvpn-server@server openvpn sslh 2>/dev/null
+                        systemctl disable stunnel4 dropbear squid squid3 mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api maximus-keyserver maximus-tunnel x-ui openvpn-server@server openvpn sslh 2>/dev/null
                         systemctl daemon-reload 2>/dev/null
-                        killall -9 badvpn-udpgw hysteria udp-custom stunnel4 2>/dev/null
+                        
+                        echo -e '${RED}[+] Matando todos los procesos en segundo plano y sockets...${NC}'
+                        killall -9 badvpn-udpgw hysteria udp-custom stunnel4 dropbear squid squid3 dns-server sslh 2>/dev/null
                         pkill -9 badvpn-udpgw 2>/dev/null
                         pkill -9 hysteria 2>/dev/null
                         pkill -9 udp-custom 2>/dev/null
                         pkill -9 stunnel4 2>/dev/null
+                        pkill -9 dropbear 2>/dev/null
+                        pkill -9 squid 2>/dev/null
+                        pkill -9 dns-server 2>/dev/null
+                        pkill -9 -f '[P]Direct' >/dev/null 2>&1
+                        pkill -9 -f '[P]Open' >/dev/null 2>&1
+                        pkill -9 -f '[P]Pub' >/dev/null 2>&1
+                        pkill -9 -f '[P]Priv' >/dev/null 2>&1
+                        pkill -9 -f '[P]Get' >/dev/null 2>&1
+                        pkill -9 -f '[w]s-epro' >/dev/null 2>&1
                         pkill -9 -f '[k]ey_server.py' >/dev/null 2>&1
                         pkill -9 -f '[b]ot.py' >/dev/null 2>&1
                         pkill -9 -f '[c]loudflared' >/dev/null 2>&1
+                        screen -wipe >/dev/null 2>&1
+                        
                         fuser -k 6767/tcp >/dev/null 2>&1
+                        fuser -k 3128/tcp >/dev/null 2>&1
                         fuser -k 80/tcp >/dev/null 2>&1
                         fuser -k 443/tcp >/dev/null 2>&1
+                        fuser -k 53/udp >/dev/null 2>&1
                         rm -f /root/setup 2>/dev/null
                         
-                        # Eliminar directorios y binarios externos
+                        echo -e '${RED}[+] Eliminando paquetes, carpetas de configuración y temporales...${NC}'
                         rm -rf /usr/local/x-ui /etc/x-ui /usr/bin/x-ui 2>/dev/null
                         rm -rf /usr/local/hysteria /etc/hysteria 2>/dev/null
-                        rm -f /etc/systemd/system/x-ui.service 2>/dev/null
-                        rm -f /etc/systemd/system/hysteria.service 2>/dev/null
-                        rm -f /etc/systemd/system/udp-custom.service 2>/dev/null
+                        rm -rf /etc/stunnel /etc/dropbear /etc/squid /etc/openvpn 2>/dev/null
+                        rm -f /etc/systemd/system/x-ui.service /etc/systemd/system/hysteria.service /etc/systemd/system/udp-custom.service /etc/systemd/system/maximus-*.service 2>/dev/null
                         
-                        # Eliminar estructura principal y alias
                         rm -rf /etc/MaximusVpsMx
                         rm -f /usr/local/bin/MX /usr/local/bin/menu /usr/local/bin/MENU
                         
-                        # Purga de paquetes de repositorio
-                        apt-get purge stunnel4 dropbear openvpn -y 2>/dev/null
+                        apt-get purge stunnel4 dropbear openvpn squid squid3 -y 2>/dev/null
                         apt-get autoremove -y 2>/dev/null
                         
-                        # Refrescar systemd
                         systemctl daemon-reload
                         echo -e '${GREEN}✅ VUELO COMPLETADO. El servidor ha sido restaurado de fábrica.${NC}'
                         exit 0
