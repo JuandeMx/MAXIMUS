@@ -687,6 +687,9 @@ delete_client_wizard() {
 # ==============================================================================
 menu_v2ray() {
     init_v2ray_config
+    if check_xray_installed && ! systemctl is-active --quiet maximus-v2ray; then
+        systemctl start maximus-v2ray >/dev/null 2>&1
+    fi
     while true; do
         clear
         ui_hr
