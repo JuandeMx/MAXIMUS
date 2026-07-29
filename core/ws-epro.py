@@ -21,7 +21,7 @@ BUFLEN = 131072
 
 def obtener_banner_chico():
     import os
-    default_text = "[LEGION ANONYMUS & FreeLatam] Si te revendieron este servidor TE ESTAFARON - Grupos: https://chat.whatsapp.com/L05wZezLROk2QIqubI0OXg | https://chat.whatsapp.com/HLv74cLJzaiEDBieLIBllc"
+    default_text = "[LEGION ANONYMUS & MAXIMUS J&J] Si te revendieron este servidor TE ESTAFARON - Grupos: https://chat.whatsapp.com/L05wZezLROk2QIqubI0OXg | https://chat.whatsapp.com/Gmti2GoprFa0Uf4tuGD4dP?s=cl&p=a&ilr=0"
     path = "/etc/MaximusVpsMx/core/small_banner.txt"
     if os.path.exists(path):
         try:

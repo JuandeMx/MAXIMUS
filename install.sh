@@ -316,7 +316,7 @@ chmod +x /etc/MaximusVpsMx/core/maximus_banner.sh
 
 # Inicializar banner chico por defecto si no existe
 if [ ! -f /etc/MaximusVpsMx/core/small_banner.txt ]; then
-    echo "[LEGION ANONYMUS & FreeLatam] Si te revendieron este servidor TE ESTAFARON - Grupos: https://chat.whatsapp.com/L05wZezLROk2QIqubI0OXg | https://chat.whatsapp.com/HLv74cLJzaiEDBieLIBllc" > /etc/MaximusVpsMx/core/small_banner.txt
+    echo "[LEGION ANONYMUS & MAXIMUS J&J] Si te revendieron este servidor TE ESTAFARON - Grupos: https://chat.whatsapp.com/L05wZezLROk2QIqubI0OXg | https://chat.whatsapp.com/Gmti2GoprFa0Uf4tuGD4dP?s=cl&p=a&ilr=0" > /etc/MaximusVpsMx/core/small_banner.txt
 fi
 
 # Extraer y actualizar banners estáticos para Dropbear y openSSH
