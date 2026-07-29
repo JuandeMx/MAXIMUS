@@ -569,6 +569,8 @@ list_clients() {
     ui_hr
     if [ ! -s "$V2RAY_CLIENTS_DB" ]; then
         echo -e " ${RED}No hay clientes V2Ray registrados.${NC}"
+        ui_hr
+        return
     else
         printf "${WHITE}%-15s | %-36s | %-16s | %-10s${NC}\n" "CLIENTE" "UUID / KEY" "MÉTODO TAG" "EXPIRACIÓN"
         ui_subhr
@@ -578,6 +580,29 @@ list_clients() {
         done < "$V2RAY_CLIENTS_DB"
     fi
     ui_hr
+
+    read -p " Selecciona un cliente para ver su URL y QR (Enter para salir): " sel_c
+    [ -z "$sel_c" ] && return
+
+    c_line=$(grep -i "^$sel_c|" "$V2RAY_CLIENTS_DB" | head -n 1)
+    [ -z "$c_line" ] && c_line=$(grep -i "$sel_c" "$V2RAY_CLIENTS_DB" | head -n 1)
+
+    if [ -z "$c_line" ]; then
+        echo -e "${RED}❌ Cliente no encontrado.${NC}"
+        ui_pause
+        return
+    fi
+
+    IFS='|' read -r c_usr c_uid c_tag c_exp <<< "$c_line"
+
+    inbound_line=$(grep "^$c_tag|" "$V2RAY_DB" | head -n 1)
+    if [ -z "$inbound_line" ]; then
+        inbound_line="$c_tag|Inbound|vless|443|ws|none|/|telcel.com||"
+    fi
+
+    IFS='|' read -r tid remark proto port net sec path host_header sni reality_pub <<< "$inbound_line"
+
+    generate_client_qr_output "$c_usr" "$c_uid" "$c_exp" "Activo" "$remark" "$proto" "$port" "$net" "$sec" "$path" "$host_header" "$sni" "$reality_pub"
 }
 
 renew_client_wizard() {

@@ -310,6 +310,31 @@ chmod +x /etc/MaximusVpsMx/core/*.py 2>/dev/null
 chmod +x /etc/MaximusVpsMx/modules/*.sh 2>/dev/null
 touch /etc/MaximusVpsMx/hysteria_users.db
 
+# Inicializar entorno V2Ray
+mkdir -p /etc/MaximusVpsMx/v2ray
+touch /etc/MaximusVpsMx/v2ray_inbounds.db
+touch /etc/MaximusVpsMx/v2ray_clients.db
+if [ ! -f /etc/MaximusVpsMx/v2ray/config.json ] || [ ! -s /etc/MaximusVpsMx/v2ray/config.json ]; then
+    cat << 'EOF' > /etc/MaximusVpsMx/v2ray/config.json
+{
+  "log": {
+    "loglevel": "warning"
+  },
+  "inbounds": [],
+  "outbounds": [
+    {
+      "protocol": "freedom",
+      "tag": "direct"
+    },
+    {
+      "protocol": "blackhole",
+      "tag": "block"
+    }
+  ]
+}
+EOF
+fi
+
 # Configurar Banner Dinámico vía PAM
 sed -i 's/\r$//' /etc/MaximusVpsMx/core/maximus_banner.sh 2>/dev/null
 chmod +x /etc/MaximusVpsMx/core/maximus_banner.sh
