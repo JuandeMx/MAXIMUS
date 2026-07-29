@@ -2021,6 +2021,9 @@ menu_mantenimiento() {
                     [ -f /etc/MaximusVpsMx/bot_config.json ] && cp /etc/MaximusVpsMx/bot_config.json /tmp/MX_BACKUP/
                     [ -f /etc/MaximusVpsMx/hysteria_users.db ] && cp /etc/MaximusVpsMx/hysteria_users.db /tmp/MX_BACKUP/
                     [ -f /etc/MaximusVpsMx/cloudflare.conf ] && cp /etc/MaximusVpsMx/cloudflare.conf /tmp/MX_BACKUP/
+                    [ -d /etc/MaximusVpsMx/v2ray ] && cp -r /etc/MaximusVpsMx/v2ray /tmp/MX_BACKUP/
+                    [ -f /etc/MaximusVpsMx/v2ray_inbounds.db ] && cp /etc/MaximusVpsMx/v2ray_inbounds.db /tmp/MX_BACKUP/
+                    [ -f /etc/MaximusVpsMx/v2ray_clients.db ] && cp /etc/MaximusVpsMx/v2ray_clients.db /tmp/MX_BACKUP/
                     
                     URL_REPO="https://github.com/JuandeMx/MAXIMUS.git"
                     TEMP_DIR="/tmp/MaximusVpsMx_temp"
@@ -2073,6 +2076,9 @@ menu_mantenimiento() {
                         [ -f /tmp/MX_BACKUP/bot_config.json ] && cp /tmp/MX_BACKUP/bot_config.json /etc/MaximusVpsMx/
                         [ -f /tmp/MX_BACKUP/hysteria_users.db ] && cp /tmp/MX_BACKUP/hysteria_users.db /etc/MaximusVpsMx/
                         [ -f /tmp/MX_BACKUP/cloudflare.conf ] && cp /tmp/MX_BACKUP/cloudflare.conf /etc/MaximusVpsMx/
+                        [ -d /tmp/MX_BACKUP/v2ray ] && cp -r /tmp/MX_BACKUP/v2ray /etc/MaximusVpsMx/
+                        [ -f /tmp/MX_BACKUP/v2ray_inbounds.db ] && cp /tmp/MX_BACKUP/v2ray_inbounds.db /etc/MaximusVpsMx/
+                        [ -f /tmp/MX_BACKUP/v2ray_clients.db ] && cp /tmp/MX_BACKUP/v2ray_clients.db /etc/MaximusVpsMx/
                         [ -d /etc/MaximusVpsMx/slowdns ] && [ -f /tmp/MX_BACKUP/ns-domain.conf ] && cp /tmp/MX_BACKUP/ns-domain.conf /etc/MaximusVpsMx/slowdns/
                         [ -d /etc/stunnel ] && [ -f /tmp/MX_BACKUP/stunnel.pem ] && cp /tmp/MX_BACKUP/stunnel.pem /etc/stunnel/
                         [ -f /tmp/MX_BACKUP/dropbear ] && cp /tmp/MX_BACKUP/dropbear /etc/default/
@@ -2094,6 +2100,9 @@ menu_mantenimiento() {
                     [ -f /etc/MaximusVpsMx/bot_config.json ] && cp /etc/MaximusVpsMx/bot_config.json /tmp/MX_BACKUP/
                     [ -f /etc/MaximusVpsMx/hysteria_users.db ] && cp /etc/MaximusVpsMx/hysteria_users.db /tmp/MX_BACKUP/
                     [ -f /etc/MaximusVpsMx/cloudflare.conf ] && cp /etc/MaximusVpsMx/cloudflare.conf /tmp/MX_BACKUP/
+                    [ -d /etc/MaximusVpsMx/v2ray ] && cp -r /etc/MaximusVpsMx/v2ray /tmp/MX_BACKUP/
+                    [ -f /etc/MaximusVpsMx/v2ray_inbounds.db ] && cp /etc/MaximusVpsMx/v2ray_inbounds.db /tmp/MX_BACKUP/
+                    [ -f /etc/MaximusVpsMx/v2ray_clients.db ] && cp /etc/MaximusVpsMx/v2ray_clients.db /tmp/MX_BACKUP/
                     
                     source /etc/MaximusVpsMx/license.key
                     if [ -z "$MASTER_URL" ] && [ -n "$MASTER_IP" ]; then
@@ -2146,6 +2155,9 @@ menu_mantenimiento() {
                         [ -f /tmp/MX_BACKUP/bot_config.json ] && cp /tmp/MX_BACKUP/bot_config.json /etc/MaximusVpsMx/
                         [ -f /tmp/MX_BACKUP/hysteria_users.db ] && cp /tmp/MX_BACKUP/hysteria_users.db /etc/MaximusVpsMx/
                         [ -f /tmp/MX_BACKUP/cloudflare.conf ] && cp /tmp/MX_BACKUP/cloudflare.conf /etc/MaximusVpsMx/
+                        [ -d /tmp/MX_BACKUP/v2ray ] && cp -r /tmp/MX_BACKUP/v2ray /etc/MaximusVpsMx/
+                        [ -f /tmp/MX_BACKUP/v2ray_inbounds.db ] && cp /tmp/MX_BACKUP/v2ray_inbounds.db /etc/MaximusVpsMx/
+                        [ -f /tmp/MX_BACKUP/v2ray_clients.db ] && cp /tmp/MX_BACKUP/v2ray_clients.db /etc/MaximusVpsMx/
                         [ -d /etc/MaximusVpsMx/slowdns ] && [ -f /tmp/MX_BACKUP/ns-domain.conf ] && cp /tmp/MX_BACKUP/ns-domain.conf /etc/MaximusVpsMx/slowdns/
                         [ -d /etc/stunnel ] && [ -f /tmp/MX_BACKUP/stunnel.pem ] && cp /tmp/MX_BACKUP/stunnel.pem /etc/stunnel/
                         [ -f /tmp/MX_BACKUP/dropbear ] && cp /tmp/MX_BACKUP/dropbear /etc/default/
@@ -2212,7 +2224,8 @@ menu_mantenimiento() {
                         rm -rf /tmp/MX_BACKUP /var/MaximusVpsMx_backup 2>/dev/null
                         
                         # Limpiar instalación antigua y configuraciones previas
-                        rm -rf /etc/stunnel /etc/dropbear /etc/squid /etc/openvpn 2>/dev/null
+                        rm -rf /etc/stunnel /etc/dropbear /etc/squid /etc/openvpn /etc/MaximusVpsMx/v2ray 2>/dev/null
+                        rm -f /etc/MaximusVpsMx/v2ray_inbounds.db /etc/MaximusVpsMx/v2ray_clients.db 2>/dev/null
                         rm -f /root/setup 2>/dev/null
                         
                         # Obtener código
@@ -2310,7 +2323,8 @@ menu_mantenimiento() {
                         rm -rf /tmp/MX_BACKUP /var/MaximusVpsMx_backup 2>/dev/null
 
                         # Limpiar instalación antigua y configuraciones previas
-                        rm -rf /etc/stunnel /etc/dropbear /etc/squid /etc/openvpn 2>/dev/null
+                        rm -rf /etc/stunnel /etc/dropbear /etc/squid /etc/openvpn /etc/MaximusVpsMx/v2ray 2>/dev/null
+                        rm -f /etc/MaximusVpsMx/v2ray_inbounds.db /etc/MaximusVpsMx/v2ray_clients.db 2>/dev/null
                         rm -f /root/setup 2>/dev/null
                         
                         # Extraer payload
@@ -2344,17 +2358,18 @@ menu_mantenimiento() {
                     
                     cd /tmp
                     echo -e "${RED}[+] Deteniendo todos los servicios del sistema...${NC}"
-                    systemctl stop stunnel4 dropbear squid squid3 mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api maximus-keyserver maximus-tunnel x-ui openvpn-server@server openvpn sslh 2>/dev/null
-                    systemctl disable stunnel4 dropbear squid squid3 mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api maximus-keyserver maximus-tunnel x-ui openvpn-server@server openvpn sslh 2>/dev/null
+                    systemctl stop stunnel4 dropbear squid squid3 mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api maximus-keyserver maximus-tunnel x-ui openvpn-server@server openvpn sslh maximus-v2ray 2>/dev/null
+                    systemctl disable stunnel4 dropbear squid squid3 mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api maximus-keyserver maximus-tunnel x-ui openvpn-server@server openvpn sslh maximus-v2ray 2>/dev/null
                     systemctl daemon-reload 2>/dev/null
                     
                     echo -e "${RED}[+] Matando todos los procesos en segundo plano y sockets...${NC}"
-                    killall -9 badvpn-udpgw hysteria udp-custom squid squid3 dns-server 2>/dev/null
+                    killall -9 badvpn-udpgw hysteria udp-custom squid squid3 dns-server xray 2>/dev/null
                     pkill -9 badvpn-udpgw 2>/dev/null
                     pkill -9 hysteria 2>/dev/null
                     pkill -9 udp-custom 2>/dev/null
                     pkill -9 squid 2>/dev/null
                     pkill -9 dns-server 2>/dev/null
+                    pkill -9 xray 2>/dev/null
                     pkill -9 -f 'python.*PDirect' >/dev/null 2>&1
                     pkill -9 -f 'python.*POpen' >/dev/null 2>&1
                     pkill -9 -f 'python.*PPub' >/dev/null 2>&1
@@ -2386,7 +2401,8 @@ menu_mantenimiento() {
 
                     rm -rf /usr/local/x-ui /etc/x-ui /usr/bin/x-ui 2>/dev/null
                     rm -rf /usr/local/hysteria /etc/hysteria 2>/dev/null
-                    rm -rf /etc/stunnel /etc/dropbear /etc/squid /etc/openvpn 2>/dev/null
+                    rm -rf /etc/stunnel /etc/dropbear /etc/squid /etc/openvpn /etc/MaximusVpsMx/v2ray 2>/dev/null
+                    rm -f /usr/local/bin/xray /etc/systemd/system/maximus-v2ray.service /etc/MaximusVpsMx/v2ray_inbounds.db /etc/MaximusVpsMx/v2ray_clients.db 2>/dev/null
                     rm -f /etc/systemd/system/x-ui.service /etc/systemd/system/hysteria.service /etc/systemd/system/udp-custom.service /etc/systemd/system/maximus-*.service 2>/dev/null
                     
                     rm -rf /etc/MaximusVpsMx
