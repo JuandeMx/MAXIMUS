@@ -108,10 +108,24 @@ init_v2ray_config() {
   ]
 }
 EOF
+    else
+        # Reparar automáticamente certificados vacíos en inbounds existentes
+        mkdir -p /etc/MaximusVpsMx/v2ray
+        if [ ! -f /etc/MaximusVpsMx/v2ray/server.crt ] || [ ! -f /etc/MaximusVpsMx/v2ray/server.key ]; then
+            openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
+                -keyout /etc/MaximusVpsMx/v2ray/server.key \
+                -out /etc/MaximusVpsMx/v2ray/server.crt \
+                -subj "/CN=127.0.0.1" >/dev/null 2>&1
+        fi
+        
+        # Corregir certificateFile vacíos
+        clean_json=$(jq 'walk(if type == "object" and has("certificateFile") and .certificateFile == "" then .certificateFile = "/etc/MaximusVpsMx/v2ray/server.crt" | .keyFile = "/etc/MaximusVpsMx/v2ray/server.key" else . end)' "$V2RAY_CONF" 2>/dev/null)
+        [ -n "$clean_json" ] && echo "$clean_json" > "$V2RAY_CONF"
     fi
 }
 
 reload_v2ray_service() {
+    init_v2ray_config
     systemctl restart maximus-v2ray >/dev/null 2>&1
 }
 
@@ -289,6 +303,18 @@ EOF
     fi
 
     if [ "$sec" == "tls" ]; then
+        if [ -z "$pub_cert" ] || [ ! -f "$pub_cert" ] || [ -z "$priv_key" ] || [ ! -f "$priv_key" ]; then
+            mkdir -p /etc/MaximusVpsMx/v2ray
+            if [ ! -f /etc/MaximusVpsMx/v2ray/server.crt ] || [ ! -f /etc/MaximusVpsMx/v2ray/server.key ]; then
+                echo -e "   ${YELLOW}[+] Generando certificado SSL auto-firmado para TLS...${NC}"
+                openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
+                    -keyout /etc/MaximusVpsMx/v2ray/server.key \
+                    -out /etc/MaximusVpsMx/v2ray/server.crt \
+                    -subj "/CN=${sni:-127.0.0.1}" >/dev/null 2>&1
+            fi
+            pub_cert="/etc/MaximusVpsMx/v2ray/server.crt"
+            priv_key="/etc/MaximusVpsMx/v2ray/server.key"
+        fi
         tmp_json=$(jq --arg sni "$sni" --arg cert "$pub_cert" --arg key "$priv_key" '.streamSettings.tlsSettings = {"serverName": $sni, "certificates": [{"certificateFile": $cert, "keyFile": $key}]}' "$tmp_file")
         echo "$tmp_json" > "$tmp_file"
     elif [ "$sec" == "reality" ]; then
