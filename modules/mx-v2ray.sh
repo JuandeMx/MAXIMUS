@@ -686,6 +686,7 @@ delete_client_wizard() {
 # MENÚ PRINCIPAL ESTRUCTURADO EN SECCIONES
 # ==============================================================================
 menu_v2ray() {
+    init_v2ray_config
     while true; do
         clear
         ui_hr
