@@ -1265,21 +1265,32 @@ sub_xui() {
 # --- SUBMENÚ DE PROTOCOLOS ---
 menu_protocolos() {
     while true; do
-        # --- Telemetría de Servicios ---
+        # --- Telemetría de Servicios y Puertos ---
         # BADVPN
-        ps aux | grep -v grep | grep -q "badvpn-udpgw" && st_badvpn="${GREEN}[ ACTIVO ]${NC}" || st_badvpn="${RED}[ OFF ]${NC}"
+        badvpn_p=$(ps aux | grep badvpn-udpgw | grep -v grep | grep -Po '--listen-addr \S+:\K[0-9]+' 2>/dev/null | tr '\n' ',' | sed 's/,$//')
+        [ -n "$badvpn_p" ] && st_badvpn="${GREEN}[ ACTIVO : $badvpn_p ]${NC}" || st_badvpn="${RED}[ OFF ]${NC}"
         
         # DROPBEAR
-        systemctl is-active --quiet dropbear 2>/dev/null && st_dropbear="${GREEN}[ ACTIVO ]${NC}" || st_dropbear="${RED}[ OFF ]${NC}"
+        dropbear_p=$(ss -tlnp 2>/dev/null | grep dropbear | awk '{print $4}' | awk -F':' '{print $NF}' | sort -u -n | tr '\n' ',' | sed 's/,$//')
+        if [ -z "$dropbear_p" ] && systemctl is-active --quiet dropbear 2>/dev/null; then
+            dropbear_p=$(grep -Po '\-p \K[0-9]+' /etc/default/dropbear 2>/dev/null | tr '\n' ',' | sed 's/,$//')
+        fi
+        [ -n "$dropbear_p" ] && st_dropbear="${GREEN}[ ACTIVO : $dropbear_p ]${NC}" || st_dropbear="${RED}[ OFF ]${NC}"
         
         # SSL (stunnel4)
-        systemctl is-active --quiet stunnel4 2>/dev/null && st_ssl="${GREEN}[ ACTIVO ]${NC}" || st_ssl="${RED}[ OFF ]${NC}"
+        ssl_p=""
+        if [ -f /etc/stunnel/stunnel.conf ]; then
+            ssl_p=$(grep -E '^\s*accept' /etc/stunnel/stunnel.conf 2>/dev/null | awk '{print $NF}' | sort -u -n | tr '\n' ',' | sed 's/,$//')
+        fi
+        [ -n "$ssl_p" ] && st_ssl="${GREEN}[ ACTIVO : $ssl_p ]${NC}" || st_ssl="${RED}[ OFF ]${NC}"
         
         # SQUID
-        (systemctl is-active --quiet squid 2>/dev/null || systemctl is-active --quiet squid3 2>/dev/null) && st_squid="${GREEN}[ ACTIVO ]${NC}" || st_squid="${RED}[ OFF ]${NC}"
+        squid_p=$(ss -tlnp 2>/dev/null | grep -E 'squid|squid3' | awk '{print $4}' | awk -F':' '{print $NF}' | sort -u -n | tr '\n' ',' | sed 's/,$//')
+        [ -n "$squid_p" ] && st_squid="${GREEN}[ ACTIVO : $squid_p ]${NC}" || st_squid="${RED}[ OFF ]${NC}"
         
         # OPENVPN
-        systemctl is-active --quiet openvpn-server@server 2>/dev/null && st_openvpn="${GREEN}[ ACTIVO ]${NC}" || st_openvpn="${RED}[ OFF ]${NC}"
+        openvpn_p=$(ss -tulpn 2>/dev/null | grep openvpn | awk '{print $5}' | awk -F':' '{print $NF}' | sort -u -n | tr '\n' ',' | sed 's/,$//')
+        [ -n "$openvpn_p" ] && st_openvpn="${GREEN}[ ACTIVO : $openvpn_p ]${NC}" || st_openvpn="${RED}[ OFF ]${NC}"
         
         # SHADOWSOCK NORMAL
         ps aux | grep -v grep | grep -q "ssserver" && st_ssnorm="${GREEN}[ ACTIVO ]${NC}" || st_ssnorm="${RED}[ OFF ]${NC}"
@@ -1288,7 +1299,8 @@ menu_protocolos() {
         ps aux | grep -v grep | grep -q "ss-server" && st_sslibev="${GREEN}[ ACTIVO ]${NC}" || st_sslibev="${RED}[ OFF ]${NC}"
         
         # SLOWDNS
-        (systemctl is-active --quiet mx-slowdns 2>/dev/null || ps aux | grep -v grep | grep -q "dns-server") && st_slowdns="${GREEN}[ ACTIVO ]${NC}" || st_slowdns="${RED}[ OFF ]${NC}"
+        slowdns_p=$(ss -tulpn 2>/dev/null | grep -E 'dns-server|mx-slowdns' | awk '{print $5}' | awk -F':' '{print $NF}' | sort -u -n | tr '\n' ',' | sed 's/,$//')
+        [ -n "$slowdns_p" ] && st_slowdns="${GREEN}[ ACTIVO : $slowdns_p ]${NC}" || st_slowdns="${RED}[ OFF ]${NC}"
         
         # GETTUNEL
         ps aux | grep -v grep | grep -q "PGet.py" && st_get="${GREEN}[ ACTIVO ]${NC}" || st_get="${RED}[ OFF ]${NC}"
@@ -1297,27 +1309,43 @@ menu_protocolos() {
         ps aux | grep -v grep | grep -q "scktcheck" && st_tcp="${GREEN}[ ACTIVO ]${NC}" || st_tcp="${RED}[ OFF ]${NC}"
         
         # SSLH
-        systemctl is-active --quiet sslh 2>/dev/null && st_sslh="${GREEN}[ ACTIVO ]${NC}" || st_sslh="${RED}[ OFF ]${NC}"
+        sslh_p=$(ss -tlnp 2>/dev/null | grep sslh | awk '{print $4}' | awk -F':' '{print $NF}' | sort -u -n | tr '\n' ',' | sed 's/,$//')
+        [ -n "$sslh_p" ] && st_sslh="${GREEN}[ ACTIVO : $sslh_p ]${NC}" || st_sslh="${RED}[ OFF ]${NC}"
         
         # WEBSOKET STATUS EDITABLE
-        ps aux | grep -v grep | grep -E -q "PDirect-|ws-epro" && st_ws="${GREEN}[ ACTIVO ]${NC}" || st_ws="${RED}[ OFF ]${NC}"
+        ws_p=$(ps aux | grep -E 'PDirect-|ws-epro' | grep -v grep | grep -Po 'PDirect-\K[0-9]+' | sort -u -n | tr '\n' ',' | sed 's/,$//')
+        [ -z "$ws_p" ] && [ -f /etc/MaximusVpsMx/core/PDirect.log ] && ws_p=$(cat /etc/MaximusVpsMx/core/PDirect.log 2>/dev/null | tr '\n' ',' | sed 's/,$//')
+        [ -n "$ws_p" ] && st_ws="${GREEN}[ ACTIVO : $ws_p ]${NC}" || st_ws="${RED}[ OFF ]${NC}"
         
         # PROXY OPENVPN
-        ps aux | grep -v grep | grep -q "POpen.py" && st_popen="${GREEN}[ ACTIVO ]${NC}" || st_popen="${RED}[ OFF ]${NC}"
+        popen_p=$(ps aux | grep POpen.py | grep -v grep | awk '{print $NF}' | grep -E '^[0-9]+$' | tr '\n' ',' | sed 's/,$//')
+        [ -n "$popen_p" ] && st_popen="${GREEN}[ ACTIVO : $popen_p ]${NC}" || st_popen="${RED}[ OFF ]${NC}"
         
         # PROXY PUBLICO
-        ps aux | grep -v grep | grep -q "PPub.py" && st_ppub="${GREEN}[ ACTIVO ]${NC}" || st_ppub="${RED}[ OFF ]${NC}"
+        ppub_p=$(ps aux | grep PPub.py | grep -v grep | awk '{print $NF}' | grep -E '^[0-9]+$' | tr '\n' ',' | sed 's/,$//')
+        [ -n "$ppub_p" ] && st_ppub="${GREEN}[ ACTIVO : $ppub_p ]${NC}" || st_ppub="${RED}[ OFF ]${NC}"
         
         # PROXY PRIVADO
-        ps aux | grep -v grep | grep -q "PPriv.py" && st_ppriv="${GREEN}[ ACTIVO ]${NC}" || st_ppriv="${RED}[ OFF ]${NC}"
+        ppriv_p=$(ps aux | grep PPriv.py | grep -v grep | awk '{print $NF}' | grep -E '^[0-9]+$' | tr '\n' ',' | sed 's/,$//')
+        [ -n "$ppriv_p" ] && st_ppriv="${GREEN}[ ACTIVO : $ppriv_p ]${NC}" || st_ppriv="${RED}[ OFF ]${NC}"
 
         # SSL + PYTHON (Combo)
-        (systemctl is-active --quiet stunnel4 2>/dev/null && ps aux | grep -v grep | grep -q "PDirect-") && st_sslpy="${GREEN}[ ACTIVO ]${NC}" || st_sslpy="${RED}[ OFF ]${NC}"
+        if systemctl is-active --quiet stunnel4 2>/dev/null && ps aux | grep -v grep | grep -q "PDirect-"; then
+            st_sslpy="${GREEN}[ ACTIVO : SSL $ssl_p | WS $ws_p ]${NC}"
+        else
+            st_sslpy="${RED}[ OFF ]${NC}"
+        fi
 
         # PANEL X-UI
-        systemctl is-active --quiet x-ui 2>/dev/null && st_xui="${GREEN}[ ACTIVO ]${NC}" || st_xui="${RED}[ OFF ]${NC}"
+        xui_p=$(sqlite3 /etc/x-ui/x-ui.db "SELECT value FROM settings WHERE key='webPort';" 2>/dev/null)
+        [ -z "$xui_p" ] && systemctl is-active --quiet x-ui 2>/dev/null && xui_p="54321"
+        [ -n "$xui_p" ] && st_xui="${GREEN}[ ACTIVO : $xui_p ]${NC}" || st_xui="${RED}[ OFF ]${NC}"
 
         ui_header "MENU DE PROTOCOLOS"
+        active_tcp_ports=$(ss -tlnp 2>/dev/null | awk 'NR>1 {print $4}' | awk -F':' '{print $NF}' | grep -E '^[0-9]+$' | sort -u -n | tr '\n' ' ')
+        [ -z "$active_tcp_ports" ] && active_tcp_ports="Ninguno"
+        echo -e " ${YELLOW}PUERTOS TCP ACTIVOS EN EL SERVIDOR:${NC} ${WHITE}$active_tcp_ports${NC}"
+        ui_subhr
         echo -e "  ${CYAN}[1] >${WHITE} BADVPN --------------------------- $st_badvpn"
         echo -e "  ${CYAN}[2] >${WHITE} DROPBEAR ------------------------- $st_dropbear"
         echo -e "  ${CYAN}[3] >${WHITE} SSL ------------------------------ $st_ssl"
