@@ -77,7 +77,9 @@ uninstall_xray_core() {
         systemctl daemon-reload
         rm -f "$XRAY_BIN"
         rm -rf "$V2RAY_DIR" "$V2RAY_DB" "$V2RAY_CLIENTS_DB"
-        echo -e "${GREEN}✅ Motor Xray-core desinstalado correctamente.${NC}"
+        journalctl --rotate >/dev/null 2>&1
+        journalctl --vacuum-time=1s >/dev/null 2>&1
+        echo -e "${GREEN}✅ Motor Xray-core y su historial de logs desinstalados correctamente.${NC}"
     else
         echo -e "${CYAN}Operación cancelada.${NC}"
     fi
@@ -736,7 +738,8 @@ menu_v2ray() {
         ui_subhr
         echo -e "${YELLOW}            4. HERRAMIENTAS Y LOGS${NC}"
         ui_subhr
-        echo -e "  ${CYAN}[14]>${WHITE} VER LOGS EN TIEMPO REAL (JOURNALCTL)${NC}"
+        echo -e "  ${CYAN}[14]>${WHITE} VER LOGS EN TIEMPO REAL (HISTORIAL RECIENTE)${NC}"
+        echo -e "  ${CYAN}[15]>${RED} LIMPIAR / VACÍAR HISTORIAL DE LOGS DE V2RAY${NC}"
         
         ui_hr
         echo -e "  ${WHITE}[0] VOLVER AL MENÚ DE PROTOCOLOS${NC}"
@@ -757,7 +760,8 @@ menu_v2ray() {
             11) renew_client_wizard ;;
             12) delete_client_wizard ;;
             13) list_clients ; ui_pause ;;
-            14) journalctl -u maximus-v2ray -n 50 --no-pager ; ui_pause ;;
+            14) journalctl -u maximus-v2ray -b -n 50 --no-pager ; ui_pause ;;
+            15) journalctl --rotate >/dev/null 2>&1 ; journalctl --vacuum-time=1s >/dev/null 2>&1 ; echo -e "${GREEN}✅ Historial de logs del sistema limpiado correctamente.${NC}" ; ui_pause ;;
             0) break ;;
             *) continue ;;
         esac
