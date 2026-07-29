@@ -2026,10 +2026,10 @@ menu_mantenimiento() {
                         exec bash -c "
                             cd /tmp
                             echo -e '${RED}[!] Deteniendo todos los servicios y procesos vivos...${NC}'
-                            systemctl stop stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api maximus-keyserver maximus-tunnel 2>/dev/null
-                            systemctl disable stunnel4 dropbear mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api maximus-keyserver maximus-tunnel 2>/dev/null
+                            systemctl stop stunnel4 mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api maximus-keyserver maximus-tunnel 2>/dev/null
+                            systemctl disable stunnel4 mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api maximus-keyserver maximus-tunnel 2>/dev/null
                             systemctl daemon-reload 2>/dev/null
-                            killall -9 badvpn-udpgw hysteria udp-custom stunnel4 dropbear 2>/dev/null
+                            killall -9 badvpn-udpgw hysteria udp-custom stunnel4 2>/dev/null
                             pkill -9 badvpn-udpgw 2>/dev/null
                             pkill -9 hysteria 2>/dev/null
                             pkill -9 udp-custom 2>/dev/null
@@ -2171,16 +2171,15 @@ menu_mantenimiento() {
                         exec bash -c "
                             cd /tmp
                             echo -e '${RED}🔥 Iniciando limpieza y deteniendo servicios del Maestro...${NC}'
-                            systemctl stop stunnel4 dropbear squid squid3 mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api maximus-keyserver maximus-tunnel x-ui openvpn-server@server openvpn sslh 2>/dev/null
-                            systemctl disable stunnel4 dropbear squid squid3 mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api maximus-keyserver maximus-tunnel x-ui openvpn-server@server openvpn sslh 2>/dev/null
+                            systemctl stop stunnel4 squid squid3 mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api maximus-keyserver maximus-tunnel x-ui openvpn-server@server openvpn sslh 2>/dev/null
+                            systemctl disable stunnel4 squid squid3 mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api maximus-keyserver maximus-tunnel x-ui openvpn-server@server openvpn sslh 2>/dev/null
                             systemctl daemon-reload 2>/dev/null
                             
-                            killall -9 badvpn-udpgw hysteria udp-custom stunnel4 dropbear squid squid3 dns-server sslh 2>/dev/null
+                            killall -9 badvpn-udpgw hysteria udp-custom stunnel4 squid squid3 dns-server sslh 2>/dev/null
                             pkill -9 badvpn-udpgw 2>/dev/null
                             pkill -9 hysteria 2>/dev/null
                             pkill -9 udp-custom 2>/dev/null
                             pkill -9 stunnel4 2>/dev/null
-                            pkill -9 dropbear 2>/dev/null
                             pkill -9 squid 2>/dev/null
                             pkill -9 dns-server 2>/dev/null
                             pkill -9 -f 'python.*PDirect' >/dev/null 2>&1
@@ -2264,16 +2263,15 @@ menu_mantenimiento() {
                         exec bash -c "
                             cd /tmp
                             echo -e '${RED}🔥 Iniciando limpieza y deteniendo servicios del Cliente...${NC}'
-                            systemctl stop stunnel4 dropbear squid squid3 mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api maximus-keyserver maximus-tunnel x-ui openvpn-server@server openvpn sslh 2>/dev/null
-                            systemctl disable stunnel4 dropbear squid squid3 mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api maximus-keyserver maximus-tunnel x-ui openvpn-server@server openvpn sslh 2>/dev/null
+                            systemctl stop stunnel4 squid squid3 mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api maximus-keyserver maximus-tunnel x-ui openvpn-server@server openvpn sslh 2>/dev/null
+                            systemctl disable stunnel4 squid squid3 mx-proxy badvpn mx-slowdns hysteria udp-custom ws-epro maximus-bot maximus-wa maximus-api maximus-keyserver maximus-tunnel x-ui openvpn-server@server openvpn sslh 2>/dev/null
                             systemctl daemon-reload 2>/dev/null
                             
-                            killall -9 badvpn-udpgw hysteria udp-custom stunnel4 dropbear squid squid3 dns-server sslh 2>/dev/null
+                            killall -9 badvpn-udpgw hysteria udp-custom stunnel4 squid squid3 dns-server sslh 2>/dev/null
                             pkill -9 badvpn-udpgw 2>/dev/null
                             pkill -9 hysteria 2>/dev/null
                             pkill -9 udp-custom 2>/dev/null
                             pkill -9 stunnel4 2>/dev/null
-                            pkill -9 dropbear 2>/dev/null
                             pkill -9 squid 2>/dev/null
                             pkill -9 dns-server 2>/dev/null
                             pkill -9 -f 'python.*PDirect' >/dev/null 2>&1
