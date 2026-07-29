@@ -23,18 +23,30 @@ ui_header() {
 
 # Obtiene puertos en uso
 mportas() {
-    unset portas
-    portas_var=$(lsof -V -i tcp -P -n 2>/dev/null | grep -v "ESTABLISHED" | grep -v "COMMAND" | grep "LISTEN")
-    while read -r port; do
-        var1=$(echo "$port" | awk '{print $1}')
-        var2=$(echo "$port" | awk '{print $9}' | awk -F ":" '{print $2}')
-        if [[ -n "$var1" && -n "$var2" ]]; then
-            if ! echo -e "$portas" | grep -q "$var1 $var2"; then
-                portas+="$var1 $var2\n"
-            fi
-        fi
-    done <<<"$portas_var"
-    echo -e "$portas"
+    local ports=""
+    if command -v ss >/dev/null 2>&1; then
+        ports=$(ss -tlnp 2>/dev/null | awk 'NR>1 {print $1, $4}' | awk -F':' '{print $NF}')
+    elif command -v netstat >/dev/null 2>&1; then
+        ports=$(netstat -tlnp 2>/dev/null | awk 'NR>2 {print $4}' | awk -F':' '{print $NF}')
+    elif command -v lsof >/dev/null 2>&1; then
+        ports=$(lsof -i -P -n 2>/dev/null | grep LISTEN | awk '{print $9}' | awk -F':' '{print $NF}' | sed 's/(LISTEN)//g')
+    fi
+    echo "$ports"
+}
+
+is_port_active() {
+    local p="$1"
+    [ -z "$p" ] && return 1
+    if command -v ss >/dev/null 2>&1; then
+        ss -tln 2>/dev/null | grep -q -E ":${p}\b" && return 0
+    fi
+    if command -v netstat >/dev/null 2>&1; then
+        netstat -tln 2>/dev/null | grep -q -E ":${p}\b" && return 0
+    fi
+    if command -v lsof >/dev/null 2>&1; then
+        lsof -iTCP:${p} -sTCP:LISTEN >/dev/null 2>&1 && return 0
+    fi
+    return 1
 }
 
 ssl_stunel() {
@@ -83,10 +95,14 @@ ssl_stunel() {
     while true; do
         read -p "Puerto Local (Ancla): " -e -i "444" portx
         if [[ -n "$portx" ]]; then
-            if mportas | grep -q -w "$portx"; then
+            if is_port_active "$portx"; then
                 break
             else
-                echo -e "${RED}❌ Puerto inválido o inactivo. Intente con uno activo.${NC}"
+                echo -e "${YELLOW}⚠️ No se detectó ningún servicio escuchando localmente en el puerto $portx.${NC}"
+                read -p " ¿Deseas usar el puerto $portx de todas formas? [s/n]: " conf_p
+                if [[ "$conf_p" =~ ^[sS]$ ]]; then
+                    break
+                fi
             fi
         fi
     done
@@ -95,10 +111,10 @@ ssl_stunel() {
     echo -e "${WHITE}Selecciona el puerto público para el servicio SSL/TLS...${NC}"
     while true; do
         read -p "Puerto SSL: " -e -i "443" SSLPORT
-        if ! mportas | grep -q -w "$SSLPORT"; then
+        if ! is_port_active "$SSLPORT"; then
             break
         else
-            echo -e "${RED}❌ Puerto $SSLPORT ya está en uso. Elige otro.${NC}"
+            echo -e "${RED}❌ Puerto $SSLPORT ya está en uso por otro servicio. Elige otro.${NC}"
         fi
     done
     
