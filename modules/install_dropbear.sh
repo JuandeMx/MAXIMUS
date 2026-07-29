@@ -76,12 +76,12 @@ if wget -q https://matt.ucc.asn.au/dropbear/releases/dropbear-2022.83.tar.bz2 ||
 #undef MAX_BANNER_SIZE
 #define MAX_BANNER_SIZE 16384
 
-/* Habilitar soporte PAM y deshabilitar PASSWORD directo */
+/* Habilitar soporte PAM y PASSWORD directo */
 #undef DROPBEAR_SVR_PAM_AUTH
 #define DROPBEAR_SVR_PAM_AUTH 1
 
 #undef DROPBEAR_SVR_PASSWORD_AUTH
-#define DROPBEAR_SVR_PASSWORD_AUTH 0
+#define DROPBEAR_SVR_PASSWORD_AUTH 1
 
 #endif /* DROPBEAR_LOCALOPTIONS_H */
 LOCALOPT
