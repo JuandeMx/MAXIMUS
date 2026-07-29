@@ -45,6 +45,9 @@ get_public_ip() {
     echo "$ip"
 }
 
+PY_EXEC="python3"
+command -v python3 >/dev/null 2>&1 || PY_EXEC="python"
+
 # --- 12) WEBSOCKET STATUS EDITABLE ---
 ws_editable() {
     activar_ws() {
@@ -262,7 +265,7 @@ EOF
         ufw allow ${porta_socket}/tcp >/dev/null 2>&1
         
         # Ejecutar
-        screen -dmS pydic-${porta_socket} python /etc/MaximusVpsMx/core/PDirect-${porta_socket}.py 2>/dev/null || screen -dmS pydic-${porta_socket} python3 /etc/MaximusVpsMx/core/PDirect-${porta_socket}.py 2>/dev/null
+        screen -dmS pydic-${porta_socket} $PY_EXEC /etc/MaximusVpsMx/core/PDirect-${porta_socket}.py 2>/dev/null
         
         echo "${porta_socket}" >> /etc/MaximusVpsMx/core/PDirect.log
         
@@ -328,7 +331,7 @@ proxy_openvpn() {
         ufw allow ${porta_socket}/tcp >/dev/null 2>&1
         
         # Iniciar backend
-        screen -dmS popenvpn-${porta_socket} python /etc/MaximusVpsMx/core/POpen.py "$porta_socket" "$texto_soket" 2>/dev/null || screen -dmS popenvpn-${porta_socket} python3 /etc/MaximusVpsMx/core/POpen.py "$porta_socket" "$texto_soket" 2>/dev/null
+        screen -dmS popenvpn-${porta_socket} $PY_EXEC /etc/MaximusVpsMx/core/POpen.py "$porta_socket" "$texto_soket" 2>/dev/null
         
         echo "${porta_socket}" >> /etc/MaximusVpsMx/core/POpen.log
         
@@ -386,7 +389,7 @@ proxy_publico() {
         ufw allow ${porta_socket}/tcp >/dev/null 2>&1
         
         # Iniciar backend
-        screen -dmS ppublico-${porta_socket} python /etc/MaximusVpsMx/core/PPub.py "$porta_socket" "$texto_soket" 2>/dev/null || screen -dmS ppublico-${porta_socket} python3 /etc/MaximusVpsMx/core/PPub.py "$porta_socket" "$texto_soket" 2>/dev/null
+        screen -dmS ppublico-${porta_socket} $PY_EXEC /etc/MaximusVpsMx/core/PPub.py "$porta_socket" "$texto_soket" 2>/dev/null
         
         echo "${porta_socket}" >> /etc/MaximusVpsMx/core/PPub.log
         
@@ -502,7 +505,7 @@ get_tunnel() {
         ufw allow ${porta_socket}/tcp >/dev/null 2>&1
         
         # Iniciar backend
-        screen -dmS getpy python /etc/MaximusVpsMx/core/PGet.py -b "0.0.0.0:$porta_socket" -p "/etc/MaximusVpsMx/core/pwd.pwd" 2>/dev/null || screen -dmS getpy python3 /etc/MaximusVpsMx/core/PGet.py -b "0.0.0.0:$porta_socket" -p "/etc/MaximusVpsMx/core/pwd.pwd" 2>/dev/null
+        screen -dmS getpy $PY_EXEC /etc/MaximusVpsMx/core/PGet.py -b "0.0.0.0:$porta_socket" -p "/etc/MaximusVpsMx/core/pwd.pwd" 2>/dev/null
         
         ui_hr
         echo -e "${GREEN}✓ GETTUNEL ACTIVO EN PUERTO: $porta_socket${NC}"

@@ -38,21 +38,42 @@ mportas() {
 }
 
 ssl_stunel() {
-    # Si ya está instalado (comprobando existencia del binario), desinstalar
+    # Si ya está instalado (comprobando existencia del binario), ofrecer opciones
     if [[ -f /usr/bin/stunnel4 || -f /usr/sbin/stunnel4 ]]; then
-        ui_header "DESINSTALAR SSL (STUNNEL4)"
-        systemctl stop stunnel4 >/dev/null 2>&1
-        systemctl disable stunnel4 >/dev/null 2>&1
-        killall -9 stunnel4 >/dev/null 2>&1
-        pkill -9 stunnel4 >/dev/null 2>&1
-        echo -e "${YELLOW}[+] Eliminando stunnel4...${NC}"
-        DEBIAN_FRONTEND=noninteractive apt-get purge stunnel4 -y >/dev/null 2>&1
-        rm -rf /etc/stunnel/* >/dev/null 2>&1
-        systemctl daemon-reload >/dev/null 2>&1
+        ui_header "GESTIÓN SSL (STUNNEL4)"
+        echo -e "${YELLOW}Stunnel4 ya está instalado en el sistema.${NC}"
+        if [ -f /etc/stunnel/stunnel.conf ]; then
+            echo -e "${WHITE}Configuración actual en /etc/stunnel/stunnel.conf:${NC}"
+            grep -E 'accept|connect' /etc/stunnel/stunnel.conf 2>/dev/null | sed 's/^/  /'
+        fi
         ui_hr
-        echo -e "${GREEN}✓ SSL (STUNNEL4) DESINSTALADO CON ÉXITO${NC}"
-        ui_pause
-        return 0
+        echo -e "  ${CYAN}[1]>${WHITE} Reconfigurar / Reinstalar SSL Directo${NC}"
+        echo -e "  ${CYAN}[2]>${WHITE} Desinstalar SSL (Stunnel4) completamente${NC}"
+        echo -e "  ${WHITE}[0]> Cancelar${NC}"
+        ui_hr
+        read -p "Selecciona una opción: " opt_st
+        case $opt_st in
+            1)
+                ;;
+            2)
+                ui_header "DESINSTALAR SSL (STUNNEL4)"
+                systemctl stop stunnel4 >/dev/null 2>&1
+                systemctl disable stunnel4 >/dev/null 2>&1
+                killall -9 stunnel4 >/dev/null 2>&1
+                pkill -9 stunnel4 >/dev/null 2>&1
+                echo -e "${YELLOW}[+] Eliminando stunnel4...${NC}"
+                DEBIAN_FRONTEND=noninteractive apt-get purge stunnel4 -y >/dev/null 2>&1
+                rm -rf /etc/stunnel/* >/dev/null 2>&1
+                systemctl daemon-reload >/dev/null 2>&1
+                ui_hr
+                echo -e "${GREEN}✓ SSL (STUNNEL4) DESINSTALADO CON ÉXITO${NC}"
+                ui_pause
+                return 0
+                ;;
+            *)
+                return 0
+                ;;
+        esac
     fi
     
     ui_header "INSTALAR SSL (STUNNEL4)"

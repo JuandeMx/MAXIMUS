@@ -1010,6 +1010,7 @@ sub_xui() {
         ui_subhr
         echo -e "${CYAN} [3] CAMBIAR PUERTO DEL PANEL WEB${NC}"
         echo -e "${CYAN} [4] ABRIR PANEL WEB${NC}"
+        echo -e "${CYAN} [5] REPARAR PANTALLA EN BLANCO (Resetear Ruta/SSL)${NC}"
         ui_hr
         echo -e "${CYAN} [0] VOLVER${NC}"
         ui_hr
@@ -1044,6 +1045,8 @@ sub_xui() {
                     if [[ "$n_port" =~ ^[0-9]+$ ]]; then
                         /usr/local/x-ui/x-ui setting -port $n_port >/dev/null 2>&1
                         ufw allow $n_port/tcp >/dev/null 2>&1
+                        iptables -I INPUT -p tcp --dport $n_port -j ACCEPT >/dev/null 2>&1
+                        iptables -I INPUT -p udp --dport $n_port -j ACCEPT >/dev/null 2>&1
                         systemctl restart x-ui
                         echo -e "${GREEN}✅ Puerto cambiado a $n_port.${NC}"
                     else
@@ -1067,6 +1070,22 @@ sub_xui() {
                     echo -e "${WHITE}Private Key Path:${CYAN} /etc/x-ui/server.key${NC}"
                     echo -e "Copia el link y pégalo en tu navegador."
                     ui_pause
+                fi
+                ;;
+            5)
+                if [ "$xui_port" == "--" ]; then
+                    echo -e "\n${RED}Primero debes instalar X-UI.${NC}"; sleep 0.1
+                else
+                    echo -e "\n${YELLOW}[+] Reparando configuración web y firewall de X-UI...${NC}"
+                    /usr/local/x-ui/x-ui setting -webBasePath "" >/dev/null 2>&1
+                    /usr/local/x-ui/x-ui setting -webCert "" >/dev/null 2>&1
+                    /usr/local/x-ui/x-ui setting -webKey "" >/dev/null 2>&1
+                    ufw allow $xui_port/tcp >/dev/null 2>&1
+                    iptables -I INPUT -p tcp --dport $xui_port -j ACCEPT >/dev/null 2>&1
+                    systemctl restart x-ui 2>/dev/null
+                    echo -e "${GREEN}✅ Configuración de X-UI reseteada y puerto liberado.${NC}"
+                    echo -e "${WHITE}Ahora puedes ingresar a http://$IP:$xui_port/${NC}"
+                    sleep 2
                 fi
                 ;;
             0) return ;;
@@ -1281,7 +1300,7 @@ menu_protocolos() {
         systemctl is-active --quiet sslh 2>/dev/null && st_sslh="${GREEN}[ ACTIVO ]${NC}" || st_sslh="${RED}[ OFF ]${NC}"
         
         # WEBSOKET STATUS EDITABLE
-        ps aux | grep -v grep | grep -q "PDirect-*" && st_ws="${GREEN}[ ACTIVO ]${NC}" || st_ws="${RED}[ OFF ]${NC}"
+        ps aux | grep -v grep | grep -E -q "PDirect-|ws-epro" && st_ws="${GREEN}[ ACTIVO ]${NC}" || st_ws="${RED}[ OFF ]${NC}"
         
         # PROXY OPENVPN
         ps aux | grep -v grep | grep -q "POpen.py" && st_popen="${GREEN}[ ACTIVO ]${NC}" || st_popen="${RED}[ OFF ]${NC}"
