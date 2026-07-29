@@ -33,6 +33,9 @@ check_xray_installed() {
     fi
 }
 
+# ==============================================================================
+# SECCIÓN 1: MOTOR Y SERVICIO SYSTEMD
+# ==============================================================================
 install_xray_core() {
     echo -e "${CYAN}[+] Instalando dependencias (jq, qrencode, unzip, curl, openssl)...${NC}"
     apt-get update -y >/dev/null 2>&1
@@ -62,6 +65,23 @@ install_xray_core() {
 
     create_v2ray_systemd
     init_v2ray_config
+}
+
+uninstall_xray_core() {
+    echo -e "\n${RED}⚠️ DESINSTALAR MOTOR Y SERVICIO V2RAY / XRAY${NC}"
+    read -p "¿Estás seguro de eliminar Xray-core y todas sus configuraciones? [S/N]: " conf_un
+    if [[ "$conf_un" == "S" || "$conf_un" == "s" ]]; then
+        systemctl stop maximus-v2ray 2>/dev/null
+        systemctl disable maximus-v2ray 2>/dev/null
+        rm -f /etc/systemd/system/maximus-v2ray.service
+        systemctl daemon-reload
+        rm -f "$XRAY_BIN"
+        rm -rf "$V2RAY_DIR" "$V2RAY_DB" "$V2RAY_CLIENTS_DB"
+        echo -e "${GREEN}✅ Motor Xray-core desinstalado correctamente.${NC}"
+    else
+        echo -e "${CYAN}Operación cancelada.${NC}"
+    fi
+    ui_pause
 }
 
 create_v2ray_systemd() {
@@ -109,7 +129,7 @@ init_v2ray_config() {
 }
 EOF
     else
-        # Reparar automáticamente certificados vacíos en inbounds existentes
+        # Reparar automáticamente certificados vacíos y eliminar inbounds duplicados en config.json
         mkdir -p /etc/MaximusVpsMx/v2ray
         if [ ! -f /etc/MaximusVpsMx/v2ray/server.crt ] || [ ! -f /etc/MaximusVpsMx/v2ray/server.key ]; then
             openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
@@ -118,7 +138,6 @@ EOF
                 -subj "/CN=127.0.0.1" >/dev/null 2>&1
         fi
         
-        # Corregir certificateFile vacíos y eliminar inbounds duplicados por tag o puerto
         clean_json=$(jq 'walk(if type == "object" and has("certificateFile") and .certificateFile == "" then .certificateFile = "/etc/MaximusVpsMx/v2ray/server.crt" | .keyFile = "/etc/MaximusVpsMx/v2ray/server.key" else . end) | .inbounds |= unique_by(.tag)' "$V2RAY_CONF" 2>/dev/null)
         [ -n "$clean_json" ] && echo "$clean_json" > "$V2RAY_CONF"
     fi
@@ -130,7 +149,7 @@ reload_v2ray_service() {
 }
 
 # ==============================================================================
-# PASO 1: CREAR Y CONFIGURAR MÉTODOS (INBOUND BUILDER REPLICA 3X-UI)
+# SECCIÓN 2: GESTIÓN DE MÉTODOS E INBOUNDS (3X-UI REPLICA)
 # ==============================================================================
 add_inbound_wizard() {
     if ! check_xray_installed; then
@@ -222,7 +241,6 @@ add_inbound_wizard() {
     sec="none"
     sni=""
     fp="chrome"
-    alpn="h2,http/1.1"
     pub_cert=""
     priv_key=""
     reality_dest=""
@@ -235,8 +253,8 @@ add_inbound_wizard() {
            read -p "   - Server Name Indication (SNI) [ej. midominio.com]: " sni
            read -p "   - Impostación uTLS [chrome/firefox/safari/randomised] (Default: chrome): " fp
            [ -z "$fp" ] && fp="chrome"
-           read -p "   - Ruta Certificado Público [Default: /etc/dropbear/banner o /etc/x-ui/server.crt]: " pub_cert
-           read -p "   - Ruta Llave Privada [Default: /etc/x-ui/server.key]: " priv_key
+           read -p "   - Ruta Certificado Público [Default: Auto-firmado /etc/x-ui/server.crt]: " pub_cert
+           read -p "   - Ruta Llave Privada [Default: Auto-firmado /etc/x-ui/server.key]: " priv_key
            ;;
         3) sec="reality"
            read -p "   - Target / Destino Camuflado [Default: www.google.com:443]: " reality_dest
@@ -244,25 +262,20 @@ add_inbound_wizard() {
            read -p "   - SNI Camuflado [Default: www.google.com]: " sni
            [ -z "$sni" ] && sni="www.google.com"
 
-           # Generar claves REALITY automáticamente con Xray
            keys_out=$("$XRAY_BIN" x25519 2>/dev/null)
            reality_priv=$(echo "$keys_out" | grep -i "Private key" | awk '{print $NF}')
            reality_pub=$(echo "$keys_out" | grep -i "Public key" | awk '{print $NF}')
            [ -z "$reality_priv" ] && reality_priv=$(openssl rand -base64 32 | tr -dc 'a-zA-Z0-9' | head -c 43)
            reality_short=$(openssl rand -hex 8)
            echo -e "   ${GREEN}[+] Claves REALITY generadas automáticamente.${NC}"
-           echo -e "       Private Key : $reality_priv"
-           echo -e "       Public Key  : $reality_pub"
-           echo -e "       Short ID    : $reality_short"
            ;;
         *) sec="none" ;;
     esac
 
-    # 7. Toggles (Sniffing, PROXY Protocol)
+    # 7. Sniffing
     read -p "\n 7. ¿Activar Sniffing (Detección HTTP/TLS/QUIC)? [S/N] (Default: S): " act_sniff
     [[ "$act_sniff" =~ ^[Nn]$ ]] && enable_sniff=false || enable_sniff=true
 
-    # Construir Inbound JSON en Xray config.json
     tag_id="inbound-$port-$proto"
     
     inbound_json=$(cat <<EOF
@@ -287,7 +300,6 @@ add_inbound_wizard() {
 EOF
 )
 
-    # Inyectar sub-propiedades WS / gRPC / TLS / REALITY al JSON
     tmp_file="/tmp/inbound_building.json"
     echo "$inbound_json" > "$tmp_file"
 
@@ -306,7 +318,6 @@ EOF
         if [ -z "$pub_cert" ] || [ ! -f "$pub_cert" ] || [ -z "$priv_key" ] || [ ! -f "$priv_key" ]; then
             mkdir -p /etc/MaximusVpsMx/v2ray
             if [ ! -f /etc/MaximusVpsMx/v2ray/server.crt ] || [ ! -f /etc/MaximusVpsMx/v2ray/server.key ]; then
-                echo -e "   ${YELLOW}[+] Generando certificado SSL auto-firmado para TLS...${NC}"
                 openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
                     -keyout /etc/MaximusVpsMx/v2ray/server.key \
                     -out /etc/MaximusVpsMx/v2ray/server.crt \
@@ -322,19 +333,15 @@ EOF
         echo "$tmp_json" > "$tmp_file"
     fi
 
-    # Agregar nuevo inbound al config.json de Xray
     final_inbound=$(cat "$tmp_file")
     rm -f "$tmp_file"
 
-    # Limpiar inbound previo en el mismo puerto o tag para evitar error de tag duplicado
     clean_existing=$(jq --arg tag "$tag_id" --argjson port "$port" '.inbounds |= map(select(.tag != $tag and .port != $port))' "$V2RAY_CONF")
     echo "$clean_existing" > "$V2RAY_CONF"
 
     updated_config=$(jq --argjson new_in "$final_inbound" '.inbounds += [$new_in]' "$V2RAY_CONF")
     echo "$updated_config" > "$V2RAY_CONF"
 
-    # Guardar Metadata en la Base de Datos local de Inbounds
-    # Registro: id|remark|proto|port|net|sec|path|host|sni|pubkey
     echo "$tag_id|$remark|$proto|$port|$net|$sec|$path|$host_header|$sni|$reality_pub" >> "$V2RAY_DB"
 
     reload_v2ray_service
@@ -351,6 +358,71 @@ EOF
     echo -e "${CYAN} SEGURIDAD         :${WHITE} $sec (SNI: $sni)${NC}"
     [ -n "$reality_pub" ] && echo -e "${CYAN} REALITY PUBLIC KEY:${WHITE} $reality_pub${NC}"
     ui_hr
+    ui_pause
+}
+
+edit_inbound_wizard() {
+    list_inbounds
+    read -p " Escribe el Remark o Tag del Método a editar: " ed_in
+    [ -z "$ed_in" ] && return
+
+    inbound_line=$(grep -i "$ed_in" "$V2RAY_DB" | head -n 1)
+    if [ -z "$inbound_line" ]; then
+        echo -e "${RED}❌ Método no encontrado.${NC}"
+        ui_pause
+        return
+    fi
+
+    IFS='|' read -r tid remark proto port net sec path host_header sni reality_pub <<< "$inbound_line"
+
+    echo -e "\n${YELLOW}▶ EDITANDO INBOUND: $remark ($tid)${NC}"
+    read -p " Nuevo Remark [Actual: $remark]: " n_remark
+    [ -z "$n_remark" ] && n_remark="$remark"
+
+    read -p " Nuevo Puerto [Actual: $port]: " n_port
+    [ -z "$n_port" ] && n_port="$port"
+
+    read -p " Nuevo Host Header / Trick [Actual: $host_header]: " n_host
+    [ -z "$n_host" ] && n_host="$host_header"
+
+    read -p " Nuevo Path [Actual: $path]: " n_path
+    [ -z "$n_path" ] && n_path="$path"
+
+    # Actualizar DB local
+    sed -i "/^$tid|/d" "$V2RAY_DB"
+    echo "$tid|$n_remark|$proto|$n_port|$net|$sec|$n_path|$n_host|$sni|$reality_pub" >> "$V2RAY_DB"
+
+    # Actualizar config.json
+    tmp_json=$(jq --arg tag "$tid" --argjson nport "$n_port" --arg npath "$n_path" --arg nhost "$n_host" \
+        '(.inbounds[] | select(.tag == $tag)) |= (.port = $nport | .streamSettings.wsSettings.path = $npath | .streamSettings.wsSettings.host = $nhost)' "$V2RAY_CONF")
+    echo "$tmp_json" > "$V2RAY_CONF"
+
+    reload_v2ray_service
+    echo -e "${GREEN}✅ Método '$n_remark' actualizado correctamente.${NC}"
+    ui_pause
+}
+
+delete_inbound_wizard() {
+    list_inbounds
+    read -p " Escribe el Remark o Tag del Método a eliminar: " del_in
+    [ -z "$del_in" ] && return
+
+    inbound_line=$(grep -i "$del_in" "$V2RAY_DB" | head -n 1)
+    if [ -z "$inbound_line" ]; then
+        echo -e "${RED}❌ Método no encontrado.${NC}"
+        ui_pause
+        return
+    fi
+
+    IFS='|' read -r tid remark proto port net sec path host_header sni reality_pub <<< "$inbound_line"
+
+    tmp_json=$(jq --arg tag "$tid" '.inbounds |= map(select(.tag != $tag))' "$V2RAY_CONF")
+    echo "$tmp_json" > "$V2RAY_CONF"
+
+    sed -i "/^$tid|/d" "$V2RAY_DB"
+    reload_v2ray_service
+
+    echo -e "${GREEN}✅ Método Inbound '$remark' ($tid) eliminado correctamente.${NC}"
     ui_pause
 }
 
@@ -372,11 +444,11 @@ list_inbounds() {
 }
 
 # ==============================================================================
-# PASO 2: ASIGNACIÓN Y CREACIÓN DE CLIENTES EN UN INBOUND
+# SECCIÓN 3: GESTIÓN DE CLIENTES
 # ==============================================================================
 create_client_wizard() {
     if [ ! -s "$V2RAY_DB" ]; then
-        echo -e "${RED}❌ No hay métodos/inbounds creados. Registra un Método primero (Opción 2).${NC}"
+        echo -e "${RED}❌ No hay métodos/inbounds creados. Registra un Método primero (Opción 5).${NC}"
         ui_pause
         return
     fi
@@ -386,13 +458,11 @@ create_client_wizard() {
     echo -e "${YELLOW}             CREAR CLIENTE V2RAY ASIGNANDO MÉTODO${NC}"
     ui_hr
     
-    # Mostrar Inbounds disponibles
     list_inbounds
     echo ""
     read -p " Selecciona el Número o Nombre del Método Inbound: " sel_inbound
     [ -z "$sel_inbound" ] && return
 
-    # Buscar Inbound en DB
     inbound_line=$(grep -i "$sel_inbound" "$V2RAY_DB" | head -n 1)
     if [ -z "$inbound_line" ]; then
         echo -e "${RED}❌ Método no encontrado.${NC}"
@@ -411,31 +481,29 @@ create_client_wizard() {
 
     uuid=$(cat /proc/sys/kernel/random/uuid)
 
-    # Agregar cliente al JSON de Xray según el Tag Inbound y Protocolo
     if [ "$proto" == "trojan" ] || [ "$proto" == "shadowsocks" ]; then
-        # Para Trojan / Shadowsocks se usa password
         tmp_json=$(jq --arg tag "$tid" --arg pass "$uuid" --arg email "$client_name" \
             '(.inbounds[] | select(.tag == $tag).settings.clients) += [{"password": $pass, "email": $email}]' "$V2RAY_CONF")
     else
-        # Para VLESS / VMESS se usa UUID
         tmp_json=$(jq --arg tag "$tid" --arg id "$uuid" --arg email "$client_name" \
             '(.inbounds[] | select(.tag == $tag).settings.clients) += [{"id": $id, "alterId": 0, "email": $email}]' "$V2RAY_CONF")
     fi
 
     echo "$tmp_json" > "$V2RAY_CONF"
     
-    # Guardar en Base de Datos de Clientes
     echo "$client_name|$uuid|$tid|$exp_date" >> "$V2RAY_CLIENTS_DB"
     reload_v2ray_service
 
-    # Generar URI Link de conexión
+    generate_client_qr_output "$client_name" "$uuid" "$exp_date" "$dias" "$remark" "$proto" "$port" "$net" "$sec" "$path" "$host_header" "$sni" "$reality_pub"
+}
+
+generate_client_qr_output() {
+    local client_name="$1" uuid="$2" exp_date="$3" dias="$4" remark="$5" proto="$6" port="$7" net="$8" sec="$9" path="${10}" host_header="${11}" sni="${12}" reality_pub="${13}"
+
     ip=$(curl -s4 ifconfig.me || echo "127.0.0.1")
     domain=""
     [ -f /etc/MaximusVpsMx/domain.conf ] && domain=$(cat /etc/MaximusVpsMx/domain.conf)
     [ -z "$domain" ] && domain="$ip"
-
-    add_host="$domain"
-    [ -n "$host_header" ] && add_host="$host_header"
 
     if [ "$proto" == "vmess" ]; then
         v_json=$(cat <<EOF
@@ -495,40 +563,108 @@ EOF
     ui_pause
 }
 
-delete_inbound_wizard() {
-    list_inbounds
-    read -p " Escribe el Remark o Tag del Método a eliminar: " del_in
-    [ -z "$del_in" ] && return
+list_clients() {
+    ui_hr
+    echo -e "${YELLOW}               LISTA DE CLIENTES V2RAY REGISTRADOS${NC}"
+    ui_hr
+    if [ ! -s "$V2RAY_CLIENTS_DB" ]; then
+        echo -e " ${RED}No hay clientes V2Ray registrados.${NC}"
+    else
+        printf "${WHITE}%-15s | %-36s | %-16s | %-10s${NC}\n" "CLIENTE" "UUID / KEY" "MÉTODO TAG" "EXPIRACIÓN"
+        ui_subhr
+        while IFS='|' read -r c_usr c_uid c_tag c_exp; do
+            [ -z "$c_usr" ] && continue
+            printf " ${CYAN}%-15s${NC} | %-36s | %-16s | %-10s\n" "$c_usr" "$c_uid" "$c_tag" "$c_exp"
+        done < "$V2RAY_CLIENTS_DB"
+    fi
+    ui_hr
+}
 
-    inbound_line=$(grep -i "$del_in" "$V2RAY_DB" | head -n 1)
-    if [ -z "$inbound_line" ]; then
-        echo -e "${RED}❌ Método no encontrado.${NC}"
+renew_client_wizard() {
+    list_clients
+    read -p " Nombre del cliente a renovar: " r_usr
+    [ -z "$r_usr" ] && return
+
+    c_line=$(grep "^$r_usr|" "$V2RAY_CLIENTS_DB" | head -n 1)
+    if [ -z "$c_line" ]; then
+        echo -e "${RED}❌ Cliente no encontrado.${NC}"
         ui_pause
         return
     fi
 
-    IFS='|' read -r tid remark proto port net sec path host_header sni reality_pub <<< "$inbound_line"
+    IFS='|' read -r c_usr c_uid c_tag c_exp <<< "$c_line"
 
-    # Eliminar Inbound de config.json
-    tmp_json=$(jq --arg tag "$tid" '.inbounds |= map(select(.tag != $tag))' "$V2RAY_CONF")
+    read -p " Días adicionales a agregar [Default: 30]: " add_dias
+    [ -z "$add_dias" ] && add_dias=30
+
+    new_exp=$(date -d "$c_exp +$add_dias days" +%Y-%m-%d 2>/dev/null || date -d "+$add_dias days" +%Y-%m-%d)
+    
+    sed -i "/^$c_usr|/d" "$V2RAY_CLIENTS_DB"
+    echo "$c_usr|$c_uid|$c_tag|$new_exp" >> "$V2RAY_CLIENTS_DB"
+
+    echo -e "${GREEN}✅ Cliente '$c_usr' renovado hasta $new_exp (+$add_dias Días).${NC}"
+    ui_pause
+}
+
+edit_client_wizard() {
+    list_clients
+    read -p " Nombre del cliente a editar: " e_usr
+    [ -z "$e_usr" ] && return
+
+    c_line=$(grep "^$e_usr|" "$V2RAY_CLIENTS_DB" | head -n 1)
+    if [ -z "$c_line" ]; then
+        echo -e "${RED}❌ Cliente no encontrado.${NC}"
+        ui_pause
+        return
+    fi
+
+    IFS='|' read -r c_usr c_uid c_tag c_exp <<< "$c_line"
+
+    echo -e "\n${YELLOW}▶ EDITANDO CLIENTE: $c_usr${NC}"
+    read -p " Nuevo nombre [Actual: $c_usr]: " n_c_usr
+    [ -z "$n_c_usr" ] && n_c_usr="$c_usr"
+
+    sed -i "/^$c_usr|/d" "$V2RAY_CLIENTS_DB"
+    echo "$n_c_usr|$c_uid|$c_tag|$c_exp" >> "$V2RAY_CLIENTS_DB"
+
+    echo -e "${GREEN}✅ Datos del cliente '$n_c_usr' actualizados.${NC}"
+    ui_pause
+}
+
+delete_client_wizard() {
+    list_clients
+    read -p " Nombre del cliente a eliminar: " d_usr
+    [ -z "$d_usr" ] && return
+
+    c_line=$(grep "^$d_usr|" "$V2RAY_CLIENTS_DB" | head -n 1)
+    if [ -z "$c_line" ]; then
+        echo -e "${RED}❌ Cliente no encontrado.${NC}"
+        ui_pause
+        return
+    fi
+
+    IFS='|' read -r c_usr c_uid c_tag c_exp <<< "$c_line"
+
+    # Eliminar de config.json
+    tmp_json=$(jq --arg email "$c_usr" 'walk(if type == "array" then map(select(type == "object" and .email != $email)) else . end)' "$V2RAY_CONF")
     echo "$tmp_json" > "$V2RAY_CONF"
 
-    # Eliminar de la DB local
-    sed -i "/^$tid|/d" "$V2RAY_DB"
+    # Eliminar de la DB
+    sed -i "/^$c_usr|/d" "$V2RAY_CLIENTS_DB"
     reload_v2ray_service
 
-    echo -e "${GREEN}✅ Método Inbound '$remark' ($tid) eliminado correctamente.${NC}"
+    echo -e "${GREEN}✅ Cliente '$c_usr' eliminado correctamente.${NC}"
     ui_pause
 }
 
 # ==============================================================================
-# MENÚ PRINCIPAL
+# MENÚ PRINCIPAL ESTRUCTURADO EN SECCIONES
 # ==============================================================================
 menu_v2ray() {
     while true; do
         clear
         ui_hr
-        echo -e "${YELLOW}     GESTOR V2RAY / XRAY NATIVO (RÉPLICA EXACTA 3X-UI CLI)${NC}"
+        echo -e "${YELLOW}     GESTOR V2RAY / XRAY NATIVO (RÉPLICA 3X-UI CLI)${NC}"
         ui_hr
         
         if check_xray_installed; then
@@ -542,15 +678,37 @@ menu_v2ray() {
         fi
 
         echo -e " Estado del Servicio: $st"
+        
         ui_subhr
-        echo -e "  ${CYAN}[1]>${WHITE} INSTALAR / REINSTALAR MOTOR XRAY-CORE${NC}"
-        echo -e "  ${CYAN}[2]>${WHITE} AGREGAR NUEVO MÉTODO / INBOUND (RÉPLICA 3X-UI)${NC}"
-        echo -e "  ${CYAN}[3]>${WHITE} CREAR CLIENTE Y ASIGNAR A UN MÉTODO${NC}"
-        echo -e "  ${CYAN}[4]>${WHITE} LISTAR MÉTODOS E INBOUNDS CONFIGURADOS${NC}"
-        echo -e "  ${CYAN}[5]>${RED} ELIMINAR UN MÉTODO / INBOUND${NC}"
+        echo -e "${YELLOW}            1. MOTOR Y SERVICIO SYSTEMD${NC}"
         ui_subhr
-        echo -e "  ${CYAN}[6]>${WHITE} REINICIAR SERVICIO V2RAY${NC}"
-        echo -e "  ${CYAN}[7]>${WHITE} VER LOGS EN TIEMPO REAL (JOURNALCTL)${NC}"
+        echo -e "  ${CYAN}[1] >${WHITE} INSTALAR / REINSTALAR MOTOR XRAY-CORE${NC}"
+        echo -e "  ${CYAN}[2] >${RED} DESINSTALAR MOTOR XRAY-CORE${NC}"
+        echo -e "  ${CYAN}[3] >${GREEN} INICIAR / REINICIAR SERVICIO V2RAY${NC}"
+        echo -e "  ${CYAN}[4] >${YELLOW} DETENER SERVICIO V2RAY${NC}"
+        
+        ui_subhr
+        echo -e "${YELLOW}            2. GESTIÓN DE MÉTODOS E INBOUNDS${NC}"
+        ui_subhr
+        echo -e "  ${CYAN}[5] >${WHITE} AGREGAR NUEVO MÉTODO / INBOUND (3X-UI REPLICA)${NC}"
+        echo -e "  ${CYAN}[6] >${WHITE} EDITAR UN MÉTODO / INBOUND${NC}"
+        echo -e "  ${CYAN}[7] >${RED} ELIMINAR UN MÉTODO / INBOUND${NC}"
+        echo -e "  ${CYAN}[8] >${WHITE} LISTAR MÉTODOS E INBOUNDS CONFIGURADOS${NC}"
+        
+        ui_subhr
+        echo -e "${YELLOW}            3. GESTIÓN DE CLIENTES${NC}"
+        ui_subhr
+        echo -e "  ${CYAN}[9] >${WHITE} AGREGAR NUEVO CLIENTE (ASIGNAR MÉTODO)${NC}"
+        echo -e "  ${CYAN}[10]>${WHITE} EDITAR CLIENTE (CAMBIAR DATOS)${NC}"
+        echo -e "  ${CYAN}[11]>${WHITE} RENOVAR CLIENTE (AGREGAR DÍAS)${NC}"
+        echo -e "  ${CYAN}[12]>${RED} ELIMINAR CLIENTE${NC}"
+        echo -e "  ${CYAN}[13]>${WHITE} LISTAR CLIENTES Y VER DETALLES / QR${NC}"
+        
+        ui_subhr
+        echo -e "${YELLOW}            4. HERRAMIENTAS Y LOGS${NC}"
+        ui_subhr
+        echo -e "  ${CYAN}[14]>${WHITE} VER LOGS EN TIEMPO REAL (JOURNALCTL)${NC}"
+        
         ui_hr
         echo -e "  ${WHITE}[0] VOLVER AL MENÚ DE PROTOCOLOS${NC}"
         ui_hr
@@ -558,12 +716,19 @@ menu_v2ray() {
 
         case "$opt" in
             1) install_xray_core ; ui_pause ;;
-            2) add_inbound_wizard ;;
-            3) create_client_wizard ;;
-            4) list_inbounds ; ui_pause ;;
-            5) delete_inbound_wizard ;;
-            6) reload_v2ray_service ; echo -e "${GREEN}✅ Servicio V2Ray reiniciado.${NC}" ; sleep 1 ;;
-            7) journalctl -u maximus-v2ray -n 50 --no-pager ; ui_pause ;;
+            2) uninstall_xray_core ;;
+            3) reload_v2ray_service ; echo -e "${GREEN}✅ Servicio V2Ray reiniciado.${NC}" ; sleep 1 ;;
+            4) systemctl stop maximus-v2ray 2>/dev/null ; echo -e "${RED}⚠️ Servicio V2Ray detenido.${NC}" ; sleep 1 ;;
+            5) add_inbound_wizard ;;
+            6) edit_inbound_wizard ;;
+            7) delete_inbound_wizard ;;
+            8) list_inbounds ; ui_pause ;;
+            9) create_client_wizard ;;
+            10) edit_client_wizard ;;
+            11) renew_client_wizard ;;
+            12) delete_client_wizard ;;
+            13) list_clients ; ui_pause ;;
+            14) journalctl -u maximus-v2ray -n 50 --no-pager ; ui_pause ;;
             0) break ;;
             *) continue ;;
         esac
