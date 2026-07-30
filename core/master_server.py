@@ -431,6 +431,61 @@ class MasterWebHandler(BaseHTTPRequestHandler):
         if not file_path:
             file_path = "index.html"
 
+        # Regenerar archivo .mx al vuelo si no existe
+        if file_path.startswith("downloads/") and file_path.endswith(".mx"):
+            downloads_dir = os.path.join(WEB_DIR, "downloads")
+            os.makedirs(downloads_dir, exist_ok=True)
+            full_file_path = os.path.join(WEB_DIR, file_path)
+            
+            if not os.path.exists(full_file_path):
+                filename = os.path.basename(file_path)
+                safe_name_req = filename[:-3] # Remover ".mx"
+                
+                # Intentar resolver/regenerar desde base de datos de métodos
+                if os.path.exists(METHODS_DB):
+                    import re
+                    with open(METHODS_DB, "r") as f:
+                        for line in f:
+                            parts = line.strip().split("|")
+                            if len(parts) >= 8:
+                                name = parts[0]
+                                safe_name = re.sub(r'[^a-zA-Z0-9_\-]', '_', name)
+                                if safe_name == safe_name_req:
+                                    if generate_mx_file:
+                                        try:
+                                            generate_mx_file(
+                                                name=name,
+                                                ssh_host=parts[1],
+                                                ssh_port=int(parts[2]),
+                                                ssh_user=parts[3],
+                                                ssh_pass=parts[4],
+                                                sni=parts[6],
+                                                payload=parts[7],
+                                                out_path=full_file_path
+                                            )
+                                        except Exception:
+                                            pass
+                                    break
+                            elif len(parts) >= 5:
+                                name = parts[0]
+                                safe_name = re.sub(r'[^a-zA-Z0-9_\-]', '_', name)
+                                if safe_name == safe_name_req:
+                                    if generate_mx_file:
+                                        try:
+                                            generate_mx_file(
+                                                name=name,
+                                                ssh_host="127.0.0.1",
+                                                ssh_port=int(parts[4]),
+                                                ssh_user="root",
+                                                ssh_pass="",
+                                                sni=parts[2],
+                                                payload=parts[3],
+                                                out_path=full_file_path
+                                            )
+                                        except Exception:
+                                            pass
+                                    break
+
         full_file_path = os.path.join(WEB_DIR, file_path)
         if os.path.exists(full_file_path) and os.path.isfile(full_file_path):
             content_type = "text/html"
@@ -681,6 +736,7 @@ class MasterWebHandler(BaseHTTPRequestHandler):
         # POST /api/method/create
         # ----------------------------------------------------------------------
         elif parsed.path == "/api/method/create":
+            global generate_mx_file
             name = payload.get("name", "")
             ssh_host = payload.get("ssh_host", "").strip()
             ssh_port = payload.get("ssh_port", 22)
@@ -690,6 +746,30 @@ class MasterWebHandler(BaseHTTPRequestHandler):
             protocol = payload.get("protocol", "")
             sni = payload.get("sni", "")
             payload_str = payload.get("payload", "").strip()
+
+            # Intentar importar si es None
+            if not generate_mx_file:
+                try:
+                    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+                    from mx_generator import generate_mx_file
+                except Exception:
+                    pass
+
+            # Si sigue siendo None, intentar instalar pycryptodome al vuelo
+            if not generate_mx_file:
+                subprocess.run("pip3 install pycryptodome --break-system-packages >/dev/null 2>&1 || pip3 install pycryptodome >/dev/null 2>&1", shell=True)
+                try:
+                    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+                    from mx_generator import generate_mx_file
+                except Exception:
+                    pass
+
+            if not generate_mx_file:
+                self._send_json(500, {
+                    "success": False,
+                    "error": "El generador criptográfico .MX no está listo porque falta la librería 'pycryptodome'. Por favor ejecuta 'pip3 install pycryptodome' en la terminal de tu servidor y reinicia el servicio."
+                })
+                return
 
             with open(METHODS_DB, "a") as f:
                 f.write(f"{name}|{ssh_host}|{ssh_port}|{ssh_user}|{ssh_pass}|{protocol}|{sni}|{payload_str}\n")
