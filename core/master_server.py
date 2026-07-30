@@ -32,6 +32,13 @@ for tf in touch_files:
 # Diccionario global para rastrear instalaciones en curso
 _install_jobs = {}
 
+def _safe_hash(s):
+    """Genera un hash entero de 31 bits positivo determinista para compatibilidad con JS"""
+    h = 5381
+    for char in s:
+        h = ((h << 5) + h) + ord(char)
+    return h & 0x7FFFFFFF
+
 def _ssh_run(ip, port, user, password, cmd):
     """Ejecuta un comando remoto por SSH usando sshpass. Retorna (exit_code, output)"""
     ssh_cmd = f"sshpass -p '{password}' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -p {port} {user}@{ip} '{cmd}'"
@@ -282,29 +289,30 @@ class MasterWebHandler(BaseHTTPRequestHandler):
 
         if parsed.path == "/api/nodes":
             nodes = []
+            # Siempre agregar el nodo local master al inicio
+            nodes.append({
+                "id": 1,
+                "name": "Servidor Local (Master)",
+                "ip": "127.0.0.1",
+                "port": 22,
+                "status": "ONLINE",
+                "users": 1
+            })
             if os.path.exists(NODES_DB):
                 with open(NODES_DB, "r") as f:
                     for line in f:
                         parts = line.strip().split("|")
                         if len(parts) >= 3:
+                            if parts[1] in ["127.0.0.1", "localhost"]:
+                                continue
                             nodes.append({
-                                "id": hash(parts[1]),
+                                "id": _safe_hash(parts[1]),
                                 "name": parts[0],
                                 "ip": parts[1],
                                 "port": int(parts[2]),
                                 "status": "ONLINE",
                                 "users": 1
                             })
-            # Si no hay nodos, agregar el nodo local por defecto
-            if not nodes:
-                nodes.append({
-                    "id": 1,
-                    "name": "Servidor Local (Master)",
-                    "ip": "127.0.0.1",
-                    "port": 22,
-                    "status": "ONLINE",
-                    "users": 1
-                })
             self._send_json(200, {"nodes": nodes})
             return
 
@@ -316,7 +324,7 @@ class MasterWebHandler(BaseHTTPRequestHandler):
                         parts = line.strip().split("|")
                         if len(parts) >= 5:
                             methods.append({
-                                "id": hash(parts[0]),
+                                "id": _safe_hash(parts[0]),
                                 "name": parts[0],
                                 "protocol": parts[1],
                                 "sni": parts[2],

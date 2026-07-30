@@ -465,17 +465,7 @@ async function handleAddVps(event) {
 
   footerEl.style.display = 'flex';
 
-  const newNode = {
-    id: Date.now(),
-    name,
-    ip,
-    port,
-    status: 'ONLINE',
-    users: clientsDB.length
-  };
-
-  nodesDB.push(newNode);
-  saveState();
+  await fetchRealState();
   renderNodes();
   document.getElementById('form-add-vps').reset();
 }
