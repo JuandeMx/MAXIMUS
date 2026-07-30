@@ -273,13 +273,20 @@ function renderMethods() {
 
   methodsDB.forEach(method => {
     const tr = document.createElement('tr');
+    const safeName = method.name.replace(/[^a-zA-Z0-9_\-]/g, '_');
+    const downloadUrl = `${API_BASE}/downloads/${safeName}.mx`;
+
     tr.innerHTML = `
       <td class="user-cell">${method.name}</td>
       <td><span class="pass-cell">${method.ssh_host || '127.0.0.1'}:${method.ssh_port || 22}</span></td>
-      <td><span class="pass-cell" style="font-size: 0.8rem; color: #94a3b8;">${method.ssh_user || 'root'}:${method.ssh_pass ? '••••••' : 'sin pass'}</span></td>
       <td><span class="badge-status active">${method.protocol || 'SSL'}</span></td>
       <td><span class="pass-cell">${method.sni || 'N/A'}</span></td>
       <td style="font-family: monospace; font-size: 0.8rem; color: #94a3b8;">${(method.payload || 'N/A').substring(0, 35)}...</td>
+      <td>
+        <a href="${downloadUrl}" download="${safeName}.mx" class="btn-sm" style="background: rgba(16,185,129,0.15); color: #4ade80; border-color: rgba(16,185,129,0.3); text-decoration: none; display: inline-block; text-align: center; font-size: 0.75rem;">
+          <i data-lucide="download" style="width: 13px; vertical-align: middle;"></i> .MX
+        </a>
+      </td>
       <td>
         <div class="action-btns">
           <button class="btn-sm btn-danger" onclick="deleteMethod(${method.id})">
@@ -522,8 +529,6 @@ async function handleCreateMethod(event) {
   const name = document.getElementById('m-name').value.trim();
   const ssh_host = document.getElementById('m-ssh-host').value.trim();
   const ssh_port = parseInt(document.getElementById('m-ssh-port').value) || 22;
-  const ssh_user = document.getElementById('m-ssh-user').value.trim() || 'root';
-  const ssh_pass = document.getElementById('m-ssh-pass').value.trim();
   const protocol = document.getElementById('m-proto').value;
   const sni = document.getElementById('m-sni').value.trim();
   const payload = document.getElementById('m-payload').value.trim();
@@ -532,14 +537,14 @@ async function handleCreateMethod(event) {
     await fetch(`${API_BASE}/api/method/create`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, ssh_host, ssh_port, ssh_user, ssh_pass, protocol, sni, payload })
+      body: JSON.stringify({ name, ssh_host, ssh_port, protocol, sni, payload })
     });
   } catch (e) {}
 
   await fetchRealState();
   closeModal('modal-create-method');
   renderMethods();
-  alert(`✅ Método de Conexión '${name}' guardado correctamente.`);
+  alert(`✅ Método de Conexión '${name}' guardado y archivo .mx generado.`);
   document.getElementById('form-create-method').reset();
 }
 

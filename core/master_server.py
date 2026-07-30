@@ -440,6 +440,8 @@ class MasterWebHandler(BaseHTTPRequestHandler):
                 content_type = "application/javascript"
             elif file_path.endswith(".png"):
                 content_type = "image/png"
+            elif file_path.endswith(".mx"):
+                content_type = "application/octet-stream"
 
             self.send_response(200)
             self.send_header("Content-Type", content_type)
@@ -661,7 +663,18 @@ class MasterWebHandler(BaseHTTPRequestHandler):
                         continue
                     f.write(l)
 
-            self._send_json(200, {"success": True, "message": f"Método {name} eliminado."})
+            # Borrar archivo físico .mx
+            import re
+            safe_name = re.sub(r'[^a-zA-Z0-9_\-]', '_', name)
+            mx_filename = f"{safe_name}.mx"
+            mx_filepath = os.path.join(WEB_DIR, "downloads", mx_filename)
+            if os.path.exists(mx_filepath):
+                try:
+                    os.remove(mx_filepath)
+                except Exception:
+                    pass
+
+            self._send_json(200, {"success": True, "message": f"Método {name} y su archivo .mx eliminados."})
             return
 
         # ----------------------------------------------------------------------
@@ -671,8 +684,9 @@ class MasterWebHandler(BaseHTTPRequestHandler):
             name = payload.get("name", "")
             ssh_host = payload.get("ssh_host", "").strip()
             ssh_port = payload.get("ssh_port", 22)
-            ssh_user = payload.get("ssh_user", "").strip()
-            ssh_pass = payload.get("ssh_pass", "")
+            # SSH User y SSH Pass vacíos para que la app móvil los pida manualmente
+            ssh_user = ""
+            ssh_pass = ""
             protocol = payload.get("protocol", "")
             sni = payload.get("sni", "")
             payload_str = payload.get("payload", "").strip()
@@ -680,7 +694,31 @@ class MasterWebHandler(BaseHTTPRequestHandler):
             with open(METHODS_DB, "a") as f:
                 f.write(f"{name}|{ssh_host}|{ssh_port}|{ssh_user}|{ssh_pass}|{protocol}|{sni}|{payload_str}\n")
 
-            self._send_json(200, {"success": True, "message": f"Método '{name}' guardado."})
+            # Generar archivo físico .mx en la carpeta de descargas del panel web
+            downloads_dir = os.path.join(WEB_DIR, "downloads")
+            os.makedirs(downloads_dir, exist_ok=True)
+
+            import re
+            safe_name = re.sub(r'[^a-zA-Z0-9_\-]', '_', name)
+            mx_filename = f"{safe_name}.mx"
+            mx_filepath = os.path.join(downloads_dir, mx_filename)
+
+            if generate_mx_file:
+                try:
+                    generate_mx_file(
+                        name=name,
+                        ssh_host=ssh_host,
+                        ssh_port=ssh_port,
+                        ssh_user=ssh_user,
+                        ssh_pass=ssh_pass,
+                        sni=sni,
+                        payload=payload_str,
+                        out_path=mx_filepath
+                    )
+                except Exception as e:
+                    print(f"Error writing physical MX file: {e}")
+
+            self._send_json(200, {"success": True, "message": f"Método '{name}' guardado y archivo .mx generado."})
             return
 
         self._send_json(404, {"error": "Endpoint not found"})
