@@ -29,6 +29,81 @@ for tf in touch_files:
         with open(tf, "w") as f:
             pass
 
+# Diccionario global para rastrear instalaciones en curso
+_install_jobs = {}
+
+def _ssh_run(ip, port, user, password, cmd):
+    """Ejecuta un comando remoto por SSH usando sshpass. Retorna (exit_code, output)"""
+    ssh_cmd = f"sshpass -p '{password}' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -p {port} {user}@{ip} '{cmd}'"
+    result = subprocess.run(ssh_cmd, shell=True, capture_output=True, text=True, timeout=300)
+    return result.returncode, result.stdout + result.stderr
+
+def _run_real_ssh_install(install_id, ip, port, user, password):
+    """Hilo de fondo que ejecuta la instalación REAL paso a paso por SSH"""
+    job = _install_jobs[install_id]
+
+    # Paso 0: Asegurar que sshpass esté instalado localmente en el Master
+    job["step"] = 0
+    job["status"] = "Instalando sshpass en el Master..."
+    job["log"].append("[+] Verificando sshpass en el servidor Master...")
+    subprocess.run("apt-get install -y sshpass >/dev/null 2>&1", shell=True)
+    job["log"].append("[OK] sshpass listo.")
+
+    steps = [
+        {
+            "msg": "Probando conexión SSH...",
+            "cmd": "echo 'SSH_OK'",
+            "check": "SSH_OK"
+        },
+        {
+            "msg": "Actualizando paquetes base (apt-get update)...",
+            "cmd": "apt-get update -y >/dev/null 2>&1 && apt-get install -y git >/dev/null 2>&1 && echo 'APT_OK'",
+            "check": "APT_OK"
+        },
+        {
+            "msg": "Clonando repositorio MaximusVpsMx...",
+            "cmd": "rm -rf /tmp/MaximusVpsMx && git clone https://github.com/JuandeMx/MAXIMUS.git /tmp/MaximusVpsMx >/dev/null 2>&1 && echo 'CLONE_OK'",
+            "check": "CLONE_OK"
+        },
+        {
+            "msg": "Ejecutando install.sh (esto tarda ~60 seg)...",
+            "cmd": "cd /tmp/MaximusVpsMx && chmod +x install.sh && bash install.sh >/dev/null 2>&1 && echo 'INSTALL_OK'",
+            "check": "INSTALL_OK"
+        },
+        {
+            "msg": "Verificando API Multi-Nodo (puerto 6767)...",
+            "cmd": "sleep 2 && curl -s http://127.0.0.1:6767/api/v1/health",
+            "check": "ONLINE"
+        }
+    ]
+
+    for i, step in enumerate(steps):
+        job["step"] = i + 1
+        job["status"] = step["msg"]
+        job["log"].append(f"[+] Paso {i+1}/{len(steps)}: {step['msg']}")
+
+        try:
+            code, output = _ssh_run(ip, port, user, password, step["cmd"])
+            if step["check"] in output:
+                job["log"].append(f"[OK] Paso {i+1} completado.")
+            else:
+                job["log"].append(f"[WARN] Paso {i+1} terminó con salida inesperada: {output[:120]}")
+                if i == 0:
+                    # Si falla la conexión SSH, abortar
+                    job["error"] = True
+                    job["done"] = True
+                    job["status"] = f"ERROR: No se pudo conectar por SSH a {user}@{ip}:{port}"
+                    job["log"].append(f"[ERROR] Fallo de conexión SSH: {output[:200]}")
+                    return
+        except subprocess.TimeoutExpired:
+            job["log"].append(f"[WARN] Paso {i+1} excedió el timeout (300s).")
+        except Exception as e:
+            job["log"].append(f"[ERROR] Paso {i+1}: {str(e)}")
+
+    job["done"] = True
+    job["status"] = "¡Instalación completada con éxito!"
+    job["log"].append(f"[SUCCESS] ✅ VPS {ip} lista y sincronizada.")
+
 def execute_local_user_create(username, password, days):
     """Crea el usuario REAL en el sistema Linux local de la VPS"""
     try:
@@ -166,6 +241,23 @@ class MasterWebHandler(BaseHTTPRequestHandler):
             self._send_json(200, {"methods": methods})
             return
 
+        if parsed.path.startswith("/api/vps/install/status"):
+            params = parse_qs(parsed.query)
+            install_id = params.get("id", [""])[0]
+            if install_id in _install_jobs:
+                job = _install_jobs[install_id]
+                self._send_json(200, {
+                    "step": job["step"],
+                    "total_steps": 5,
+                    "status": job["status"],
+                    "log": job["log"],
+                    "done": job["done"],
+                    "error": job.get("error", False)
+                })
+            else:
+                self._send_json(404, {"error": "Install ID not found"})
+            return
+
         # ----------------------------------------------------------------------
         # ARCHIVOS ESTÁTICOS DE LA WEB (index.html, style.css, app.js)
         # ----------------------------------------------------------------------
@@ -257,7 +349,7 @@ class MasterWebHandler(BaseHTTPRequestHandler):
             return
 
         # ----------------------------------------------------------------------
-        # POST /api/vps/install (INSTALACIÓN REAL SSH REMOTA O LOCAL)
+        # POST /api/vps/install (INSTALACIÓN REAL SSH REMOTA)
         # ----------------------------------------------------------------------
         elif parsed.path == "/api/vps/install":
             name = payload.get("name", "VPS Remote")
@@ -270,21 +362,17 @@ class MasterWebHandler(BaseHTTPRequestHandler):
             with open(NODES_DB, "a") as f:
                 f.write(f"{name}|{ip}|{port}\n")
 
-            # Ejecutar comando de instalación real si es por SSH
-            install_cmd = "apt-get update -y && apt-get install -y git && rm -rf /tmp/MaximusVpsMx && git clone https://github.com/JuandeMx/MAXIMUS.git /tmp/MaximusVpsMx && cd /tmp/MaximusVpsMx && chmod +x install.sh && bash install.sh && mkdir -p /etc/MaximusVpsMx && touch /etc/MaximusVpsMx/.master_node"
-            
-            if ip in ["127.0.0.1", "localhost"] or ip == os.popen("curl -s4 ifconfig.me").read().strip():
-                # Instalación local
-                subprocess.Popen(install_cmd, shell=True)
-            else:
-                # Instalación remota SSH usando sshpass si está disponible
-                ssh_cmd = f"sshpass -p '{password}' ssh -o StrictHostKeyChecking=no -p {port} {user}@{ip} '{install_cmd}'"
-                subprocess.Popen(ssh_cmd, shell=True)
+            # Iniciar instalación real en un hilo de fondo
+            install_id = f"{ip}_{int(time.time())}"
+            _install_jobs[install_id] = {"status": "starting", "step": 0, "log": [], "done": False, "error": False}
+
+            t = threading.Thread(target=_run_real_ssh_install, args=(install_id, ip, port, user, password), daemon=True)
+            t.start()
 
             self._send_json(200, {
                 "success": True,
-                "message": f"Instalación REAL iniciada en SSH para {ip}.",
-                "ip": ip
+                "install_id": install_id,
+                "message": f"Instalación SSH REAL iniciada para {ip}."
             })
             return
 

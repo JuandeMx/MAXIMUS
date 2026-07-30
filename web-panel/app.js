@@ -386,6 +386,7 @@ async function handleAddVps(event) {
   const footerEl = document.getElementById('install-modal-footer');
 
   termEl.innerHTML = '';
+  barEl.style.width = '0%';
   footerEl.style.display = 'none';
 
   function appendLog(text, type = 'info') {
@@ -396,57 +397,72 @@ async function handleAddVps(event) {
     termEl.scrollTop = termEl.scrollHeight;
   }
 
-  // Petición al Backend Master REAL para ejecutar la instalación por SSH
+  appendLog(`[+] Enviando orden de instalación SSH REAL a ${user}@${ip}:${port}...`);
+  titleEl.innerText = `Conectando al Backend Master para instalar en ${ip}...`;
+  barEl.style.width = '5%';
+
+  // Enviar la orden al Backend Master (que ejecuta SSH real)
+  let installId = '';
   try {
-    fetch(`${API_BASE}/api/vps/install`, {
+    const res = await fetch(`${API_BASE}/api/vps/install`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, ip, port, user, password })
     });
-  } catch (e) {}
+    const data = await res.json();
+    installId = data.install_id || '';
+    appendLog(`[OK] Backend Master recibió la orden. ID: ${installId}`, 'success');
+  } catch (e) {
+    appendLog(`[ERROR] No se pudo contactar al Backend Master.`, 'error');
+    titleEl.innerText = `Error de conexión con el Backend Master.`;
+    footerEl.style.display = 'flex';
+    return;
+  }
 
-  // PASO 1: SSH Connect
-  titleEl.innerText = `Estableciendo conexión SSH con ${user}@${ip}:${port}...`;
-  barEl.style.width = '15%';
-  appendLog(`[+] Conectando socket SSH con ${user}@${ip}:${port}...`);
-  await new Promise(r => setTimeout(r, 1500));
+  // Poll de progreso real cada 3 segundos
+  let lastLogCount = 0;
+  let pollAttempts = 0;
+  const maxPollAttempts = 120; // 6 minutos máximo
 
-  // PASO 2: Apt-get & Git
-  titleEl.innerText = `Instalando git y paquetes base...`;
-  barEl.style.width = '35%';
-  appendLog(`[+] Ejecutando comando remoto: apt-get update -y && apt-get install -y git`);
-  await new Promise(r => setTimeout(r, 2000));
-  appendLog(`[OK] Paquetes base instalados correctamente en la VPS remota.`, 'success');
+  while (pollAttempts < maxPollAttempts) {
+    await new Promise(r => setTimeout(r, 3000));
+    pollAttempts++;
 
-  // PASO 3: Git Clone
-  titleEl.innerText = `Clonando repositorio oficial MaximusVpsMx...`;
-  barEl.style.width = '55%';
-  appendLog(`[+] Ejecutando: rm -rf /tmp/MaximusVpsMx && git clone https://github.com/JuandeMx/MAXIMUS.git /tmp/MaximusVpsMx`);
-  await new Promise(r => setTimeout(r, 2500));
-  appendLog(`[OK] Repositorio oficial clonado con éxito en /tmp/MaximusVpsMx.`, 'success');
+    try {
+      const statusRes = await fetch(`${API_BASE}/api/vps/install/status?id=${installId}`);
+      const status = await statusRes.json();
 
-  // PASO 4: Install.sh
-  titleEl.innerText = `Ejecutando script de instalación install.sh...`;
-  barEl.style.width = '75%';
-  appendLog(`[+] Ejecutando: cd /tmp/MaximusVpsMx && chmod +x install.sh && bash install.sh`);
-  await new Promise(r => setTimeout(r, 3000));
-  appendLog(`[OK] Servicios y entorno MaximusVpsMx instalados.`, 'success');
+      // Mostrar nuevas líneas de log
+      if (status.log && status.log.length > lastLogCount) {
+        for (let i = lastLogCount; i < status.log.length; i++) {
+          const line = status.log[i];
+          const type = line.includes('[OK]') || line.includes('[SUCCESS]') ? 'success' :
+                       line.includes('[ERROR]') ? 'error' :
+                       line.includes('[WARN]') ? 'warning' : 'info';
+          appendLog(line, type);
+        }
+        lastLogCount = status.log.length;
+      }
 
-  // PASO 5: Desbloquear Panel Maestro (.master_node)
-  titleEl.innerText = `Desbloqueando funciones Maestro (.master_node)...`;
-  barEl.style.width = '90%';
-  appendLog(`[+] Ejecutando: mkdir -p /etc/MaximusVpsMx && touch /etc/MaximusVpsMx/.master_node`);
-  await new Promise(r => setTimeout(r, 1200));
-  appendLog(`[OK] Archivo /etc/MaximusVpsMx/.master_node creado. Funciones activadas.`, 'success');
+      // Actualizar barra de progreso
+      const pct = Math.min(Math.round((status.step / status.total_steps) * 100), 100);
+      barEl.style.width = `${pct}%`;
+      titleEl.innerText = status.status;
 
-  // PASO 6: Check API Health
-  titleEl.innerText = `Verificando API Multi-Nodo en http://${ip}:6767/api/v1/health...`;
-  barEl.style.width = '100%';
-  appendLog(`[+] Probando comunicación con daemon maximus-node-api en puerto 6767...`);
-  await new Promise(r => setTimeout(r, 1000));
+      if (status.done) {
+        if (status.error) {
+          appendLog(`[ERROR] La instalación falló. Verifica credenciales SSH y acceso al puerto.`, 'error');
+        } else {
+          barEl.style.width = '100%';
+          appendLog(`[SUCCESS] ✅ ¡VPS '${name}' (${ip}) instalada y conectada correctamente!`, 'success');
+        }
+        break;
+      }
+    } catch (e) {
+      // Silenciar errores de polling
+    }
+  }
 
-  appendLog(`[SUCCESS] ✅ ¡Servidor VPS '${name}' (${ip}) 100% Instalado, Conectado y Sincronizado!`, 'success');
-  titleEl.innerText = `¡Instalación y Vinculación Completada!`;
   footerEl.style.display = 'flex';
 
   const newNode = {
