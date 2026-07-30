@@ -507,10 +507,21 @@ async function syncNode(id) {
   }
 }
 
-function deleteNode(id) {
+async function deleteNode(id) {
   if (!confirm('¿Estás seguro de desvincular este servidor VPS?')) return;
+  const node = nodesDB.find(n => n.id === id);
+  if (node) {
+    try {
+      await fetch(`${API_BASE}/api/vps/delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ip: node.ip })
+      });
+    } catch (e) {}
+  }
   nodesDB = nodesDB.filter(n => n.id !== id);
   saveState();
+  await fetchRealState();
   renderNodes();
 }
 

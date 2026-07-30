@@ -443,9 +443,18 @@ class MasterWebHandler(BaseHTTPRequestHandler):
             user = payload.get("user", "root")
             password = payload.get("password", "")
 
-            # Guardar nodo en nodes_servers.db
-            with open(NODES_DB, "a") as f:
-                f.write(f"{name}|{ip}|{port}\n")
+            # Guardar nodo en nodes_servers.db (evitando duplicados)
+            exists = False
+            if os.path.exists(NODES_DB):
+                with open(NODES_DB, "r") as f:
+                    for line in f:
+                        parts = line.strip().split("|")
+                        if len(parts) >= 2 and parts[1] == ip:
+                            exists = True
+                            break
+            if not exists:
+                with open(NODES_DB, "a") as f:
+                    f.write(f"{name}|{ip}|{port}\n")
 
             # Iniciar instalación real en un hilo de fondo
             install_id = f"{ip}_{int(time.time())}"
@@ -459,6 +468,30 @@ class MasterWebHandler(BaseHTTPRequestHandler):
                 "install_id": install_id,
                 "message": f"Instalación SSH REAL iniciada para {ip}."
             })
+            return
+
+        # ----------------------------------------------------------------------
+        # POST /api/vps/delete
+        # ----------------------------------------------------------------------
+        elif parsed.path == "/api/vps/delete":
+            ip = payload.get("ip", "").strip()
+            if not ip:
+                self._send_json(400, {"error": "IP is required"})
+                return
+
+            lines = []
+            if os.path.exists(NODES_DB):
+                with open(NODES_DB, "r") as f:
+                    lines = f.readlines()
+
+            with open(NODES_DB, "w") as f:
+                for l in lines:
+                    parts = l.strip().split("|")
+                    if len(parts) >= 2 and parts[1] == ip:
+                        continue
+                    f.write(l)
+
+            self._send_json(200, {"success": True, "message": f"VPS {ip} desvinculada."})
             return
 
         # ----------------------------------------------------------------------
