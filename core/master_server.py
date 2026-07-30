@@ -16,12 +16,29 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
 
 # Importar generador de perfiles cifrados .MX
-try:
-    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-    from mx_generator import generate_mx_file
-except Exception as e:
-    print(f"Error importing mx_generator: {e}")
-    generate_mx_file = None
+generate_mx_file = None
+
+def load_mx_generator():
+    global generate_mx_file
+    if generate_mx_file is not None:
+        return True
+    try:
+        sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+        from mx_generator import generate_mx_file
+        return True
+    except Exception:
+        # Intentar instalar al vuelo
+        subprocess.run("pip3 install pycryptodome --break-system-packages >/dev/null 2>&1 || pip3 install pycryptodome >/dev/null 2>&1", shell=True)
+        try:
+            sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+            from mx_generator import generate_mx_file
+            return True
+        except Exception as e:
+            print(f"Error loading mx_generator: {e}")
+            generate_mx_file = None
+            return False
+
+load_mx_generator()
 
 PORT = 8080
 CONFIG_DIR = "/etc/MaximusVpsMx"
@@ -325,6 +342,7 @@ class MasterWebHandler(BaseHTTPRequestHandler):
             return
 
         if parsed.path == "/api/methods":
+            load_mx_generator()
             methods = []
             if os.path.exists(METHODS_DB):
                 with open(METHODS_DB, "r") as f:
@@ -433,6 +451,7 @@ class MasterWebHandler(BaseHTTPRequestHandler):
 
         # Regenerar archivo .mx al vuelo si no existe
         if file_path.startswith("downloads/") and file_path.endswith(".mx"):
+            load_mx_generator()
             downloads_dir = os.path.join(WEB_DIR, "downloads")
             os.makedirs(downloads_dir, exist_ok=True)
             full_file_path = os.path.join(WEB_DIR, file_path)
