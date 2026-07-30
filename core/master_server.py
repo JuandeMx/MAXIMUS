@@ -57,7 +57,7 @@ def execute_local_user_create(username, password, days):
         for l in lines:
             if not l.startswith(f"{username}:"):
                 f.write(l)
-        f.write(f"{username}:{exp_date}:{password}\n")
+        f.write(f"{username}:{password}:{exp_date}\n")
 
     return True, exp_date
 
@@ -105,13 +105,14 @@ class MasterWebHandler(BaseHTTPRequestHandler):
                 with open(USERS_DB, "r") as f:
                     for line in f:
                         parts = line.strip().split(":")
-                        if len(parts) >= 2:
-                            pass_str = parts[2] if len(parts) > 2 else ""
+                        if len(parts) >= 3:
+                            pass_str = parts[1]
+                            exp_str = parts[2]
                             users.append({
                                 "id": hash(parts[0]),
                                 "username": parts[0],
                                 "password": pass_str,
-                                "exp_date": parts[1],
+                                "exp_date": exp_str,
                                 "days": 30,
                                 "devices": 1,
                                 "status": "Active"

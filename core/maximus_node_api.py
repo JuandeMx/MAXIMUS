@@ -144,7 +144,7 @@ class NodeAPIHandler(BaseHTTPRequestHandler):
                         if not l.startswith(f"{username}:"):
                             f.write(l)
             with open(USERS_DB, "a") as f:
-                f.write(f"{username}:{exp_date}:{password}\n")
+                f.write(f"{username}:{password}:{exp_date}\n")
 
             self._send_json(200, {
                 "success": True,
