@@ -71,11 +71,43 @@ def _run_real_ssh_install(install_id, ip, port, user, password):
             "check": "INSTALL_OK"
         },
         {
+            "msg": "Copiando licencia y desbloqueando panel en nodo esclavo...",
+            "cmd": "_PLACEHOLDER_LICENSE_",
+            "check": "LICENSE_OK"
+        },
+        {
             "msg": "Verificando API Multi-Nodo (puerto 6767)...",
             "cmd": "sleep 2 && curl -s http://127.0.0.1:6767/api/v1/health",
             "check": "ONLINE"
         }
     ]
+
+    # Leer licencia del Master para copiarla al esclavo
+    license_key = ""
+    license_file = os.path.join(CONFIG_DIR, "license.key")
+    if os.path.exists(license_file):
+        with open(license_file, "r") as f:
+            license_key = f.read().strip()
+
+    # Construir el comando real para copiar licencia + key de nodo
+    license_cmd = f"mkdir -p /etc/MaximusVpsMx && echo '{license_key}' > /etc/MaximusVpsMx/license.key"
+    # Copiar token de API del Master
+    api_token = "maximus_secret_node_key_2026"
+    token_file = os.path.join(CONFIG_DIR, "api_token.conf")
+    if os.path.exists(token_file):
+        with open(token_file, "r") as f:
+            api_token = f.read().strip()
+    license_cmd += f" && echo '{api_token}' > /etc/MaximusVpsMx/api_token.conf"
+    # Reiniciar servicios
+    license_cmd += " && systemctl restart maximus-node-api >/dev/null 2>&1"
+    # NO crear .master_node — el esclavo NO debe tener el panel web (puerto 8080)
+    license_cmd += " && systemctl stop maximus-master-web >/dev/null 2>&1; systemctl disable maximus-master-web >/dev/null 2>&1"
+    license_cmd += " && echo 'LICENSE_OK'"
+
+    # Reemplazar placeholder con comando real
+    for step in steps:
+        if step["cmd"] == "_PLACEHOLDER_LICENSE_":
+            step["cmd"] = license_cmd
 
     for i, step in enumerate(steps):
         job["step"] = i + 1
@@ -248,7 +280,7 @@ class MasterWebHandler(BaseHTTPRequestHandler):
                 job = _install_jobs[install_id]
                 self._send_json(200, {
                     "step": job["step"],
-                    "total_steps": 5,
+                    "total_steps": 6,
                     "status": job["status"],
                     "log": job["log"],
                     "done": job["done"],
