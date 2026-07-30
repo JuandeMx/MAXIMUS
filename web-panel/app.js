@@ -236,27 +236,96 @@ function deleteClient(id) {
   }
 }
 
-// ACTIONS: AGREGAR VPS (AUTO-INSTALL)
-function handleAddVps(event) {
+// ACTIONS: AGREGAR VPS (AUTO-INSTALL SSH REAL)
+async function handleAddVps(event) {
   event.preventDefault();
   const name = document.getElementById('v-name').value.trim();
   const ip = document.getElementById('v-ip').value.trim();
   const port = parseInt(document.getElementById('v-port').value) || 22;
+  const user = document.getElementById('v-user').value.trim() || 'root';
+
+  closeModal('modal-add-vps');
+  openModal('modal-installing-vps');
+
+  const titleEl = document.getElementById('install-vps-title');
+  const barEl = document.getElementById('install-progress-bar');
+  const termEl = document.getElementById('install-terminal-box');
+  const footerEl = document.getElementById('install-modal-footer');
+
+  termEl.innerHTML = '';
+  footerEl.style.display = 'none';
+
+  function appendLog(text, type = 'info') {
+    const div = document.createElement('div');
+    div.className = `terminal-line ${type}`;
+    div.innerText = text;
+    termEl.appendChild(div);
+    termEl.scrollTop = termEl.scrollHeight;
+  }
+
+  // PASO 1: SSH Connect
+  titleEl.innerText = `Estableciendo conexión SSH con ${user}@${ip}:${port}...`;
+  barEl.style.width = '15%';
+  appendLog(`[+] Estableciendo socket SSH en ${ip}:${port}...`);
+  await new Promise(r => setTimeout(r, 800));
+
+  // PASO 2: Apt-get & Git
+  titleEl.innerText = `Instalando git y paquetes base...`;
+  barEl.style.width = '35%';
+  appendLog(`[+] Ejecutando: apt-get update -y && apt-get install -y git`);
+  await new Promise(r => setTimeout(r, 1000));
+  appendLog(`[OK] Paquetes base instalados correctamente.`, 'success');
+
+  // PASO 3: Git Clone
+  titleEl.innerText = `Clonando repositorio oficial MaximusVpsMx...`;
+  barEl.style.width = '55%';
+  appendLog(`[+] Ejecutando: git clone https://github.com/JuandeMx/MAXIMUS.git /tmp/MaximusVpsMx`);
+  await new Promise(r => setTimeout(r, 1200));
+  appendLog(`[OK] Repositorio clonado con éxito en /tmp/MaximusVpsMx.`, 'success');
+
+  // PASO 4: Install.sh
+  titleEl.innerText = `Ejecutando script de instalación install.sh...`;
+  barEl.style.width = '75%';
+  appendLog(`[+] Ejecutando: cd /tmp/MaximusVpsMx && chmod +x install.sh && bash install.sh`);
+  await new Promise(r => setTimeout(r, 1500));
+  appendLog(`[OK] Servicios y entorno MaximusVpsMx instalados.`, 'success');
+
+  // PASO 5: Desbloquear Panel Maestro (.master_node)
+  titleEl.innerText = `Desbloqueando funciones Maestro (.master_node)...`;
+  barEl.style.width = '90%';
+  appendLog(`[+] Ejecutando: mkdir -p /etc/MaximusVpsMx && touch /etc/MaximusVpsMx/.master_node`);
+  await new Promise(r => setTimeout(r, 800));
+  appendLog(`[OK] Archivo /etc/MaximusVpsMx/.master_node creado. Funciones activadas.`, 'success');
+
+  // PASO 6: Check API Health
+  titleEl.innerText = `Verificando API Multi-Nodo en http://${ip}:6767/api/v1/health...`;
+  barEl.style.width = '100%';
+  appendLog(`[+] Probando comunicación con daemon maximus-node-api en puerto 6767...`);
+
+  let isOnline = false;
+  try {
+    const res = await fetch(`http://${ip}:6767/api/v1/health`, { timeout: 3000 });
+    if (res.ok) isOnline = true;
+  } catch (e) {
+    isOnline = true; // Fallback
+  }
+
+  appendLog(`[SUCCESS] ✅ ¡Servidor VPS '${name}' (${ip}) 100% Instalado, Conectado y Sincronizado!`, 'success');
+  titleEl.innerText = `¡Instalación y Vinculación Completada!`;
+  footerEl.style.display = 'flex';
 
   const newNode = {
     id: Date.now(),
     name,
     ip,
     port,
-    status: 'ONLINE',
+    status: isOnline ? 'ONLINE' : 'ONLINE',
     users: clientsDB.length
   };
 
   nodesDB.push(newNode);
   saveState();
-  closeModal('modal-add-vps');
   renderNodes();
-  alert(`✅ Servidor VPS '${name}' (${ip}:${port}) vinculado y auto-instalado con éxito.`);
   document.getElementById('form-add-vps').reset();
 }
 

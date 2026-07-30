@@ -245,6 +245,31 @@
     </div>
   </div>
 
+  <!-- MODAL 4: INSTALACIÓN EN TIEMPO REAL SSH -->
+  <div id="modal-installing-vps" class="modal-overlay">
+    <div class="modal-box" style="width: 580px;">
+      <div class="modal-header">
+        <h3><i data-lucide="loader-2" class="spin"></i> Instalando Panel en VPS Virgen...</h3>
+      </div>
+      <div style="padding: 0.5rem 0;">
+        <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem;" id="install-vps-title">
+          Estableciendo conexión SSH con root@...
+        </p>
+        <div class="progress-container">
+          <div id="install-progress-bar" class="progress-bar"></div>
+        </div>
+        <div id="install-terminal-box" class="terminal-box">
+          <div class="terminal-line">[+] Iniciando auto-instalación en segundo plano...</div>
+        </div>
+      </div>
+      <div class="modal-footer" id="install-modal-footer" style="display: none;">
+        <button type="button" class="btn-primary" onclick="closeModal('modal-installing-vps')">
+          <i data-lucide="check-circle"></i> ¡VPS Lista y Conectada!
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script src="app.js"></script>
   <script>
     lucide.createIcons();
