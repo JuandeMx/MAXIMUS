@@ -23,18 +23,35 @@ def load_mx_generator():
     if generate_mx_file is not None:
         return True
     try:
-        sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-        from mx_generator import generate_mx_file
+        core_dir = os.path.dirname(os.path.abspath(__file__))
+        if core_dir not in sys.path:
+            sys.path.insert(0, core_dir)
+        import importlib
+        mx_mod = importlib.import_module("mx_generator")
+        generate_mx_file = mx_mod.generate_mx_file
+        print("[MX Generator] ✅ Módulo mx_generator cargado correctamente.")
         return True
-    except Exception:
-        # Intentar instalar al vuelo
-        subprocess.run("pip3 install pycryptodome --break-system-packages >/dev/null 2>&1 || pip3 install pycryptodome >/dev/null 2>&1", shell=True)
+    except Exception as e1:
+        print(f"[MX Generator] ⚠️ Primera carga falló: {e1}")
+        print("[MX Generator] Intentando instalar pycryptodome...")
         try:
-            sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-            from mx_generator import generate_mx_file
+            subprocess.run(["pip3", "install", "pycryptodome", "--break-system-packages"],
+                           capture_output=True, timeout=30)
+        except Exception:
+            try:
+                subprocess.run(["pip3", "install", "pycryptodome"],
+                               capture_output=True, timeout=30)
+            except Exception:
+                pass
+        try:
+            import importlib
+            mx_mod = importlib.import_module("mx_generator")
+            generate_mx_file = mx_mod.generate_mx_file
+            print("[MX Generator] ✅ Módulo mx_generator cargado tras instalar pycryptodome.")
             return True
-        except Exception as e:
-            print(f"Error loading mx_generator: {e}")
+        except Exception as e2:
+            print(f"[MX Generator] ❌ No se pudo cargar mx_generator: {e2}")
+            print("[MX Generator] El servidor funcionará SIN generación de archivos .MX")
             generate_mx_file = None
             return False
 
@@ -755,7 +772,6 @@ class MasterWebHandler(BaseHTTPRequestHandler):
         # POST /api/method/create
         # ----------------------------------------------------------------------
         elif parsed.path == "/api/method/create":
-            global generate_mx_file
             name = payload.get("name", "")
             ssh_host = payload.get("ssh_host", "").strip()
             ssh_port = payload.get("ssh_port", 22)
@@ -766,29 +782,8 @@ class MasterWebHandler(BaseHTTPRequestHandler):
             sni = payload.get("sni", "")
             payload_str = payload.get("payload", "").strip()
 
-            # Intentar importar si es None
-            if not generate_mx_file:
-                try:
-                    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-                    from mx_generator import generate_mx_file
-                except Exception:
-                    pass
-
-            # Si sigue siendo None, intentar instalar pycryptodome al vuelo
-            if not generate_mx_file:
-                subprocess.run("pip3 install pycryptodome --break-system-packages >/dev/null 2>&1 || pip3 install pycryptodome >/dev/null 2>&1", shell=True)
-                try:
-                    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-                    from mx_generator import generate_mx_file
-                except Exception:
-                    pass
-
-            if not generate_mx_file:
-                self._send_json(500, {
-                    "success": False,
-                    "error": "El generador criptográfico .MX no está listo porque falta la librería 'pycryptodome'. Por favor ejecuta 'pip3 install pycryptodome' en la terminal de tu servidor y reinicia el servicio."
-                })
-                return
+            # Asegurar que el generador .MX esté cargado
+            load_mx_generator()
 
             with open(METHODS_DB, "a") as f:
                 f.write(f"{name}|{ssh_host}|{ssh_port}|{ssh_user}|{ssh_pass}|{protocol}|{sni}|{payload_str}\n")
