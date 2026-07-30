@@ -322,14 +322,29 @@ class MasterWebHandler(BaseHTTPRequestHandler):
                 with open(METHODS_DB, "r") as f:
                     for line in f:
                         parts = line.strip().split("|")
-                        if len(parts) >= 5:
+                        if len(parts) >= 8:
+                            methods.append({
+                                "id": _safe_hash(parts[0] + parts[1]),
+                                "name": parts[0],
+                                "ssh_host": parts[1],
+                                "ssh_port": int(parts[2]),
+                                "ssh_user": parts[3],
+                                "ssh_pass": parts[4],
+                                "protocol": parts[5],
+                                "sni": parts[6],
+                                "payload": parts[7]
+                            })
+                        elif len(parts) >= 5:
                             methods.append({
                                 "id": _safe_hash(parts[0]),
                                 "name": parts[0],
+                                "ssh_host": "127.0.0.1",
+                                "ssh_port": int(parts[4]),
+                                "ssh_user": "root",
+                                "ssh_pass": "",
                                 "protocol": parts[1],
                                 "sni": parts[2],
-                                "payload": parts[3],
-                                "port": int(parts[4])
+                                "payload": parts[3]
                             })
             self._send_json(200, {"methods": methods})
             return
@@ -518,17 +533,44 @@ class MasterWebHandler(BaseHTTPRequestHandler):
             return
 
         # ----------------------------------------------------------------------
+        # POST /api/method/delete
+        # ----------------------------------------------------------------------
+        elif parsed.path == "/api/method/delete":
+            name = payload.get("name", "").strip()
+            if not name:
+                self._send_json(400, {"error": "Name is required"})
+                return
+
+            lines = []
+            if os.path.exists(METHODS_DB):
+                with open(METHODS_DB, "r") as f:
+                    lines = f.readlines()
+
+            with open(METHODS_DB, "w") as f:
+                for l in lines:
+                    parts = l.strip().split("|")
+                    if len(parts) >= 1 and parts[0] == name:
+                        continue
+                    f.write(l)
+
+            self._send_json(200, {"success": True, "message": f"Método {name} eliminado."})
+            return
+
+        # ----------------------------------------------------------------------
         # POST /api/method/create
         # ----------------------------------------------------------------------
         elif parsed.path == "/api/method/create":
             name = payload.get("name", "")
+            ssh_host = payload.get("ssh_host", "").strip()
+            ssh_port = payload.get("ssh_port", 22)
+            ssh_user = payload.get("ssh_user", "").strip()
+            ssh_pass = payload.get("ssh_pass", "")
             protocol = payload.get("protocol", "")
             sni = payload.get("sni", "")
-            payload_str = payload.get("payload", "")
-            port = payload.get("port", 443)
+            payload_str = payload.get("payload", "").strip()
 
             with open(METHODS_DB, "a") as f:
-                f.write(f"{name}|{protocol}|{sni}|{payload_str}|{port}\n")
+                f.write(f"{name}|{ssh_host}|{ssh_port}|{ssh_user}|{ssh_pass}|{protocol}|{sni}|{payload_str}\n")
 
             self._send_json(200, {"success": True, "message": f"Método '{name}' guardado."})
             return

@@ -267,7 +267,7 @@ function renderMethods() {
   tbody.innerHTML = '';
 
   if (methodsDB.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 2rem;">No hay métodos de conexión configurados.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2rem;">No hay métodos de conexión configurados.</td></tr>`;
     return;
   }
 
@@ -275,9 +275,10 @@ function renderMethods() {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td class="user-cell">${method.name}</td>
-      <td><span class="badge-status active">${method.protocol}</span></td>
+      <td><span class="pass-cell">${method.ssh_host || '127.0.0.1'}:${method.ssh_port || 22}</span></td>
+      <td><span class="pass-cell" style="font-size: 0.8rem; color: #94a3b8;">${method.ssh_user || 'root'}:${method.ssh_pass ? '••••••' : 'sin pass'}</span></td>
+      <td><span class="badge-status active">${method.protocol || 'SSL'}</span></td>
       <td><span class="pass-cell">${method.sni || 'N/A'}</span></td>
-      <td>${method.port}</td>
       <td style="font-family: monospace; font-size: 0.8rem; color: #94a3b8;">${(method.payload || 'N/A').substring(0, 35)}...</td>
       <td>
         <div class="action-btns">
@@ -519,32 +520,44 @@ async function deleteNode(id) {
 async function handleCreateMethod(event) {
   event.preventDefault();
   const name = document.getElementById('m-name').value.trim();
+  const ssh_host = document.getElementById('m-ssh-host').value.trim();
+  const ssh_port = parseInt(document.getElementById('m-ssh-port').value) || 22;
+  const ssh_user = document.getElementById('m-ssh-user').value.trim() || 'root';
+  const ssh_pass = document.getElementById('m-ssh-pass').value.trim();
   const protocol = document.getElementById('m-proto').value;
   const sni = document.getElementById('m-sni').value.trim();
   const payload = document.getElementById('m-payload').value.trim();
-  const port = parseInt(document.getElementById('m-port').value) || 443;
 
   try {
     await fetch(`${API_BASE}/api/method/create`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, protocol, sni, payload, port })
+      body: JSON.stringify({ name, ssh_host, ssh_port, ssh_user, ssh_pass, protocol, sni, payload })
     });
   } catch (e) {}
 
-  const newMethod = { id: Date.now(), name, protocol, sni, payload, port };
-  methodsDB.push(newMethod);
-  saveState();
+  await fetchRealState();
   closeModal('modal-create-method');
   renderMethods();
   alert(`✅ Método de Conexión '${name}' guardado correctamente.`);
   document.getElementById('form-create-method').reset();
 }
 
-function deleteMethod(id) {
+async function deleteMethod(id) {
   if (!confirm('¿Estás seguro de eliminar este método de conexión?')) return;
+  const method = methodsDB.find(m => m.id === id);
+  if (method) {
+    try {
+      await fetch(`${API_BASE}/api/method/delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: method.name })
+      });
+    } catch (e) {}
+  }
   methodsDB = methodsDB.filter(m => m.id !== id);
   saveState();
+  await fetchRealState();
   renderMethods();
 }
 

@@ -137,9 +137,10 @@
           <thead>
             <tr>
               <th>NOMBRE COMERCIAL</th>
-              <th>MODO DE TÚNEL / PROTOCOLO</th>
+              <th>SSH HOST:PORT</th>
+              <th>SSH USER:PASS</th>
+              <th>PROTOCOLO</th>
               <th>HOST SNI</th>
-              <th>PUERTO</th>
               <th>PAYLOAD STRING</th>
               <th>ACCIONES</th>
             </tr>
@@ -232,6 +233,26 @@
           <label>Nombre Comercial (se ve en la app):</label>
           <input type="text" id="m-name" class="form-control" placeholder="ej: TELCEL SSL ILIMITADO" required>
         </div>
+        <div style="display: flex; gap: 1rem;">
+          <div class="form-group" style="flex: 2;">
+            <label>SSH Host / IP:</label>
+            <input type="text" id="m-ssh-host" class="form-control" placeholder="ej: 78.14.139.83" required>
+          </div>
+          <div class="form-group" style="flex: 1;">
+            <label>SSH Port:</label>
+            <input type="number" id="m-ssh-port" class="form-control" value="22" required>
+          </div>
+        </div>
+        <div style="display: flex; gap: 1rem;">
+          <div class="form-group" style="flex: 1;">
+            <label>SSH User (Opcional):</label>
+            <input type="text" id="m-ssh-user" class="form-control" placeholder="ej: root">
+          </div>
+          <div class="form-group" style="flex: 1;">
+            <label>SSH Pass (Opcional):</label>
+            <input type="password" id="m-ssh-pass" class="form-control" placeholder="Contraseña">
+          </div>
+        </div>
         <div class="form-group">
           <label>Modo de Túnel / Protocolo:</label>
           <select id="m-proto" class="form-control">
@@ -250,10 +271,6 @@
         <div class="form-group">
           <label>Payload String (Opcional):</label>
           <textarea id="m-payload" class="form-control" placeholder="GET / HTTP/1.1[crlf]Host: m.facebook.com[crlf][crlf]"></textarea>
-        </div>
-        <div class="form-group">
-          <label>Puerto de Conexión:</label>
-          <input type="number" id="m-port" class="form-control" value="443" required>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn-sm" onclick="closeModal('modal-create-method')">Cancelar</button>
