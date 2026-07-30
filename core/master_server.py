@@ -404,9 +404,59 @@ class MasterWebHandler(BaseHTTPRequestHandler):
             payload = {}
 
         # ----------------------------------------------------------------------
+        # POST /api/client/validate (VALIDACIÓN DE CREDENCIALES PARA LA APP)
+        # ----------------------------------------------------------------------
+        if parsed.path == "/api/client/validate":
+            username = payload.get("username", "").strip().upper()
+            password = payload.get("password", "").strip()
+
+            if not username or not password:
+                self._send_json(400, {"valid": False, "message": "Usuario y contraseña requeridos."})
+                return
+
+            valid = False
+            exp_date = ""
+            days_left = 0
+
+            if os.path.exists(USERS_DB):
+                with open(USERS_DB, "r") as f:
+                    for line in f:
+                        parts = line.strip().split(":")
+                        if len(parts) >= 3:
+                            db_user = parts[0].upper()
+                            db_pass = parts[1]
+                            db_exp = parts[2]
+                            if db_user == username and db_pass == password:
+                                # Verificar que no esté vencido
+                                try:
+                                    exp = datetime.datetime.strptime(db_exp, "%Y-%m-%d").date()
+                                    days_left = (exp - datetime.date.today()).days
+                                    if days_left >= 0:
+                                        valid = True
+                                        exp_date = db_exp
+                                except:
+                                    pass
+                                break
+
+            if valid:
+                self._send_json(200, {
+                    "valid": True,
+                    "username": username,
+                    "exp_date": exp_date,
+                    "days_left": days_left,
+                    "message": "Acceso concedido."
+                })
+            else:
+                self._send_json(200, {
+                    "valid": False,
+                    "message": "Usuario/contraseña incorrectos o cuenta vencida."
+                })
+            return
+
+        # ----------------------------------------------------------------------
         # POST /api/client/create (CREACIÓN REAL EN LINUX)
         # ----------------------------------------------------------------------
-        if parsed.path == "/api/client/create":
+        elif parsed.path == "/api/client/create":
             username = payload.get("username", "").strip().upper()
             password = payload.get("password", "").strip()
             days = payload.get("days", 30)

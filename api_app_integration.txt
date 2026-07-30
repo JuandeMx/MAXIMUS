@@ -1,0 +1,99 @@
+========================================================================
+GUÍA DE INTEGRACIÓN API - APP ANDROID CON PANEL MAESTRO (MAXIMUS)
+========================================================================
+
+Esta guía detalla cómo la aplicación Android de VPN debe comunicarse con el servidor Backend Maestro de MAXIMUS (puerto 8080) para obtener los perfiles de conexión configurados y para autenticar las cuentas de los clientes.
+
+Dirección Base del Backend Maestro:
+http://<IP_DE_TU_VPS_MAESTRO>:8080
+
+------------------------------------------------------------------------
+1. OBTENER PERFILES DE CONEXIÓN (MÉTODOS)
+------------------------------------------------------------------------
+La aplicación de Android debe llamar a este endpoint en su pantalla de inicio o sección de actualización para descargar la lista de servidores y configuraciones disponibles.
+
+Método: GET
+Endpoint: /api/methods
+URL Completa: http://<IP_DE_TU_VPS_MAESTRO>:8080/api/methods
+
+Respuesta (JSON):
+{
+  "methods": [
+    {
+      "id": 162983192,
+      "name": "TELCEL SSL ILIMITADO",
+      "ssh_host": "78.14.139.83",
+      "ssh_port": 22,
+      "ssh_user": "root",
+      "ssh_pass": "mi_clave_ssh",
+      "protocol": "SSL + Payload (WebSocket)",
+      "sni": "m.facebook.com",
+      "payload": "GET / HTTP/1.1[crlf]Host: m.facebook.com[crlf][crlf]"
+    },
+    {
+      "id": 298130983,
+      "name": "SSH DIRECTO GLOBAL",
+      "ssh_host": "187.209.14.58",
+      "ssh_port": 22,
+      "ssh_user": "",
+      "ssh_pass": "",
+      "protocol": "SSH Directo (TCP)",
+      "sni": "",
+      "payload": ""
+    }
+  ]
+}
+
+Uso en la app (Lógica HTTP Custom):
+- Muestra el campo "name" en la lista de opciones para el usuario.
+- Si el protocolo requiere SSL/TLS, usa "sni" para configurar la conexión de túnel.
+- Si el protocolo usa Payload, inyecta la cadena "payload" resolviendo los [crlf] como saltos de línea (\r\n).
+- Utiliza "ssh_host" y "ssh_port" para apuntar la conexión SSH.
+- Si "ssh_user" y "ssh_pass" están definidos en el método, úsalos por defecto. De lo contrario, solicita al cliente su usuario y contraseña personal para conectarse.
+
+------------------------------------------------------------------------
+2. AUTENTICAR / VALIDAR CLIENTE (LOGIN)
+------------------------------------------------------------------------
+Cuando el cliente ingrese su usuario y contraseña en la aplicación Android y presione "Conectar" o "Login", la app debe validar las credenciales contra el servidor Maestro usando este endpoint dedicado y seguro.
+
+Método: POST
+Endpoint: /api/client/validate
+URL Completa: http://<IP_DE_TU_VPS_MAESTRO>:8080/api/client/validate
+Cabecera (Header): Content-Type: application/json
+
+Cuerpo de la Petición (Payload JSON):
+{
+  "username": "PEPE",
+  "password": "123"
+}
+
+Respuesta si la Cuenta es VÁLIDA y ACTIVA (JSON):
+{
+  "valid": true,
+  "username": "PEPE",
+  "exp_date": "2026-08-29",
+  "days_left": 30,
+  "message": "Acceso concedido."
+}
+
+Respuesta si la Cuenta es INCORRECTA o EXPIRADA (JSON):
+{
+  "valid": false,
+  "message": "Usuario/contraseña incorrectos o cuenta vencida."
+}
+
+Lógica sugerida en Android:
+- Si la respuesta tiene "valid": true, guarda el usuario en las preferencias compartidas (SharedPreferences), permite la conexión y muestra al usuario su fecha de expiración ("exp_date") o días restantes ("days_left").
+- Si "valid": false, detén el intento de conexión y muestra en la pantalla del celular el texto recibido en "message".
+
+------------------------------------------------------------------------
+3. NOTAS DE IMPLEMENTACIÓN EN ANDROID (Java/Kotlin)
+------------------------------------------------------------------------
+- Asegúrate de agregar el permiso de Internet en tu AndroidManifest.xml:
+  <uses-permission android:name="android.permission.INTERNET" />
+  <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+- Habilitar tráfico HTTP plano (Cleartext Traffic) si no usas dominio con SSL/HTTPS en el Maestro:
+  Para permitir peticiones http:// (sin S) en Android 9.0 o superior, agrega en la etiqueta <application> del AndroidManifest:
+  android:usesCleartextTraffic="true"
+  O define una configuración de seguridad de red en XML (Network Security Config).
