@@ -1,0 +1,13 @@
+[Unit]
+Description=Maximus Multi-Node Sync API Server
+After=network.target
+
+[Service]
+User=root
+WorkingDirectory=/etc/MaximusVpsMx
+ExecStart=/usr/bin/python3 /etc/MaximusVpsMx/core/maximus_node_api.py
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

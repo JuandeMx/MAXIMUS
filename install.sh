@@ -453,6 +453,14 @@ fi
 chmod +x /etc/MaximusVpsMx/core/speed_optimize.sh
 chmod 600 /etc/MaximusVpsMx/cloudflare.conf 2>/dev/null
 chmod 600 /etc/MaximusVpsMx/users.db 2>/dev/null
+
+# Habilitar servicio Multi-Node Sync API Server (Puerto 6767)
+if [ -f /etc/MaximusVpsMx/core/maximus-node-api.service ]; then
+    cp -f /etc/MaximusVpsMx/core/maximus-node-api.service /etc/systemd/system/
+    systemctl daemon-reload
+    systemctl enable maximus-node-api >/dev/null 2>&1
+    systemctl restart maximus-node-api >/dev/null 2>&1
+fi
 chmod 600 /etc/MaximusVpsMx/hysteria_users.db 2>/dev/null
 chown -R root:root /etc/MaximusVpsMx
 
