@@ -132,9 +132,62 @@ def _run_real_ssh_install(install_id, ip, port, user, password):
         except Exception as e:
             job["log"].append(f"[ERROR] Paso {i+1}: {str(e)}")
 
+    # PASO FINAL: Sincronizar todos los usuarios existentes del Master al nuevo nodo
+    job["status"] = "Sincronizando usuarios existentes al nuevo nodo..."
+    job["log"].append(f"[+] Sincronizando usuarios del Master hacia {ip}...")
+    synced = _sync_all_users_to_node(ip)
+    job["log"].append(f"[OK] {synced} usuario(s) sincronizado(s) al nuevo nodo.")
+
     job["done"] = True
     job["status"] = "¡Instalación completada con éxito!"
-    job["log"].append(f"[SUCCESS] ✅ VPS {ip} lista y sincronizada.")
+    job["log"].append(f"[SUCCESS] ✅ VPS {ip} lista y sincronizada con {synced} usuarios.")
+
+def _sync_all_users_to_node(node_ip):
+    """Envía todos los usuarios del Master al nodo remoto vía API puerto 6767"""
+    synced = 0
+    if not os.path.exists(USERS_DB):
+        return 0
+
+    # Leer token API
+    api_token = "maximus_secret_node_key_2026"
+    token_file = os.path.join(CONFIG_DIR, "api_token.conf")
+    if os.path.exists(token_file):
+        with open(token_file, "r") as f:
+            api_token = f.read().strip()
+
+    with open(USERS_DB, "r") as f:
+        for line in f:
+            parts = line.strip().split(":")
+            if len(parts) >= 3 and parts[1] != "HWID_INV":
+                username = parts[0]
+                password = parts[1]
+                exp_date = parts[2]
+
+                # Calcular días restantes
+                try:
+                    exp = datetime.datetime.strptime(exp_date, "%Y-%m-%d").date()
+                    days_left = (exp - datetime.date.today()).days
+                    if days_left < 1:
+                        days_left = 1
+                except:
+                    days_left = 30
+
+                try:
+                    import urllib.request
+                    req_data = json.dumps({"username": username, "password": password, "days": days_left}).encode("utf-8")
+                    req = urllib.request.Request(
+                        f"http://{node_ip}:6767/api/v1/client/create",
+                        data=req_data,
+                        headers={
+                            "Content-Type": "application/json",
+                            "X-API-KEY": api_token
+                        }
+                    )
+                    urllib.request.urlopen(req, timeout=5)
+                    synced += 1
+                except Exception as e:
+                    pass
+    return synced
 
 def execute_local_user_create(username, password, days):
     """Crea el usuario REAL en el sistema Linux local de la VPS"""
@@ -405,6 +458,21 @@ class MasterWebHandler(BaseHTTPRequestHandler):
                 "success": True,
                 "install_id": install_id,
                 "message": f"Instalación SSH REAL iniciada para {ip}."
+            })
+            return
+
+        # ----------------------------------------------------------------------
+        # POST /api/vps/sync
+        # ----------------------------------------------------------------------
+        elif parsed.path == "/api/vps/sync":
+            ip = payload.get("ip", "").strip()
+            if not ip:
+                self._send_json(400, {"error": "IP is required"})
+                return
+            synced = _sync_all_users_to_node(ip)
+            self._send_json(200, {
+                "success": True,
+                "message": f"Sincronizados {synced} usuarios a la VPS {ip}."
             })
             return
 

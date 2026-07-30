@@ -480,6 +480,33 @@ async function handleAddVps(event) {
   document.getElementById('form-add-vps').reset();
 }
 
+async function syncNode(id) {
+  const node = nodesDB.find(n => n.id === id);
+  if (!node) return;
+
+  // Si es el servidor local, no requiere sync de red remota (o se puede sincronizar de igual manera)
+  if (node.ip === '127.0.0.1') {
+    alert('El servidor local ya se encuentra sincronizado.');
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/api/vps/sync`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ip: node.ip })
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert(`✅ Sincronización exitosa: ${data.message}`);
+    } else {
+      alert(`❌ Error al sincronizar: ${data.error || 'Fallo desconocido'}`);
+    }
+  } catch (e) {
+    alert(`❌ No se pudo conectar al servidor maestro para la sincronización.`);
+  }
+}
+
 function deleteNode(id) {
   if (!confirm('¿Estás seguro de desvincular este servidor VPS?')) return;
   nodesDB = nodesDB.filter(n => n.id !== id);
