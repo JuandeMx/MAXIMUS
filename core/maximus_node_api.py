@@ -89,6 +89,24 @@ class NodeAPIHandler(BaseHTTPRequestHandler):
             self._send_json(200, {"users": users})
             return
 
+        if parsed.path == "/api/v1/protocols/status":
+            services = {
+                "ssh": "ssh",
+                "dropbear": "dropbear",
+                "stunnel": "stunnel4",
+                "hysteria": "hysteria",
+                "v2ray": "maximus-v2ray",
+                "badvpn": "badvpn",
+                "slowdns": "mx-slowdns"
+            }
+            statuses = {}
+            for key, svc in services.items():
+                res = subprocess.run(["systemctl", "is-active", "--quiet", svc])
+                statuses[key] = "ONLINE" if res.returncode == 0 else "STOPPED"
+
+            self._send_json(200, {"protocols": statuses})
+            return
+
         self._send_json(404, {"error": "Endpoint not found"})
 
     def do_POST(self):
@@ -218,6 +236,36 @@ class NodeAPIHandler(BaseHTTPRequestHandler):
                 "success": True,
                 "message": f"User '{username}' deleted successfully from node."
             })
+            return
+
+        # ----------------------------------------------------------------------
+        # ENDPOINT 4: CONTROL REMOTO DE PROTOCOLOS Y SERVICIOS
+        # ----------------------------------------------------------------------
+        elif parsed.path == "/api/v1/protocols/control":
+            svc_key = payload.get("service")
+            action = payload.get("action", "restart")
+
+            services = {
+                "ssh": "ssh",
+                "dropbear": "dropbear",
+                "stunnel": "stunnel4",
+                "hysteria": "hysteria",
+                "v2ray": "maximus-v2ray",
+                "badvpn": "badvpn",
+                "slowdns": "mx-slowdns"
+            }
+
+            svc_name = services.get(svc_key)
+            if not svc_name:
+                self._send_json(400, {"error": "Servicio de protocolo no válido."})
+                return
+
+            if action in ["start", "stop", "restart"]:
+                subprocess.run(["systemctl", action, svc_name], stderr=subprocess.DEVNULL)
+                self._send_json(200, {"success": True, "message": f"Protocolo '{svc_key}' {action}ed."})
+                return
+
+            self._send_json(400, {"error": "Acción no soportada."})
             return
 
         self._send_json(404, {"error": "Endpoint not found"})

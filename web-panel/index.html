@@ -91,7 +91,8 @@
               <th>DIRECCIÓN IP</th>
               <th>PUERTO SSH</th>
               <th>ESTADO RED</th>
-              <th>USUARIOS EN LÍNEA</th>
+              <th>USUARIOS</th>
+              <th>PROTOCOLOS</th>
               <th>ACCIONES</th>
             </tr>
           </thead>
@@ -101,6 +102,23 @@
         </table>
       </div>
     </main>
+
+    <!-- PANEL DE PROTOCOLOS POR NODO (Se muestra inline debajo del nodo seleccionado) -->
+    <div id="modal-protocols" class="modal-overlay">
+      <div class="modal-box" style="width: 620px;">
+        <div class="modal-header">
+          <h3><i data-lucide="shield"></i> Protocolos en: <span id="proto-node-name">---</span></h3>
+          <button class="modal-close" onclick="closeModal('modal-protocols')">&times;</button>
+        </div>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;" id="proto-node-ip">IP: ---</p>
+        <div id="proto-list-container">
+          <!-- Se llena dinámicamente -->
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-sm" onclick="closeModal('modal-protocols')">Cerrar</button>
+        </div>
+      </div>
+    </div>
 
     <!-- TAB 3: MÉTODOS DE CONEXIÓN -->
     <main id="tab-methods" class="main-card" style="display: none;">

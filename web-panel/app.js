@@ -130,7 +130,7 @@ function renderNodes() {
   tbody.innerHTML = '';
 
   if (nodesDB.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 2rem;">No hay servidores VPS vinculados.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2rem;">No hay servidores VPS vinculados.</td></tr>`;
     return;
   }
 
@@ -141,11 +141,16 @@ function renderNodes() {
       <td><span class="pass-cell">${node.ip}</span></td>
       <td>${node.port}</td>
       <td><span class="badge-status active">${node.status}</span></td>
-      <td>${clientsDB.length} Usuarios</td>
+      <td>${clientsDB.length}</td>
+      <td>
+        <button class="btn-sm" onclick="openProtocols('${node.ip}', '${node.name}')" style="background: rgba(139,92,246,0.15); color: #a78bfa; border-color: rgba(139,92,246,0.3);">
+          <i data-lucide="shield" style="width: 14px; vertical-align: middle;"></i> Gestionar
+        </button>
+      </td>
       <td>
         <div class="action-btns">
           <button class="btn-sm" onclick="syncNode(${node.id})">
-            <i data-lucide="refresh-cw" style="width: 14px; vertical-align: middle;"></i> Sincronizar
+            <i data-lucide="refresh-cw" style="width: 14px; vertical-align: middle;"></i> Sync
           </button>
           <button class="btn-sm btn-danger" onclick="deleteNode(${node.id})">
             <i data-lucide="trash-2" style="width: 14px; vertical-align: middle;"></i>
@@ -157,6 +162,104 @@ function renderNodes() {
   });
   lucide.createIcons();
 }
+
+// PROTOCOLOS: Abrir modal y consultar estado real del nodo remoto
+let _currentProtoNodeIp = '';
+
+const PROTO_LABELS = {
+  ssh: 'OpenSSH',
+  dropbear: 'Dropbear',
+  stunnel: 'Stunnel (SSL)',
+  hysteria: 'Hysteria v2',
+  v2ray: 'V2Ray / Xray',
+  badvpn: 'BadVPN (UDP)',
+  slowdns: 'SlowDNS'
+};
+
+async function openProtocols(ip, name) {
+  _currentProtoNodeIp = ip;
+  document.getElementById('proto-node-name').innerText = name;
+  document.getElementById('proto-node-ip').innerText = `IP: ${ip} — Puerto API: 6767`;
+  const container = document.getElementById('proto-list-container');
+  container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 1rem;">Consultando protocolos en el nodo remoto...</p>';
+  openModal('modal-protocols');
+  lucide.createIcons();
+
+  try {
+    const res = await fetch(`http://${ip}:6767/api/v1/protocols/status`, {
+      headers: { 'X-API-KEY': 'maximus_secret_node_key_2026' }
+    });
+    const data = await res.json();
+    renderProtocolRows(container, data.protocols, ip);
+  } catch (e) {
+    container.innerHTML = '<p style="color: #f87171; text-align: center; padding: 1rem;">⚠️ No se pudo conectar al nodo. Verifica que esté en línea y el puerto 6767 abierto.</p>';
+  }
+}
+
+function renderProtocolRows(container, protocols, ip) {
+  container.innerHTML = '';
+  for (const [key, status] of Object.entries(protocols)) {
+    const label = PROTO_LABELS[key] || key;
+    const isOnline = status === 'ONLINE';
+    const statusClass = isOnline ? 'online' : 'stopped';
+
+    const row = document.createElement('div');
+    row.className = 'proto-row';
+    row.id = `proto-row-${key}`;
+    row.innerHTML = `
+      <div class="proto-info">
+        <span class="proto-name">${label}</span>
+        <span class="proto-status ${statusClass}" id="proto-badge-${key}">${status}</span>
+      </div>
+      <div class="proto-actions">
+        <button class="btn-sm" onclick="controlProtocol('${ip}', '${key}', 'start')" style="color: #4ade80;">▶ Iniciar</button>
+        <button class="btn-sm" onclick="controlProtocol('${ip}', '${key}', 'restart')" style="color: #38bdf8;">⟳ Reiniciar</button>
+        <button class="btn-sm btn-danger" onclick="controlProtocol('${ip}', '${key}', 'stop')">■ Detener</button>
+      </div>
+    `;
+    container.appendChild(row);
+  }
+  lucide.createIcons();
+}
+
+async function controlProtocol(ip, service, action) {
+  const badge = document.getElementById(`proto-badge-${service}`);
+  if (badge) {
+    badge.innerText = '...';
+    badge.className = 'proto-status';
+  }
+
+  try {
+    const res = await fetch(`http://${ip}:6767/api/v1/protocols/control`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-KEY': 'maximus_secret_node_key_2026'
+      },
+      body: JSON.stringify({ service, action })
+    });
+    const data = await res.json();
+
+    // Refrescar estado después de la acción
+    await new Promise(r => setTimeout(r, 800));
+    const statusRes = await fetch(`http://${ip}:6767/api/v1/protocols/status`, {
+      headers: { 'X-API-KEY': 'maximus_secret_node_key_2026' }
+    });
+    const statusData = await statusRes.json();
+
+    const newStatus = statusData.protocols[service] || 'STOPPED';
+    if (badge) {
+      badge.innerText = newStatus;
+      badge.className = `proto-status ${newStatus === 'ONLINE' ? 'online' : 'stopped'}`;
+    }
+  } catch (e) {
+    if (badge) {
+      badge.innerText = 'ERROR';
+      badge.className = 'proto-status stopped';
+    }
+  }
+}
+
 
 // RENDER TAB 3: MÉTODOS DE CONEXIÓN
 function renderMethods() {

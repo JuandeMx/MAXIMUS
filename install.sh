@@ -454,7 +454,7 @@ chmod +x /etc/MaximusVpsMx/core/speed_optimize.sh
 chmod 600 /etc/MaximusVpsMx/cloudflare.conf 2>/dev/null
 chmod 600 /etc/MaximusVpsMx/users.db 2>/dev/null
 
-# Habilitar servicio Multi-Node Sync API Server (Puerto 6767)
+# Habilitar servicio Multi-Node Sync API Server (Puerto 6767) en TODOS los nodos
 if [ -f /etc/MaximusVpsMx/core/maximus-node-api.service ]; then
     cp -f /etc/MaximusVpsMx/core/maximus-node-api.service /etc/systemd/system/
     systemctl daemon-reload
@@ -462,12 +462,16 @@ if [ -f /etc/MaximusVpsMx/core/maximus-node-api.service ]; then
     systemctl restart maximus-node-api >/dev/null 2>&1
 fi
 
-# Habilitar servicio Master Web Dashboard Backend (Puerto 8080)
-if [ -f /etc/MaximusVpsMx/core/maximus-master-web.service ]; then
+# Habilitar servicio Master Web Dashboard Backend (Puerto 8080) SOLO en Nodos Maestros
+if [ -f /etc/MaximusVpsMx/.master_node ] && [ -f /etc/MaximusVpsMx/core/maximus-master-web.service ]; then
     cp -f /etc/MaximusVpsMx/core/maximus-master-web.service /etc/systemd/system/
     systemctl daemon-reload
     systemctl enable maximus-master-web >/dev/null 2>&1
     systemctl restart maximus-master-web >/dev/null 2>&1
+else
+    systemctl stop maximus-master-web >/dev/null 2>&1
+    systemctl disable maximus-master-web >/dev/null 2>&1
+    rm -f /etc/systemd/system/maximus-master-web.service
 fi
 chmod 600 /etc/MaximusVpsMx/hysteria_users.db 2>/dev/null
 chown -R root:root /etc/MaximusVpsMx
