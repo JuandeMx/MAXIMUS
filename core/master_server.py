@@ -15,6 +15,14 @@ import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
 
+# Importar generador de perfiles cifrados .MX
+try:
+    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+    from mx_generator import generate_mx_file
+except Exception as e:
+    print(f"Error importing mx_generator: {e}")
+    generate_mx_file = None
+
 PORT = 8080
 CONFIG_DIR = "/etc/MaximusVpsMx"
 WEB_DIR = os.path.join(CONFIG_DIR, "web-panel")
@@ -323,28 +331,78 @@ class MasterWebHandler(BaseHTTPRequestHandler):
                     for line in f:
                         parts = line.strip().split("|")
                         if len(parts) >= 8:
+                            name = parts[0]
+                            ssh_host = parts[1]
+                            ssh_port = int(parts[2])
+                            ssh_user = parts[3]
+                            ssh_pass = parts[4]
+                            protocol = parts[5]
+                            sni = parts[6]
+                            payload = parts[7]
+
+                            mx_content = ""
+                            if generate_mx_file:
+                                try:
+                                    mx_content = generate_mx_file(
+                                        name=name,
+                                        ssh_host=ssh_host,
+                                        ssh_port=ssh_port,
+                                        ssh_user=ssh_user,
+                                        ssh_pass=ssh_pass,
+                                        sni=sni,
+                                        payload=payload
+                                    )
+                                except Exception as e:
+                                    print(f"Error generating MX content: {e}")
+
                             methods.append({
-                                "id": _safe_hash(parts[0] + parts[1]),
-                                "name": parts[0],
-                                "ssh_host": parts[1],
-                                "ssh_port": int(parts[2]),
-                                "ssh_user": parts[3],
-                                "ssh_pass": parts[4],
-                                "protocol": parts[5],
-                                "sni": parts[6],
-                                "payload": parts[7]
+                                "id": _safe_hash(name + ssh_host),
+                                "name": name,
+                                "ssh_host": ssh_host,
+                                "ssh_port": ssh_port,
+                                "ssh_user": ssh_user,
+                                "ssh_pass": ssh_pass,
+                                "protocol": protocol,
+                                "sni": sni,
+                                "payload": payload,
+                                "mx_content": mx_content
                             })
                         elif len(parts) >= 5:
+                            name = parts[0]
+                            ssh_host = "127.0.0.1"
+                            ssh_port = int(parts[4])
+                            ssh_user = "root"
+                            ssh_pass = ""
+                            protocol = parts[1]
+                            sni = parts[2]
+                            payload = parts[3]
+
+                            mx_content = ""
+                            if generate_mx_file:
+                                try:
+                                    mx_content = generate_mx_file(
+                                        name=name,
+                                        ssh_host=ssh_host,
+                                        ssh_port=ssh_port,
+                                        ssh_user=ssh_user,
+                                        ssh_pass=ssh_pass,
+                                        sni=sni,
+                                        payload=payload
+                                    )
+                                except Exception as e:
+                                    print(f"Error generating MX content: {e}")
+
                             methods.append({
-                                "id": _safe_hash(parts[0]),
-                                "name": parts[0],
-                                "ssh_host": "127.0.0.1",
-                                "ssh_port": int(parts[4]),
-                                "ssh_user": "root",
-                                "ssh_pass": "",
-                                "protocol": parts[1],
-                                "sni": parts[2],
-                                "payload": parts[3]
+                                "id": _safe_hash(name),
+                                "name": name,
+                                "ssh_host": ssh_host,
+                                "ssh_port": ssh_port,
+                                "ssh_user": ssh_user,
+                                "ssh_pass": ssh_pass,
+                                "protocol": protocol,
+                                "sni": sni,
+                                "payload": payload,
+                                "mx_content": mx_content
                             })
             self._send_json(200, {"methods": methods})
             return

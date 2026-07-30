@@ -279,6 +279,9 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y python3 python3-pip python3-ps
 # Asegurar la correcta instalación de psutil
 instalar_psutil_local
 
+# Instalar pycryptodome para el generador de perfiles .MX
+pip3 install pycryptodome --break-system-packages >/dev/null 2>&1 || pip3 install pycryptodome >/dev/null 2>&1
+
 # 1.5 Firewall Local
 echo -e "\e[1;32m[+] Blindando Puertos Nativos con UFW...\e[0m"
 ufw allow 22/tcp 2>/dev/null
