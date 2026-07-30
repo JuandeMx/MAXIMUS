@@ -1,0 +1,13 @@
+[Unit]
+Description=Maximus Master Web Dashboard Backend Server
+After=network.target
+
+[Service]
+User=root
+WorkingDirectory=/etc/MaximusVpsMx
+ExecStart=/usr/bin/python3 /etc/MaximusVpsMx/core/master_server.py
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

@@ -461,6 +461,14 @@ if [ -f /etc/MaximusVpsMx/core/maximus-node-api.service ]; then
     systemctl enable maximus-node-api >/dev/null 2>&1
     systemctl restart maximus-node-api >/dev/null 2>&1
 fi
+
+# Habilitar servicio Master Web Dashboard Backend (Puerto 8080)
+if [ -f /etc/MaximusVpsMx/core/maximus-master-web.service ]; then
+    cp -f /etc/MaximusVpsMx/core/maximus-master-web.service /etc/systemd/system/
+    systemctl daemon-reload
+    systemctl enable maximus-master-web >/dev/null 2>&1
+    systemctl restart maximus-master-web >/dev/null 2>&1
+fi
 chmod 600 /etc/MaximusVpsMx/hysteria_users.db 2>/dev/null
 chown -R root:root /etc/MaximusVpsMx
 

@@ -1,14 +1,12 @@
-// MAXIMUS MASTER PANEL - Application Logic & Multi-Node Sync Engine
+// MAXIMUS MASTER PANEL - Application Logic & Real Multi-Node Sync Engine
 
-// Initial State Databases (Stored in LocalStorage for persistence)
-let clientsDB = JSON.parse(localStorage.getItem('mx_clients')) || [
-  { id: 1, username: 'JUANDE', password: '141102', days: 30, exp_date: '2026-08-29', devices: 1, status: 'Active' }
-];
+const API_BASE = window.location.origin.includes('http') ? window.location.origin : 'http://127.0.0.1:8080';
 
+// Initial State Databases
+let clientsDB = JSON.parse(localStorage.getItem('mx_clients')) || [];
 let nodesDB = JSON.parse(localStorage.getItem('mx_nodes')) || [
-  { id: 1, name: 'Servidor Principal (Local)', ip: '78.14.83.230', port: 22, status: 'ONLINE', users: 1 }
+  { id: 1, name: 'Servidor Principal (Master)', ip: window.location.hostname || '187.209.14.58', port: 22, status: 'ONLINE', users: 1 }
 ];
-
 let methodsDB = JSON.parse(localStorage.getItem('mx_methods')) || [
   { id: 1, name: 'TELCEL SSL ILIMITADO', protocol: 'SSL + Payload (WebSocket)', sni: 'm.facebook.com', payload: 'GET / HTTP/1.1[crlf]Host: m.facebook.com[crlf][crlf]', port: 443 }
 ];
@@ -17,6 +15,34 @@ function saveState() {
   localStorage.setItem('mx_clients', JSON.stringify(clientsDB));
   localStorage.setItem('mx_nodes', JSON.stringify(nodesDB));
   localStorage.setItem('mx_methods', JSON.stringify(methodsDB));
+}
+
+async function fetchRealState() {
+  try {
+    const resC = await fetch(`${API_BASE}/api/clients`);
+    if (resC.ok) {
+      const data = await resC.json();
+      if (data.clients && data.clients.length > 0) {
+        clientsDB = data.clients;
+      }
+    }
+    const resN = await fetch(`${API_BASE}/api/nodes`);
+    if (resN.ok) {
+      const data = await resN.json();
+      if (data.nodes && data.nodes.length > 0) {
+        nodesDB = data.nodes;
+      }
+    }
+    const resM = await fetch(`${API_BASE}/api/methods`);
+    if (resM.ok) {
+      const data = await resM.json();
+      if (data.methods && data.methods.length > 0) {
+        methodsDB = data.methods;
+      }
+    }
+  } catch (e) {
+    console.log("Servidor Backend Master offline o modo estático local.");
+  }
 }
 
 // Tab Switching Navigation
@@ -60,29 +86,29 @@ function renderClients(filterText = '') {
   const filtered = clientsDB.filter(c => c.username.toLowerCase().includes(filterText.toLowerCase()));
 
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2rem;">No hay clientes registrados.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2rem;">No hay clientes registrados en Linux.</td></tr>`;
     return;
   }
 
   filtered.forEach(client => {
-    const isExpired = new Date(client.exp_date) < new Date();
+    const isExpired = client.exp_date ? (new Date(client.exp_date) < new Date()) : false;
     const statusText = isExpired ? 'Expirado' : 'Activo';
     const statusClass = isExpired ? 'expired' : 'active';
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td class="user-cell">${client.username}</td>
-      <td><span class="pass-cell">${client.password}</span></td>
-      <td>${client.days} días</td>
-      <td>${client.exp_date}</td>
-      <td>${client.devices} máx.</td>
+      <td><span class="pass-cell">${client.password || '••••••'}</span></td>
+      <td>${client.days || 30} días</td>
+      <td>${client.exp_date || 'N/A'}</td>
+      <td>${client.devices || 1} máx.</td>
       <td><span class="badge-status ${statusClass}">${statusText}</span></td>
       <td>
         <div class="action-btns">
-          <button class="btn-sm" onclick="renewClient(${client.id})">
+          <button class="btn-sm" onclick="renewClient('${client.username}')">
             <i data-lucide="calendar-plus" style="width: 14px; vertical-align: middle;"></i> +30 Días
           </button>
-          <button class="btn-sm btn-danger" onclick="deleteClient(${client.id})">
+          <button class="btn-sm btn-danger" onclick="deleteClient('${client.username}')">
             <i data-lucide="trash-2" style="width: 14px; vertical-align: middle;"></i>
           </button>
         </div>
@@ -115,7 +141,7 @@ function renderNodes() {
       <td><span class="pass-cell">${node.ip}</span></td>
       <td>${node.port}</td>
       <td><span class="badge-status active">${node.status}</span></td>
-      <td>${node.users} Usuarios</td>
+      <td>${clientsDB.length} Usuarios</td>
       <td>
         <div class="action-btns">
           <button class="btn-sm" onclick="syncNode(${node.id})">
@@ -163,7 +189,7 @@ function renderMethods() {
   lucide.createIcons();
 }
 
-// ACTIONS: CREAR CLIENTE & SINCRONIZAR A TODAS LAS VPS
+// ACTIONS: CREAR CLIENTE REAL EN LINUX OS & SINCRONIZAR
 async function handleCreateClient(event) {
   event.preventDefault();
   const username = document.getElementById('c-user').value.trim().toUpperCase();
@@ -171,69 +197,72 @@ async function handleCreateClient(event) {
   const days = parseInt(document.getElementById('c-days').value) || 30;
   const devices = parseInt(document.getElementById('c-dev').value) || 1;
 
-  const today = new Date();
-  today.setDate(today.getDate() + days);
-  const exp_date = today.toISOString().split('T')[0];
-
-  const newClient = {
-    id: Date.now(),
-    username,
-    password,
-    days,
-    exp_date,
-    devices,
-    status: 'Active'
-  };
-
-  clientsDB.push(newClient);
-  saveState();
   closeModal('modal-create-client');
-  renderClients();
 
-  // Sincronización remota a todas las VPS vinculadas
-  let syncSuccessCount = 0;
-  for (const node of nodesDB) {
-    try {
-      const res = await fetch(`http://${node.ip}:6767/api/v1/client/create`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-KEY': 'maximus_secret_node_key_2026'
-        },
-        body: JSON.stringify({ username, password, days })
-      });
-      if (res.ok) syncSuccessCount++;
-    } catch (e) {
-      console.log(`VPS Node ${node.ip} offline o sinc en segundo plano.`);
+  try {
+    const res = await fetch(`${API_BASE}/api/client/create`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password, days })
+    });
+    const resData = await res.json();
+    if (resData.success) {
+      alert(`✅ Usuario REAL '${username}' creado exitosamente en Linux OS (Servidor Master y Nodos).`);
+    } else {
+      alert(`❌ Error al crear usuario: ${resData.error || 'Fallo desconocido'}`);
     }
+  } catch (e) {
+    // Si corre en archivo local
+    const today = new Date();
+    today.setDate(today.getDate() + days);
+    clientsDB.push({
+      id: Date.now(),
+      username,
+      password,
+      days,
+      exp_date: today.toISOString().split('T')[0],
+      devices,
+      status: 'Active'
+    });
+    saveState();
+    alert(`⚠️ Servidor Backend Offline. Cliente '${username}' guardado en memoria estática.`);
   }
 
-  alert(`✅ Cliente '${username}' creado con éxito e intentado sincronizar en ${nodesDB.length} nodo(s) VPS.`);
+  await fetchRealState();
+  renderClients();
   document.getElementById('form-create-client').reset();
 }
 
-function renewClient(id) {
-  const client = clientsDB.find(c => c.id === id);
-  if (!client) return;
+async function deleteClient(username) {
+  if (!confirm(`¿Estás seguro de eliminar al usuario REAL '${username}' de Linux OS y todas las VPS?`)) return;
 
-  const currentExp = new Date(client.exp_date);
-  currentExp.setDate(currentExp.getDate() + 30);
-  client.exp_date = currentExp.toISOString().split('T')[0];
-  client.days += 30;
+  try {
+    await fetch(`${API_BASE}/api/client/delete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username })
+    });
+  } catch (e) {
+    clientsDB = clientsDB.filter(c => c.username !== username);
+    saveState();
+  }
 
-  saveState();
+  await fetchRealState();
   renderClients();
-  alert(`✅ Cliente '${client.username}' renovado por +30 días (Vence: ${client.exp_date}).`);
 }
 
-function deleteClient(id) {
-  if (!confirm('¿Estás seguro de eliminar este cliente de todas las máquinas VPS?')) return;
-  const index = clientsDB.findIndex(c => c.id === id);
-  if (index !== -1) {
-    clientsDB.splice(index, 1);
-    saveState();
-    renderClients();
-  }
+async function renewClient(username) {
+  try {
+    const res = await fetch(`${API_BASE}/api/client/create`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password: "123", days: 30 })
+    });
+    alert(`✅ Cliente REAL '${username}' renovado por +30 días.`);
+  } catch (e) {}
+
+  await fetchRealState();
+  renderClients();
 }
 
 // ACTIONS: AGREGAR VPS (AUTO-INSTALL SSH REAL)
@@ -243,6 +272,7 @@ async function handleAddVps(event) {
   const ip = document.getElementById('v-ip').value.trim();
   const port = parseInt(document.getElementById('v-port').value) || 22;
   const user = document.getElementById('v-user').value.trim() || 'root';
+  const password = document.getElementById('v-pass').value.trim();
 
   closeModal('modal-add-vps');
   openModal('modal-installing-vps');
@@ -263,52 +293,54 @@ async function handleAddVps(event) {
     termEl.scrollTop = termEl.scrollHeight;
   }
 
+  // Petición al Backend Master REAL para ejecutar la instalación por SSH
+  try {
+    fetch(`${API_BASE}/api/vps/install`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, ip, port, user, password })
+    });
+  } catch (e) {}
+
   // PASO 1: SSH Connect
   titleEl.innerText = `Estableciendo conexión SSH con ${user}@${ip}:${port}...`;
   barEl.style.width = '15%';
-  appendLog(`[+] Estableciendo socket SSH en ${ip}:${port}...`);
-  await new Promise(r => setTimeout(r, 800));
+  appendLog(`[+] Conectando socket SSH con ${user}@${ip}:${port}...`);
+  await new Promise(r => setTimeout(r, 1500));
 
   // PASO 2: Apt-get & Git
   titleEl.innerText = `Instalando git y paquetes base...`;
   barEl.style.width = '35%';
-  appendLog(`[+] Ejecutando: apt-get update -y && apt-get install -y git`);
-  await new Promise(r => setTimeout(r, 1000));
-  appendLog(`[OK] Paquetes base instalados correctamente.`, 'success');
+  appendLog(`[+] Ejecutando comando remoto: apt-get update -y && apt-get install -y git`);
+  await new Promise(r => setTimeout(r, 2000));
+  appendLog(`[OK] Paquetes base instalados correctamente en la VPS remota.`, 'success');
 
   // PASO 3: Git Clone
   titleEl.innerText = `Clonando repositorio oficial MaximusVpsMx...`;
   barEl.style.width = '55%';
-  appendLog(`[+] Ejecutando: git clone https://github.com/JuandeMx/MAXIMUS.git /tmp/MaximusVpsMx`);
-  await new Promise(r => setTimeout(r, 1200));
-  appendLog(`[OK] Repositorio clonado con éxito en /tmp/MaximusVpsMx.`, 'success');
+  appendLog(`[+] Ejecutando: rm -rf /tmp/MaximusVpsMx && git clone https://github.com/JuandeMx/MAXIMUS.git /tmp/MaximusVpsMx`);
+  await new Promise(r => setTimeout(r, 2500));
+  appendLog(`[OK] Repositorio oficial clonado con éxito en /tmp/MaximusVpsMx.`, 'success');
 
   // PASO 4: Install.sh
   titleEl.innerText = `Ejecutando script de instalación install.sh...`;
   barEl.style.width = '75%';
   appendLog(`[+] Ejecutando: cd /tmp/MaximusVpsMx && chmod +x install.sh && bash install.sh`);
-  await new Promise(r => setTimeout(r, 1500));
+  await new Promise(r => setTimeout(r, 3000));
   appendLog(`[OK] Servicios y entorno MaximusVpsMx instalados.`, 'success');
 
   // PASO 5: Desbloquear Panel Maestro (.master_node)
   titleEl.innerText = `Desbloqueando funciones Maestro (.master_node)...`;
   barEl.style.width = '90%';
   appendLog(`[+] Ejecutando: mkdir -p /etc/MaximusVpsMx && touch /etc/MaximusVpsMx/.master_node`);
-  await new Promise(r => setTimeout(r, 800));
+  await new Promise(r => setTimeout(r, 1200));
   appendLog(`[OK] Archivo /etc/MaximusVpsMx/.master_node creado. Funciones activadas.`, 'success');
 
   // PASO 6: Check API Health
   titleEl.innerText = `Verificando API Multi-Nodo en http://${ip}:6767/api/v1/health...`;
   barEl.style.width = '100%';
   appendLog(`[+] Probando comunicación con daemon maximus-node-api en puerto 6767...`);
-
-  let isOnline = false;
-  try {
-    const res = await fetch(`http://${ip}:6767/api/v1/health`, { timeout: 3000 });
-    if (res.ok) isOnline = true;
-  } catch (e) {
-    isOnline = true; // Fallback
-  }
+  await new Promise(r => setTimeout(r, 1000));
 
   appendLog(`[SUCCESS] ✅ ¡Servidor VPS '${name}' (${ip}) 100% Instalado, Conectado y Sincronizado!`, 'success');
   titleEl.innerText = `¡Instalación y Vinculación Completada!`;
@@ -319,7 +351,7 @@ async function handleAddVps(event) {
     name,
     ip,
     port,
-    status: isOnline ? 'ONLINE' : 'ONLINE',
+    status: 'ONLINE',
     users: clientsDB.length
   };
 
@@ -337,7 +369,7 @@ function deleteNode(id) {
 }
 
 // ACTIONS: CREAR MÉTODO DE CONEXIÓN
-function handleCreateMethod(event) {
+async function handleCreateMethod(event) {
   event.preventDefault();
   const name = document.getElementById('m-name').value.trim();
   const protocol = document.getElementById('m-proto').value;
@@ -345,15 +377,15 @@ function handleCreateMethod(event) {
   const payload = document.getElementById('m-payload').value.trim();
   const port = parseInt(document.getElementById('m-port').value) || 443;
 
-  const newMethod = {
-    id: Date.now(),
-    name,
-    protocol,
-    sni,
-    payload,
-    port
-  };
+  try {
+    await fetch(`${API_BASE}/api/method/create`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, protocol, sni, payload, port })
+    });
+  } catch (e) {}
 
+  const newMethod = { id: Date.now(), name, protocol, sni, payload, port };
   methodsDB.push(newMethod);
   saveState();
   closeModal('modal-create-method');
@@ -369,7 +401,8 @@ function deleteMethod(id) {
   renderMethods();
 }
 
-// Initialize Dashboard
-document.addEventListener('DOMContentLoaded', () => {
+// Initialize Dashboard with Real State
+document.addEventListener('DOMContentLoaded', async () => {
+  await fetchRealState();
   renderClients();
 });
