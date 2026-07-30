@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestión de Clientes & Ventas - MAX VPS Master Hub</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Top Header -->
+    <header class="top-header">
+      <div class="header-title">
+        <h1 id="page-title">Gestión de Clientes & Ventas</h1>
+      </div>
+      <div class="admin-badge">
+        <div class="admin-info">
+          <div class="admin-name">Administrador Root</div>
+          <div class="admin-role">Super Admin MAX VPS</div>
+        </div>
+        <div class="admin-avatar">
+          <i data-lucide="user-cog"></i>
+        </div>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs">
+      <button class="tab-btn active" onclick="switchTab('clients')">
+        <i data-lucide="users"></i> Clientes & Ventas
+      </button>
+      <button class="tab-btn" onclick="switchTab('nodes')">
+        <i data-lucide="server"></i> Servidores VPS (Multi-Nodo)
+      </button>
+      <button class="tab-btn" onclick="switchTab('methods')">
+        <i data-lucide="zap"></i> Métodos de Conexión
+      </button>
+    </nav>
+
+    <!-- TAB 1: CLIENTES & VENTAS -->
+    <main id="tab-clients" class="main-card">
+      <div class="controls-bar">
+        <div class="search-box">
+          <i data-lucide="search"></i>
+          <input type="text" id="search-client" placeholder="Buscar cliente por usuario..." onkeyup="filterClients()">
+        </div>
+        <button class="btn-primary" onclick="openModal('modal-create-client')">
+          <i data-lucide="user-plus"></i> Crear Nuevo Cliente
+        </button>
+      </div>
+
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>USUARIO</th>
+              <th>CONTRASEÑA</th>
+              <th>DÍAS RESTANTES</th>
+              <th>EXPIRA EN</th>
+              <th>DISPOSITIVOS</th>
+              <th>ESTADO</th>
+              <th>ACCIONES</th>
+            </tr>
+          </thead>
+          <tbody id="clients-table-body">
+            <!-- Renderizado dinámico JS -->
+          </tbody>
+        </table>
+      </div>
+    </main>
+
+    <!-- TAB 2: SERVIDORES VPS (MULTI-NODO) -->
+    <main id="tab-nodes" class="main-card" style="display: none;">
+      <div class="controls-bar">
+        <div class="search-box">
+          <i data-lucide="search"></i>
+          <input type="text" id="search-node" placeholder="Buscar servidor por IP o Nombre...">
+        </div>
+        <button class="btn-primary" onclick="openModal('modal-add-vps')">
+          <i data-lucide="hard-drive-upload"></i> Agregar Nueva VPS
+        </button>
+      </div>
+
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>NOMBRE SERVIDOR</th>
+              <th>DIRECCIÓN IP</th>
+              <th>PUERTO SSH</th>
+              <th>ESTADO RED</th>
+              <th>USUARIOS EN LÍNEA</th>
+              <th>ACCIONES</th>
+            </tr>
+          </thead>
+          <tbody id="nodes-table-body">
+            <!-- Renderizado dinámico JS -->
+          </tbody>
+        </table>
+      </div>
+    </main>
+
+    <!-- TAB 3: MÉTODOS DE CONEXIÓN -->
+    <main id="tab-methods" class="main-card" style="display: none;">
+      <div class="controls-bar">
+        <div class="search-box">
+          <i data-lucide="search"></i>
+          <input type="text" id="search-method" placeholder="Buscar método de conexión...">
+        </div>
+        <button class="btn-primary" onclick="openModal('modal-create-method')">
+          <i data-lucide="zap"></i> Crear Nuevo Método de Conexión
+        </button>
+      </div>
+
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>NOMBRE COMERCIAL</th>
+              <th>MODO DE TÚNEL / PROTOCOLO</th>
+              <th>HOST SNI</th>
+              <th>PUERTO</th>
+              <th>PAYLOAD STRING</th>
+              <th>ACCIONES</th>
+            </tr>
+          </thead>
+          <tbody id="methods-table-body">
+            <!-- Renderizado dinámico JS -->
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <!-- MODAL 1: CREAR NUEVO CLIENTE -->
+  <div id="modal-create-client" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3><i data-lucide="user-plus"></i> Crear Nuevo Cliente</h3>
+        <button class="modal-close" onclick="closeModal('modal-create-client')">&times;</button>
+      </div>
+      <form id="form-create-client" onsubmit="handleCreateClient(event)">
+        <div class="form-group">
+          <label>Nombre de Usuario</label>
+          <input type="text" id="c-user" class="form-control" placeholder="ej: JUANDE" required>
+        </div>
+        <div class="form-group">
+          <label>Contraseña</label>
+          <input type="text" id="c-pass" class="form-control" placeholder="ej: 141102" required>
+        </div>
+        <div class="form-group">
+          <label>Días de Validez</label>
+          <input type="number" id="c-days" class="form-control" value="30" min="1" required>
+        </div>
+        <div class="form-group">
+          <label>Límite de Dispositivos</label>
+          <input type="number" id="c-dev" class="form-control" value="1" min="1" required>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-sm" onclick="closeModal('modal-create-client')">Cancelar</button>
+          <button type="submit" class="btn-primary">Guardar y Sincronizar en VPS</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 2: AGREGAR NUEVA VPS (AUTO-INSTALL SSH) -->
+  <div id="modal-add-vps" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3><i data-lucide="server"></i> Agregar Nueva VPS (SSH Auto-Install)</h3>
+        <button class="modal-close" onclick="closeModal('modal-add-vps')">&times;</button>
+      </div>
+      <form id="form-add-vps" onsubmit="handleAddVps(event)">
+        <div class="form-group">
+          <label>Nombre del Servidor</label>
+          <input type="text" id="v-name" class="form-control" placeholder="ej: Servidor EE.UU. 01" required>
+        </div>
+        <div class="form-group">
+          <label>Dirección IP Pública</label>
+          <input type="text" id="v-ip" class="form-control" placeholder="ej: 78.14.83.230" required>
+        </div>
+        <div class="form-group">
+          <label>Puerto SSH</label>
+          <input type="number" id="v-port" class="form-control" value="22" required>
+        </div>
+        <div class="form-group">
+          <label>Usuario Root</label>
+          <input type="text" id="v-user" class="form-control" value="root" required>
+        </div>
+        <div class="form-group">
+          <label>Contraseña Root SSH</label>
+          <input type="password" id="v-pass" class="form-control" placeholder="••••••••" required>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-sm" onclick="closeModal('modal-add-vps')">Cancelar</button>
+          <button type="submit" class="btn-primary">Conectar e Instalar MAXIMUS</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 3: CREAR NUEVO MÉTODO DE CONEXIÓN -->
+  <div id="modal-create-method" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3><i data-lucide="zap"></i> Crear Nuevo Método de Conexión</h3>
+        <button class="modal-close" onclick="closeModal('modal-create-method')">&times;</button>
+      </div>
+      <form id="form-create-method" onsubmit="handleCreateMethod(event)">
+        <div class="form-group">
+          <label>Nombre Comercial (se ve en la app):</label>
+          <input type="text" id="m-name" class="form-control" placeholder="ej: TELCEL SSL ILIMITADO" required>
+        </div>
+        <div class="form-group">
+          <label>Modo de Túnel / Protocolo:</label>
+          <select id="m-proto" class="form-control">
+            <option value="SSL + Payload (WebSocket)">SSL + Payload (WebSocket)</option>
+            <option value="SSH Directo (TCP)">SSH Directo (TCP)</option>
+            <option value="Dropbear + Payload">Dropbear + Payload</option>
+            <option value="V2Ray (VLESS WebSocket)">V2Ray (VLESS WebSocket)</option>
+            <option value="V2Ray (REALITY TLS)">V2Ray (REALITY TLS)</option>
+            <option value="Hysteria v2 (UDP)">Hysteria v2 (UDP)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Host SNI (Server Name Indication):</label>
+          <input type="text" id="m-sni" class="form-control" placeholder="ej: m.facebook.com">
+        </div>
+        <div class="form-group">
+          <label>Payload String (Opcional):</label>
+          <textarea id="m-payload" class="form-control" placeholder="GET / HTTP/1.1[crlf]Host: m.facebook.com[crlf][crlf]"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Puerto de Conexión:</label>
+          <input type="number" id="m-port" class="form-control" value="443" required>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-sm" onclick="closeModal('modal-create-method')">Cancelar</button>
+          <button type="submit" class="btn-primary">Guardar Método</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>
