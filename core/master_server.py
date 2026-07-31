@@ -242,11 +242,11 @@ def _sync_all_users_to_node(node_ip):
                     "X-API-KEY": api_token
                 }
             )
-            urllib.request.urlopen(req, timeout=3)
+            resp = urllib.request.urlopen(req, timeout=5)
             with lock:
                 synced_count[0] += 1
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[Sync Error] Failed to send user {u} to node {node_ip}: {e}")
 
     threads = []
     for u, p, d in user_requests:
@@ -255,8 +255,9 @@ def _sync_all_users_to_node(node_ip):
         threads.append(t)
 
     for t in threads:
-        t.join(timeout=4)
+        t.join(timeout=6)
 
+    print(f"[Sync Result] Node {node_ip}: {synced_count[0]}/{len(user_requests)} users synced.")
     return synced_count[0]
 
 def execute_local_user_create(username, password, days):
