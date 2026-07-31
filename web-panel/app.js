@@ -505,6 +505,24 @@ async function syncNode(id) {
   }
 }
 
+async function syncAllNodes() {
+  try {
+    const res = await fetch(`${API_BASE}/api/vps/sync`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ip: 'all' })
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert(`✅ Sincronización Masiva Exitosa: ${data.message}`);
+    } else {
+      alert(`❌ Error en la sincronización: ${data.error || 'Fallo desconocido'}`);
+    }
+  } catch (e) {
+    alert(`❌ No se pudo conectar al servidor maestro para la sincronización masiva.`);
+  }
+}
+
 async function deleteNode(id) {
   if (!confirm('¿Estás seguro de desvincular este servidor VPS?')) return;
   const node = nodesDB.find(n => n.id === id);

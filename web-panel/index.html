@@ -78,9 +78,14 @@
           <i data-lucide="search"></i>
           <input type="text" id="search-node" placeholder="Buscar servidor por IP o Nombre...">
         </div>
-        <button class="btn-primary" onclick="openModal('modal-add-vps')">
-          <i data-lucide="hard-drive-upload"></i> Agregar Nueva VPS
-        </button>
+        <div style="display: flex; gap: 0.5rem;">
+          <button class="btn-sm" onclick="syncAllNodes()" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); font-weight: 600; padding: 0.6rem 1rem;">
+            <i data-lucide="refresh-cw" style="width: 14px; vertical-align: middle;"></i> Sincronizar Nodos
+          </button>
+          <button class="btn-primary" onclick="openModal('modal-add-vps')">
+            <i data-lucide="hard-drive-upload"></i> Agregar Nueva VPS
+          </button>
+        </div>
       </div>
 
       <div class="table-responsive">

@@ -207,10 +207,13 @@ def _sync_all_users_to_node(node_ip):
     with open(USERS_DB, "r") as f:
         for line in f:
             parts = line.strip().split(":")
-            if len(parts) >= 3 and parts[1] != "HWID_INV":
-                username = parts[0]
-                password = parts[1]
-                exp_date = parts[2]
+            if len(parts) >= 3:
+                username = parts[0].strip()
+                password = parts[1].strip()
+                exp_date = parts[2].strip()
+
+                if not username or not password:
+                    continue
 
                 # Calcular días restantes
                 try:
@@ -218,7 +221,7 @@ def _sync_all_users_to_node(node_ip):
                     days_left = (exp - datetime.date.today()).days
                     if days_left < 1:
                         days_left = 1
-                except:
+                except Exception:
                     days_left = 30
 
                 try:
@@ -235,7 +238,7 @@ def _sync_all_users_to_node(node_ip):
                     urllib.request.urlopen(req, timeout=5)
                     synced += 1
                 except Exception as e:
-                    pass
+                    print(f"Error syncing user {username} to node {node_ip}: {e}")
     return synced
 
 def execute_local_user_create(username, password, days):
@@ -620,21 +623,27 @@ class MasterWebHandler(BaseHTTPRequestHandler):
             success, exp_date = execute_local_user_create(username, password, days)
 
             # 2. Replicar a otros nodos VPS guardados en nodes_servers.db
+            api_token = "maximus_secret_node_key_2026"
+            token_file = os.path.join(CONFIG_DIR, "api_token.conf")
+            if os.path.exists(token_file):
+                with open(token_file, "r") as f:
+                    api_token = f.read().strip()
+
             if os.path.exists(NODES_DB):
                 with open(NODES_DB, "r") as f:
                     for line in f:
                         parts = line.strip().split("|")
-                        if len(parts) >= 3 and parts[1] != "127.0.0.1":
-                            nip = parts[1]
+                        if len(parts) >= 2 and parts[1].strip() not in ["127.0.0.1", "localhost", ""]:
+                            nip = parts[1].strip()
                             # Intentar enviar la orden por API al nodo remoto
                             try:
                                 import urllib.request
                                 req_data = json.dumps({"username": username, "password": password, "days": days}).encode("utf-8")
                                 req = urllib.request.Request(f"http://{nip}:6767/api/v1/client/create", data=req_data, headers={
                                     "Content-Type": "application/json",
-                                    "X-API-KEY": "maximus_secret_node_key_2026"
+                                    "X-API-KEY": api_token
                                 })
-                                urllib.request.urlopen(req, timeout=3)
+                                urllib.request.urlopen(req, timeout=5)
                             except Exception as e:
                                 print(f"Error sync to remote node {nip}: {e}")
 
@@ -723,14 +732,26 @@ class MasterWebHandler(BaseHTTPRequestHandler):
         # ----------------------------------------------------------------------
         elif parsed.path == "/api/vps/sync":
             ip = payload.get("ip", "").strip()
-            if not ip:
-                self._send_json(400, {"error": "IP is required"})
-                return
-            synced = _sync_all_users_to_node(ip)
-            self._send_json(200, {
-                "success": True,
-                "message": f"Sincronizados {synced} usuarios a la VPS {ip}."
-            })
+            total_synced = 0
+
+            if ip == "all" or not ip:
+                # Sincronizar masivamente a TODOS los nodos guardados
+                if os.path.exists(NODES_DB):
+                    with open(NODES_DB, "r") as f:
+                        for line in f:
+                            parts = line.strip().split("|")
+                            if len(parts) >= 2 and parts[1].strip() not in ["127.0.0.1", "localhost", ""]:
+                                total_synced += _sync_all_users_to_node(parts[1].strip())
+                self._send_json(200, {
+                    "success": True,
+                    "message": f"Sincronización masiva completada: {total_synced} envío(s) realizado(s) a todos los nodos."
+                })
+            else:
+                total_synced = _sync_all_users_to_node(ip)
+                self._send_json(200, {
+                    "success": True,
+                    "message": f"Sincronizados {total_synced} usuario(s) a la VPS {ip}."
+                })
             return
 
         # ----------------------------------------------------------------------
