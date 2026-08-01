@@ -86,11 +86,11 @@ DEFAULT_7_METHODS = [
     "PERSONAL CFT 4|www.personal.com.ar|80|||HTTP DIRECT / PAYLOAD||GET / HTTP/1.1[crlf]Host: emailmarketing.personal.com.ar[crlf][crlf][split][crlf][crlf]GET- / HTTP/1.1[crlf]Host: www.personal.com.ar[lf][lf]GET / HTTP/1.1[crlf]Host: [rotate=[CFT]][lf]Connection:  Upgrade[lf]Upgrade: websocket[lf]User-Agent: Googlebot/2.1 (+http://www.google.com/bot.html)[lf][lf][split]"
 ]
 
-# Forzar la reescritura de connection_methods.db con las 7 plantillas reales
-new_lines = [def_m + "\n" for def_m in DEFAULT_7_METHODS]
-
-with open(METHODS_DB, "w") as f:
-    f.writelines(new_lines)
+# Cargar o inicializar connection_methods.db solo si no existe o está vacío (respetando ediciones del usuario)
+if not os.path.exists(METHODS_DB) or os.path.getsize(METHODS_DB) == 0:
+    new_lines = [def_m + "\n" for def_m in DEFAULT_7_METHODS]
+    with open(METHODS_DB, "w") as f:
+        f.writelines(new_lines)
 
 # Autogenerar archivos .mx de descarga para los 7 métodos
 downloads_dir = os.path.join(WEB_DIR, "downloads")
@@ -613,8 +613,8 @@ class MasterWebHandler(BaseHTTPRequestHandler):
                         if not compiled_sni or compiled_sni in ["[CF]", "[CFT]"]:
                             compiled_sni = n_ip
 
-                        # Usar el puerto del método si está configurado (ej: 80, 443, 8080), sino 80
-                        final_port = bm['ssh_port'] if bm['ssh_port'] and bm['ssh_port'] != 22 else 80
+                        # Usar exactamente el puerto guardado en el método (sea 80, 443, 22, 8080, etc.)
+                        final_port = bm['ssh_port']
 
                         mx_content = ""
                         if generate_mx_file:
