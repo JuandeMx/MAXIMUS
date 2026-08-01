@@ -1176,9 +1176,23 @@ class MasterWebHandler(BaseHTTPRequestHandler):
 
         self._send_json(404, {"error": "Endpoint not found"})
 
+import socket
+
+class DualStackHTTPServer(HTTPServer):
+    def server_bind(self):
+        try:
+            self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
+        except Exception:
+            pass
+        super().server_bind()
+
 def run():
     print(f"🚀 Maximus Master Web Backend Server running on http://0.0.0.0:{PORT}")
-    server = HTTPServer(("0.0.0.0", PORT), MasterWebHandler)
+    try:
+        server = DualStackHTTPServer(("0.0.0.0", PORT), MasterWebHandler)
+    except Exception:
+        server = HTTPServer(("0.0.0.0", PORT), MasterWebHandler)
+        
     try:
         server.serve_forever()
     except KeyboardInterrupt:
