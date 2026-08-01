@@ -251,8 +251,8 @@ def _compile_node_methods(node_ip):
     os.makedirs(downloads_dir, exist_ok=True)
 
     for t_name, t_proto, t_sni, t_payload in templates:
-        # Nombre final del método: [NombreNodo] NombrePlantilla
-        final_method_name = f"[{node_name}] {t_name}"
+        # Nombre exacto del archivo de la plantilla (sin corchetes ni sufijo .LT)
+        final_method_name = t_name
 
         # Reemplazar variables dinámicas
         compiled_sni = t_sni.replace("[CF]", cf_dom).replace("[HOST]", cf_dom).replace("[CFT]", cft_dom).replace("[CLOUDFRONT]", cft_dom).replace("[IP]", nip)
