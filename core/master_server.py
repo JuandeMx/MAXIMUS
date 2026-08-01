@@ -1198,8 +1198,9 @@ class MasterWebHandler(BaseHTTPRequestHandler):
         self._send_json(404, {"error": "Endpoint not found"})
 
 def run():
-    print(f"🚀 Maximus Master Web Backend Server running on http://0.0.0.0:{PORT}")
-    server = HTTPServer(("", PORT), MasterWebHandler)
+    from http.server import ThreadingHTTPServer
+    print(f"🚀 Maximus Master Web Backend Server running on http://0.0.0.0:{PORT} (Multi-Threaded)")
+    server = ThreadingHTTPServer(("", PORT), MasterWebHandler)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
