@@ -167,6 +167,7 @@ function renderNodes() {
 }
 
 function openEditVpsModal(ip, name, port, domain_cf, domain_cft) {
+  document.getElementById('ve-original-ip').value = ip;
   document.getElementById('ve-ip').value = ip;
   document.getElementById('ve-name').value = name;
   document.getElementById('ve-port').value = port;
@@ -177,7 +178,8 @@ function openEditVpsModal(ip, name, port, domain_cf, domain_cft) {
 
 async function handleSaveEditVps(e) {
   e.preventDefault();
-  const ip = document.getElementById('ve-ip').value;
+  const original_ip = document.getElementById('ve-original-ip').value;
+  const ip = document.getElementById('ve-ip').value.trim();
   const name = document.getElementById('ve-name').value.trim();
   const port = document.getElementById('ve-port').value;
   const domain_cf = document.getElementById('ve-domain-cf').value.trim();
@@ -187,7 +189,7 @@ async function handleSaveEditVps(e) {
     const res = await fetch(`${API_BASE}/api/vps/edit`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ip, name, port, domain_cf, domain_cft })
+      body: JSON.stringify({ original_ip, ip, name, port, domain_cf, domain_cft })
     });
     const data = await res.json();
     if (res.ok && data.success) {

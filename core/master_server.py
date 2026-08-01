@@ -497,34 +497,41 @@ class MasterWebHandler(BaseHTTPRequestHandler):
 
         if parsed.path == "/api/nodes":
             nodes = []
-            # Siempre agregar el nodo local master al inicio
-            nodes.append({
-                "id": 1,
-                "name": "Servidor Local (Master)",
-                "ip": "127.0.0.1",
-                "port": 22,
-                "domain_cf": "",
-                "domain_cft": "",
-                "status": "ONLINE",
-                "users": 1
-            })
             if os.path.exists(NODES_DB):
                 with open(NODES_DB, "r") as f:
                     for line in f:
                         parts = line.strip().split("|")
-                        if len(parts) >= 3:
-                            if parts[1] in ["127.0.0.1", "localhost"]:
-                                continue
+                        if len(parts) >= 2:
                             nodes.append({
-                                "id": _safe_hash(parts[1]),
-                                "name": parts[0],
-                                "ip": parts[1],
-                                "port": int(parts[2]),
+                                "id": _safe_hash(parts[1].strip()),
+                                "name": parts[0].strip(),
+                                "ip": parts[1].strip(),
+                                "port": int(parts[2].strip()) if len(parts) > 2 and parts[2].strip().isdigit() else 22,
                                 "domain_cf": parts[3].strip() if len(parts) > 3 else "",
                                 "domain_cft": parts[4].strip() if len(parts) > 4 else "",
                                 "status": "ONLINE",
                                 "users": 1
                             })
+
+            # Si no hay ningún nodo guardado aún, crear por defecto la VPS Master
+            if not nodes:
+                host_header = self.headers.get("Host", "").split(":")[0]
+                master_ip = host_header if host_header and host_header not in ["127.0.0.1", "localhost"] else "187.127.17.250"
+                default_master = {
+                    "id": 1,
+                    "name": "Servidor Master (Brasil 1)",
+                    "ip": master_ip,
+                    "port": 22,
+                    "domain_cf": "",
+                    "domain_cft": "",
+                    "status": "ONLINE",
+                    "users": 1
+                }
+                nodes.append(default_master)
+                # Guardar en NODES_DB para que sea totalmente editable
+                with open(NODES_DB, "w") as f:
+                    f.write(f"{default_master['name']}|{default_master['ip']}|22||\n")
+
             self._send_json(200, {"nodes": nodes})
             return
 
@@ -957,13 +964,15 @@ class MasterWebHandler(BaseHTTPRequestHandler):
         # POST /api/vps/edit
         # ----------------------------------------------------------------------
         elif parsed.path == "/api/vps/edit":
+            original_ip = payload.get("original_ip", payload.get("ip", "")).strip()
             ip = payload.get("ip", "").strip()
             name = payload.get("name", "").strip()
             port = str(payload.get("port", 22)).strip()
             domain_cf = payload.get("domain_cf", "").strip()
             domain_cft = payload.get("domain_cft", "").strip()
 
-            if not ip:
+            target_ip = original_ip if original_ip else ip
+            if not target_ip:
                 self._send_json(400, {"error": "IP is required"})
                 return
 
@@ -976,10 +985,11 @@ class MasterWebHandler(BaseHTTPRequestHandler):
             new_lines = []
             for l in lines:
                 parts = l.strip().split("|")
-                if len(parts) >= 2 and parts[1].strip() == ip:
+                if len(parts) >= 2 and parts[1].strip() == target_ip:
                     new_name = name if name else parts[0].strip()
                     new_port = port if port else parts[2].strip()
-                    new_lines.append(f"{new_name}|{ip}|{new_port}|{domain_cf}|{domain_cft}\n")
+                    new_ip = ip if ip else target_ip
+                    new_lines.append(f"{new_name}|{new_ip}|{new_port}|{domain_cf}|{domain_cft}\n")
                     updated = True
                 else:
                     new_lines.append(l)
@@ -993,7 +1003,7 @@ class MasterWebHandler(BaseHTTPRequestHandler):
             # Recompilar métodos autogenerados .MX
             _compile_node_methods(ip)
 
-            self._send_json(200, {"success": True, "message": f"VPS {ip} actualizada correctamente sin reinstalar."})
+            self._send_json(200, {"success": True, "message": f"VPS {ip} actualizada correctamente."})
             return
 
         # ----------------------------------------------------------------------

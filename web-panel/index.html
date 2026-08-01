@@ -244,13 +244,14 @@
         <button class="modal-close" onclick="closeModal('modal-edit-vps')">&times;</button>
       </div>
       <form id="form-edit-vps" onsubmit="handleSaveEditVps(event)">
+        <input type="hidden" id="ve-original-ip">
         <div class="form-group">
           <label>Nombre del Servidor</label>
           <input type="text" id="ve-name" class="form-control" required>
         </div>
         <div class="form-group">
-          <label>Dirección IP Pública (Sólo Lectura)</label>
-          <input type="text" id="ve-ip" class="form-control" readonly style="background: rgba(255,255,255,0.05); color: #94a3b8;">
+          <label>Dirección IP Pública</label>
+          <input type="text" id="ve-ip" class="form-control" required>
         </div>
         <div class="form-group">
           <label>Puerto SSH</label>
