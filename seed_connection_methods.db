@@ -1,0 +1,7 @@
+PERSONAL CF 1|web-cdn.freedompop.mx|80|||SSL + Payload (WebSocket)|www.fahorro.com|HEAD / HTTP/1.1[crlf]Host: www.fahorro.com[crlf]Upgrade: websocket[crlf][crlf]
+PERSONAL CF 2|web-cdn.freedompop.mx|80|||SSL + Payload (WebSocket)|www.fahorro.com|GET / HTTP/1.1[crlf]Host: [CF][crlf]Upgrade: websocket[crlf][crlf]
+PERSONAL CF 3|web-cdn.freedompop.mx|80|||SSL + Payload (WebSocket)|www.fahorro.com|CONNECT / HTTP/1.1[crlf]Host: [CF][crlf]Upgrade: websocket[crlf][crlf]
+PERSONAL CFT 1|d1234.cloudfront.net|80|||HTTP DIRECT / PAYLOAD||GET / HTTP/1.1[crlf]Host: [CFT][crlf]Upgrade: websocket[crlf][crlf]
+PERSONAL CFT 2|d1234.cloudfront.net|80|||HTTP DIRECT / PAYLOAD||CONNECT / HTTP/1.1[crlf]Host: [CFT][crlf]Upgrade: websocket[crlf][crlf]
+PERSONAL CFT 3|d1234.cloudfront.net|80|||HTTP DIRECT / PAYLOAD||HEAD / HTTP/1.1[crlf]Host: [CFT][crlf]Upgrade: websocket[crlf][crlf]
+PERSONAL CFT 4|d1234.cloudfront.net|80|||HTTP DIRECT / PAYLOAD||POST / HTTP/1.1[crlf]Host: [CFT][crlf]Upgrade: websocket[crlf][crlf]

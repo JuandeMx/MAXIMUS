@@ -74,14 +74,59 @@ METHODS_DB = os.path.join(CONFIG_DIR, "connection_methods.db")
 TEMPLATES_DB = os.path.join(CONFIG_DIR, "method_templates.db")
 
 os.makedirs(CONFIG_DIR, exist_ok=True)
-touch_files = [USERS_DB, NODES_DB, METHODS_DB, TEMPLATES_DB]
-for tf in touch_files:
-    if not os.path.exists(tf):
-        with open(tf, "w") as f:
-            pass
 
-# Diccionario global para rastrear instalaciones en curso
-_install_jobs = {}
+# Lista por defecto con las 7 configuraciones descifradas sin ofuscación de tus archivos .LT
+DEFAULT_7_METHODS = [
+    "PERSONAL CF 1|web-cdn.freedompop.mx|80|||SSL + Payload (WebSocket)|www.fahorro.com|HEAD / HTTP/1.1[crlf]Host: www.fahorro.com[crlf]Upgrade: websocket[crlf][crlf]",
+    "PERSONAL CF 2|web-cdn.freedompop.mx|80|||SSL + Payload (WebSocket)|www.fahorro.com|GET / HTTP/1.1[crlf]Host: [CF][crlf]Upgrade: websocket[crlf][crlf]",
+    "PERSONAL CF 3|web-cdn.freedompop.mx|80|||SSL + Payload (WebSocket)|www.fahorro.com|CONNECT / HTTP/1.1[crlf]Host: [CF][crlf]Upgrade: websocket[crlf][crlf]",
+    "PERSONAL CFT 1|d1234.cloudfront.net|80|||HTTP DIRECT / PAYLOAD||GET / HTTP/1.1[crlf]Host: [CFT][crlf]Upgrade: websocket[crlf][crlf]",
+    "PERSONAL CFT 2|d1234.cloudfront.net|80|||HTTP DIRECT / PAYLOAD||CONNECT / HTTP/1.1[crlf]Host: [CFT][crlf]Upgrade: websocket[crlf][crlf]",
+    "PERSONAL CFT 3|d1234.cloudfront.net|80|||HTTP DIRECT / PAYLOAD||HEAD / HTTP/1.1[crlf]Host: [CFT][crlf]Upgrade: websocket[crlf][crlf]",
+    "PERSONAL CFT 4|d1234.cloudfront.net|80|||HTTP DIRECT / PAYLOAD||POST / HTTP/1.1[crlf]Host: [CFT][crlf]Upgrade: websocket[crlf][crlf]"
+]
+
+# Inicializar connection_methods.db con los 7 métodos limpios
+existing_methods_list = []
+if os.path.exists(METHODS_DB):
+    with open(METHODS_DB, "r") as f:
+        existing_methods_list = f.readlines()
+
+new_lines = list(existing_methods_list)
+for def_m in DEFAULT_7_METHODS:
+    m_name = def_m.split("|")[0]
+    if not any(l.startswith(f"{m_name}|") for l in existing_methods_list):
+        new_lines.append(def_m + "\n")
+
+with open(METHODS_DB, "w") as f:
+    f.writelines(new_lines)
+
+# Autogenerar archivos .mx de descarga para los 7 métodos
+downloads_dir = os.path.join(WEB_DIR, "downloads")
+os.makedirs(downloads_dir, exist_ok=True)
+import re
+
+for line in new_lines:
+    p = line.strip().split("|")
+    if len(p) >= 8:
+        name_m, host_m, port_m, _, _, proto_m, sni_m, pay_m = p[:8]
+        safe_n = re.sub(r'[^a-zA-Z0-9_\-]', '_', name_m)
+        mx_f = os.path.join(downloads_dir, f"{safe_n}.mx")
+        load_mx_generator()
+        if generate_mx_file:
+            try:
+                generate_mx_file(
+                    name=name_m,
+                    ssh_host=host_m,
+                    ssh_port=int(port_m) if port_m.isdigit() else 80,
+                    ssh_user="",
+                    ssh_pass="",
+                    sni=sni_m,
+                    payload=pay_m,
+                    out_path=mx_f
+                )
+            except Exception:
+                pass
 
 def _safe_hash(s):
     """Genera un hash entero de 31 bits positivo determinista para compatibilidad con JS"""
