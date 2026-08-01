@@ -613,13 +613,16 @@ class MasterWebHandler(BaseHTTPRequestHandler):
                         if not compiled_sni or compiled_sni in ["[CF]", "[CFT]"]:
                             compiled_sni = n_ip
 
+                        # Usar el puerto del método si está configurado (ej: 80, 443, 8080), sino 80
+                        final_port = bm['ssh_port'] if bm['ssh_port'] and bm['ssh_port'] != 22 else 80
+
                         mx_content = ""
                         if generate_mx_file:
                             try:
                                 mx_content = generate_mx_file(
                                     name=compiled_name,
                                     ssh_host=n_ip,
-                                    ssh_port=n_port,
+                                    ssh_port=final_port,
                                     ssh_user="",
                                     ssh_pass="",
                                     sni=compiled_sni,
@@ -632,7 +635,7 @@ class MasterWebHandler(BaseHTTPRequestHandler):
                             "id": _safe_hash(compiled_name + n_ip),
                             "name": compiled_name,
                             "ssh_host": n_ip,
-                            "ssh_port": n_port,
+                            "ssh_port": final_port,
                             "ssh_user": "",
                             "ssh_pass": "",
                             "protocol": bm['protocol'],
