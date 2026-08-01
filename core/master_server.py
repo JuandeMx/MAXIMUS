@@ -610,8 +610,8 @@ class MasterWebHandler(BaseHTTPRequestHandler):
 
                     for bm in base_methods:
                         compiled_name = f"[{n_name}] {bm['name']}" if len(nodes_list) > 1 else bm['name']
-                        compiled_sni = bm['sni'].replace("[CF]", cf_val).replace("[HOST]", cf_val).replace("[CFT]", cft_val).replace("[CLOUDFRONT]", cft_val).replace("[IP]", n_ip)
-                        compiled_payload = bm['payload'].replace("[rotate=[CFT]]", f"[rotate={cft_val}]").replace("[CFT]", cft_val).replace("[CLOUDFRONT]", cft_val).replace("[CF]", cf_val)
+                        compiled_sni = bm['sni']
+                        compiled_payload = bm['payload']
 
                         # Usar exactamente el puerto guardado en el método (sea 80, 443, 22, 8080, etc.)
                         final_port = bm['ssh_port']
