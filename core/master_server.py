@@ -86,13 +86,8 @@ DEFAULT_7_METHODS = [
     "PERSONAL CFT 4|www.personal.com.ar|80|||HTTP DIRECT / PAYLOAD||GET / HTTP/1.1[crlf]Host: emailmarketing.personal.com.ar[crlf][crlf][split][crlf][crlf]GET- / HTTP/1.1[crlf]Host: www.personal.com.ar[lf][lf]GET / HTTP/1.1[crlf]Host: [rotate=[CFT]][lf]Connection:  Upgrade[lf]Upgrade: websocket[lf]User-Agent: Googlebot/2.1 (+http://www.google.com/bot.html)[lf][lf][split]"
 ]
 
-# Escribir o actualizar siempre los 7 métodos descifrados de tus plantillas .LT
-existing_methods_list = []
-if os.path.exists(METHODS_DB):
-    with open(METHODS_DB, "r") as f:
-        existing_methods_list = [l for l in f.readlines() if not any(l.startswith(def_m.split("|")[0] + "|") for def_m in DEFAULT_7_METHODS)]
-
-new_lines = [def_m + "\n" for def_m in DEFAULT_7_METHODS] + existing_methods_list
+# Forzar la reescritura de connection_methods.db con las 7 plantillas reales
+new_lines = [def_m + "\n" for def_m in DEFAULT_7_METHODS]
 
 with open(METHODS_DB, "w") as f:
     f.writelines(new_lines)
