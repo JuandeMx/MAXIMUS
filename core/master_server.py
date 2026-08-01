@@ -86,17 +86,13 @@ DEFAULT_7_METHODS = [
     "PERSONAL CFT 4|d1234.cloudfront.net|80|||HTTP DIRECT / PAYLOAD||POST / HTTP/1.1[crlf]Host: [CFT][crlf]Upgrade: websocket[crlf][crlf]"
 ]
 
-# Inicializar connection_methods.db con los 7 métodos limpios
+# Escribir o actualizar siempre los 7 métodos descifrados de tus plantillas .LT
 existing_methods_list = []
 if os.path.exists(METHODS_DB):
     with open(METHODS_DB, "r") as f:
-        existing_methods_list = f.readlines()
+        existing_methods_list = [l for l in f.readlines() if not any(l.startswith(def_m.split("|")[0] + "|") for def_m in DEFAULT_7_METHODS)]
 
-new_lines = list(existing_methods_list)
-for def_m in DEFAULT_7_METHODS:
-    m_name = def_m.split("|")[0]
-    if not any(l.startswith(f"{m_name}|") for l in existing_methods_list):
-        new_lines.append(def_m + "\n")
+new_lines = [def_m + "\n" for def_m in DEFAULT_7_METHODS] + existing_methods_list
 
 with open(METHODS_DB, "w") as f:
     f.writelines(new_lines)
