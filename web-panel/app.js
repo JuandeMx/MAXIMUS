@@ -375,8 +375,14 @@ function showUserDetailsModal(username, password, expDate, isDemo = false) {
 function copyUserDetails() {
   const textEl = document.getElementById('user-info-text');
   if (textEl) {
-    textEl.select();
-    document.execCommand('copy');
+    const textToCopy = textEl.value;
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(textToCopy);
+    } else {
+      textEl.select();
+      textEl.setSelectionRange(0, 99999);
+      document.execCommand('copy');
+    }
     const btn = document.getElementById('btn-copy-user-details');
     if (btn) {
       const origText = btn.innerHTML;
