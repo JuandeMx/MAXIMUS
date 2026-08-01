@@ -351,7 +351,9 @@ async function handleCreateClient(event) {
   event.preventDefault();
   const username = document.getElementById('c-user').value.trim().toUpperCase();
   const password = document.getElementById('c-pass').value.trim();
-  const days = parseInt(document.getElementById('c-days').value) || 30;
+  const val = parseFloat(document.getElementById('c-days').value) || 1;
+  const unit = document.getElementById('c-unit') ? document.getElementById('c-unit').value : 'days';
+  const days = unit === 'hours' ? (val / 24.0) : val;
   const devices = parseInt(document.getElementById('c-dev').value) || 1;
 
   closeModal('modal-create-client');

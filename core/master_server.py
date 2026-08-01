@@ -411,17 +411,21 @@ def _sync_all_users_to_node(node_ip):
     return synced_count[0]
 
 def execute_local_user_create(username, password, days):
-    """Crea el usuario REAL en el sistema Linux local de la VPS"""
+    """Crea el usuario REAL en el sistema Linux local de la VPS con soporte para Horas y Días"""
     try:
-        days = int(days)
+        days = float(days)
     except ValueError:
-        days = 30
+        days = 30.0
 
-    exp_date = (datetime.date.today() + datetime.timedelta(days=days)).strftime("%Y-%m-%d")
+    exp_dt = datetime.datetime.now() + datetime.timedelta(days=days)
+    # Fecha para Linux useradd (YYYY-MM-DD)
+    exp_date_short = exp_dt.strftime("%Y-%m-%d")
+    # Fecha exacta con hora para validación de la App y usuarios por horas (YYYY-MM-DD HH:MM:SS)
+    exp_date_full = exp_dt.strftime("%Y-%m-%d %H:%M:%S")
 
     # 1. useradd en Linux OS
     subprocess.run(["userdel", "-f", username], stderr=subprocess.DEVNULL)
-    cmd_create = ["useradd", "-M", "-s", "/bin/false", "-e", exp_date, username]
+    cmd_create = ["useradd", "-M", "-s", "/bin/false", "-e", exp_date_short, username]
     subprocess.run(cmd_create, stderr=subprocess.DEVNULL)
 
     # 2. chpasswd
@@ -438,9 +442,9 @@ def execute_local_user_create(username, password, days):
         for l in lines:
             if not l.startswith(f"{username}:"):
                 f.write(l)
-        f.write(f"{username}:{password}:{exp_date}\n")
+        f.write(f"{username}:{password}:{exp_date_full}\n")
 
-    return True, exp_date
+    return True, exp_date_full
 
 def execute_local_user_delete(username):
     """Elimina el usuario REAL del sistema Linux OS"""
@@ -818,14 +822,20 @@ class MasterWebHandler(BaseHTTPRequestHandler):
                             db_pass = parts[1]
                             db_exp = parts[2]
                             if db_user == username and db_pass == password:
-                                # Verificar que no esté vencido
+                                # Verificar que no esté vencido (soporta YYYY-MM-DD HH:MM:SS y YYYY-MM-DD)
                                 try:
-                                    exp = datetime.datetime.strptime(db_exp, "%Y-%m-%d").date()
-                                    days_left = (exp - datetime.date.today()).days
-                                    if days_left >= 0:
+                                    now = datetime.datetime.now()
+                                    if " " in db_exp:
+                                        exp_dt = datetime.datetime.strptime(db_exp, "%Y-%m-%d %H:%M:%S")
+                                    else:
+                                        exp_dt = datetime.datetime.strptime(db_exp, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
+
+                                    if exp_dt > now:
                                         valid = True
                                         exp_date = db_exp
-                                except:
+                                        seconds_left = (exp_dt - now).total_seconds()
+                                        days_left = max(1, int(seconds_left / 86400.0))
+                                except Exception as e_exp:
                                     pass
                                 break
 
