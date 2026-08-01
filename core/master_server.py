@@ -950,6 +950,49 @@ class MasterWebHandler(BaseHTTPRequestHandler):
             return
 
         # ----------------------------------------------------------------------
+        # POST /api/vps/edit
+        # ----------------------------------------------------------------------
+        elif parsed.path == "/api/vps/edit":
+            ip = payload.get("ip", "").strip()
+            name = payload.get("name", "").strip()
+            port = str(payload.get("port", 22)).strip()
+            domain_cf = payload.get("domain_cf", "").strip()
+            domain_cft = payload.get("domain_cft", "").strip()
+
+            if not ip:
+                self._send_json(400, {"error": "IP is required"})
+                return
+
+            lines = []
+            updated = False
+            if os.path.exists(NODES_DB):
+                with open(NODES_DB, "r") as f:
+                    lines = f.readlines()
+
+            new_lines = []
+            for l in lines:
+                parts = l.strip().split("|")
+                if len(parts) >= 2 and parts[1].strip() == ip:
+                    new_name = name if name else parts[0].strip()
+                    new_port = port if port else parts[2].strip()
+                    new_lines.append(f"{new_name}|{ip}|{new_port}|{domain_cf}|{domain_cft}\n")
+                    updated = True
+                else:
+                    new_lines.append(l)
+
+            if not updated and name:
+                new_lines.append(f"{name}|{ip}|{port}|{domain_cf}|{domain_cft}\n")
+
+            with open(NODES_DB, "w") as f:
+                f.writelines(new_lines)
+
+            # Recompilar métodos autogenerados .MX
+            _compile_node_methods(ip)
+
+            self._send_json(200, {"success": True, "message": f"VPS {ip} actualizada correctamente sin reinstalar."})
+            return
+
+        # ----------------------------------------------------------------------
         # POST /api/vps/sync
         # ----------------------------------------------------------------------
         elif parsed.path == "/api/vps/sync":

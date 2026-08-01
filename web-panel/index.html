@@ -236,6 +236,42 @@
     </div>
   </div>
 
+  <!-- MODAL EDITAR DOMINIOS / DATOS DE VPS -->
+  <div id="modal-edit-vps" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3><i data-lucide="edit"></i> Editar Dominios y Datos de VPS</h3>
+        <button class="modal-close" onclick="closeModal('modal-edit-vps')">&times;</button>
+      </div>
+      <form id="form-edit-vps" onsubmit="handleSaveEditVps(event)">
+        <div class="form-group">
+          <label>Nombre del Servidor</label>
+          <input type="text" id="ve-name" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label>Dirección IP Pública (Sólo Lectura)</label>
+          <input type="text" id="ve-ip" class="form-control" readonly style="background: rgba(255,255,255,0.05); color: #94a3b8;">
+        </div>
+        <div class="form-group">
+          <label>Puerto SSH</label>
+          <input type="number" id="ve-port" class="form-control" value="22" required>
+        </div>
+        <div class="form-group">
+          <label>Dominio VPS / Cloudflare (Reemplaza [CF]):</label>
+          <input type="text" id="ve-domain-cf" class="form-control" placeholder="ej: mx1.tudominio.com">
+        </div>
+        <div class="form-group">
+          <label>Dominio CloudFront (Reemplaza [CFT]):</label>
+          <input type="text" id="ve-domain-cft" class="form-control" placeholder="ej: d1234abcd.cloudfront.net">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-sm" onclick="closeModal('modal-edit-vps')">Cancelar</button>
+          <button type="submit" class="btn-primary">Guardar Cambios de Dominios</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- MODAL 3: CREAR NUEVO MÉTODO DE CONEXIÓN -->
   <div id="modal-create-method" class="modal-overlay">
     <div class="modal-box">

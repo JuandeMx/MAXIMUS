@@ -134,10 +134,12 @@ function renderNodes() {
 
   nodesDB.forEach(node => {
     const tr = document.createElement('tr');
+    const cfDom = node.domain_cf || 'N/A';
+    const cftDom = node.domain_cft || 'N/A';
     tr.innerHTML = `
       <td class="user-cell">${node.name}</td>
-      <td><span class="pass-cell">${node.ip}</span></td>
-      <td>${node.port}</td>
+      <td><span class="pass-cell">${node.ip}:${node.port}</span></td>
+      <td><span class="pass-cell" style="color: #60a5fa;">CF: ${cfDom}</span><br><span class="pass-cell" style="color: #f472b6;">CFT: ${cftDom}</span></td>
       <td><span class="badge-status active">${node.status}</span></td>
       <td>${clientsDB.length}</td>
       <td>
@@ -147,6 +149,9 @@ function renderNodes() {
       </td>
       <td>
         <div class="action-btns">
+          <button class="btn-sm" onclick="openEditVpsModal('${node.ip}', '${node.name}', '${node.port}', '${node.domain_cf || ''}', '${node.domain_cft || ''}')" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border-color: rgba(245, 158, 11, 0.3);">
+            <i data-lucide="edit" style="width: 14px; vertical-align: middle;"></i> Editar
+          </button>
           <button class="btn-sm" onclick="syncNode(${node.id})">
             <i data-lucide="refresh-cw" style="width: 14px; vertical-align: middle;"></i> Sync
           </button>
@@ -159,6 +164,44 @@ function renderNodes() {
     tbody.appendChild(tr);
   });
   lucide.createIcons();
+}
+
+function openEditVpsModal(ip, name, port, domain_cf, domain_cft) {
+  document.getElementById('ve-ip').value = ip;
+  document.getElementById('ve-name').value = name;
+  document.getElementById('ve-port').value = port;
+  document.getElementById('ve-domain-cf').value = domain_cf;
+  document.getElementById('ve-domain-cft').value = domain_cft;
+  openModal('modal-edit-vps');
+}
+
+async function handleSaveEditVps(e) {
+  e.preventDefault();
+  const ip = document.getElementById('ve-ip').value;
+  const name = document.getElementById('ve-name').value.trim();
+  const port = document.getElementById('ve-port').value;
+  const domain_cf = document.getElementById('ve-domain-cf').value.trim();
+  const domain_cft = document.getElementById('ve-domain-cft').value.trim();
+
+  try {
+    const res = await fetch(`${API_BASE}/api/vps/edit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ip, name, port, domain_cf, domain_cft })
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      alert(`✅ Servidor VPS '${name}' (${ip}) actualizado correctamente.`);
+      closeModal('modal-edit-vps');
+      await fetchRealState();
+      renderNodes();
+      renderMethods();
+    } else {
+      alert(`❌ Error actualizando VPS: ${data.error || 'Error desconocido'}`);
+    }
+  } catch (err) {
+    alert(`❌ Error de conexión con el servidor maestro.`);
+  }
 }
 
 // PROTOCOLOS: Abrir modal y consultar estado real del nodo remoto
