@@ -355,6 +355,37 @@ function renderMethods() {
   lucide.createIcons();
 }
 
+function showUserDetailsModal(username, password, expDate, isDemo = false) {
+  const textEl = document.getElementById('user-info-text');
+  const typeTitle = isDemo ? "🔥 DEMO DE PRUEBA MAXIMUS (2 HORAS) 🔥" : "✅ CLIENTE REGISTRADO - MAXIMUS VIP ✅";
+  
+  const formattedText = 
+`${typeTitle}
+━━━━━━━━━━━━━━━━━━━━━━
+👤 Usuario: ${username}
+🔑 Contraseña: ${password}
+📅 Vencimiento: ${expDate}
+━━━━━━━━━━━━━━━━━━━━━━
+⚡ ¡Conéctate usando nuestra App Oficial MAXIMUS!`;
+
+  if (textEl) textEl.value = formattedText;
+  openModal('modal-user-created');
+}
+
+function copyUserDetails() {
+  const textEl = document.getElementById('user-info-text');
+  if (textEl) {
+    textEl.select();
+    document.execCommand('copy');
+    const btn = document.getElementById('btn-copy-user-details');
+    if (btn) {
+      const origText = btn.innerHTML;
+      btn.innerHTML = '✅ ¡Copiado!';
+      setTimeout(() => { btn.innerHTML = origText; }, 2000);
+    }
+  }
+}
+
 // ACTIONS: CREAR CLIENTE REAL EN LINUX OS & SINCRONIZAR
 async function handleCreateClient(event) {
   event.preventDefault();
@@ -375,12 +406,11 @@ async function handleCreateClient(event) {
     });
     const resData = await res.json();
     if (resData.success) {
-      alert(`✅ Usuario REAL '${username}' creado exitosamente en Linux OS (Servidor Master y Nodos).`);
+      showUserDetailsModal(username, password, resData.exp_date || 'En 30 Días', false);
     } else {
       alert(`❌ Error al crear usuario: ${resData.error || 'Fallo desconocido'}`);
     }
   } catch (e) {
-    // Si corre en archivo local
     const today = new Date();
     today.setDate(today.getDate() + days);
     clientsDB.push({
@@ -393,7 +423,7 @@ async function handleCreateClient(event) {
       status: 'Active'
     });
     saveState();
-    alert(`⚠️ Servidor Backend Offline. Cliente '${username}' guardado en memoria estática.`);
+    showUserDetailsModal(username, password, today.toISOString().split('T')[0], false);
   }
 
   await fetchRealState();
@@ -416,7 +446,7 @@ async function createQuickDemo() {
     });
     const data = await res.json();
     if (data.success) {
-      alert(`⏱️ ¡DEMO DE 2 HORAS CREADO!\n\nUsuario: ${username}\nContraseña: ${password}\nExpiración: ${data.exp_date}`);
+      showUserDetailsModal(username, password, data.exp_date, true);
     } else {
       alert(`❌ Error creando demo: ${data.error || 'Error desconocido'}`);
     }
