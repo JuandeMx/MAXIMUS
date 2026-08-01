@@ -75,15 +75,15 @@ TEMPLATES_DB = os.path.join(CONFIG_DIR, "method_templates.db")
 
 os.makedirs(CONFIG_DIR, exist_ok=True)
 
-# Lista por defecto con las 7 configuraciones descifradas sin ofuscación de tus archivos .LT
+# Lista por defecto con las 7 configuraciones descifradas reales de tus archivos .LT
 DEFAULT_7_METHODS = [
-    "PERSONAL CF 1|web-cdn.freedompop.mx|80|||SSL + Payload (WebSocket)|www.fahorro.com|HEAD / HTTP/1.1[crlf]Host: www.fahorro.com[crlf]Upgrade: websocket[crlf][crlf]",
-    "PERSONAL CF 2|web-cdn.freedompop.mx|80|||SSL + Payload (WebSocket)|www.fahorro.com|GET / HTTP/1.1[crlf]Host: [CF][crlf]Upgrade: websocket[crlf][crlf]",
-    "PERSONAL CF 3|web-cdn.freedompop.mx|80|||SSL + Payload (WebSocket)|www.fahorro.com|CONNECT / HTTP/1.1[crlf]Host: [CF][crlf]Upgrade: websocket[crlf][crlf]",
-    "PERSONAL CFT 1|d1234.cloudfront.net|80|||HTTP DIRECT / PAYLOAD||GET / HTTP/1.1[crlf]Host: [CFT][crlf]Upgrade: websocket[crlf][crlf]",
-    "PERSONAL CFT 2|d1234.cloudfront.net|80|||HTTP DIRECT / PAYLOAD||CONNECT / HTTP/1.1[crlf]Host: [CFT][crlf]Upgrade: websocket[crlf][crlf]",
-    "PERSONAL CFT 3|d1234.cloudfront.net|80|||HTTP DIRECT / PAYLOAD||HEAD / HTTP/1.1[crlf]Host: [CFT][crlf]Upgrade: websocket[crlf][crlf]",
-    "PERSONAL CFT 4|d1234.cloudfront.net|80|||HTTP DIRECT / PAYLOAD||POST / HTTP/1.1[crlf]Host: [CFT][crlf]Upgrade: websocket[crlf][crlf]"
+    "PERSONAL CF 1|Sat24.com|80|||SSL + Payload (WebSocket)|www.fahorro.com|MKCOL / HTTP/1.9[lf]Host: recargas.personal.com.ar[lf]Expect: 100-continue[crlf][crlf][split][crlf][crlf]GET- // HTTP/1.1[crlf]Host: [CF][crlf]Connection: Upgrade[crlf]User-Agent: [ua][crlf]Upgrade: websocket[crlf][crlf]",
+    "PERSONAL CF 2|emailmarketing.personal.com.ar|80|||HTTP DIRECT / PAYLOAD||COPY / HTTP/1.1[crlf]Host: recargas.personal.com.ar[crlf][crlf][instant_split][lf][lf]X / HTTP/1.2[crlf]Host: recargas.personal.com.ar[crlf][lf][crlf]GET / HTTP/1.1[crlf]Host: [CF][crlf]Upgrade: websocket[crlf]Connection: Upgrade[crlf][crlf]",
+    "PERSONAL CF 3|wap.renxo.com|80|||HTTP DIRECT / PAYLOAD||GET / HTTP/1.3[crlf]Host: rexo.personal.com.ar[crlf][crlf][crlf][split][crlf][split]GETT / HTTP/1.1[crlf]Host: [CF][crlf]Connection: Keep-Alive[crlf]Upgrade: websocket[crlf][crlf]",
+    "PERSONAL CFT 1|recargas.personal.com.ar|80|||HTTP DIRECT / PAYLOAD||GET / HTTP/1.1[crlf]Host: recargas.personal.com.ar[crlf][crlf][split][crlf][crlf]GET- / HTTP/1.1[crlf]Host: [host][lf][lf]GET /suareznet HTTP/1.1[crlf]Host: [CFT][lf]Connection:  Upgrade[lf]Upgrade: websocket[lf]User-Agent: Googlebot/2.1 (+http://www.google.com/bot.html)[lf][lf]",
+    "PERSONAL CFT 2|institucional.telecom.com.ar|80|||HTTP DIRECT / PAYLOAD||HEAD / HTTP/1.1[crlf]Host: recargas.personal.com.ar[crlf][crlf][split][crlf][crlf]GET- / HTTP/1.1[crlf]Host: recargas.personal.com.ar[lf][lf]GET / HTTP/1.1[crlf]Host: [CFT][lf]Connection:  Upgrade[lf]Upgrade: websocket[lf]User-Agent: Googlebot/2.1 (+http://www.google.com/bot.html)[lf][lf][split]",
+    "PERSONAL CFT 3|device-api.smarthome.personal.com.ar|80|||HTTP DIRECT / PAYLOAD||HEAD / HTTP/1.1[crlf]Host: recargas.personal.com.ar[crlf][crlf][split][crlf][crlf]GET- / HTTP/1.1[crlf]Host: recargas.personal.com.ar[lf][lf]GET / HTTP/1.1[crlf]Host: [CFT][lf]Connection:  Upgrade[lf]Upgrade: websocket[lf]User-Agent: Googlebot/2.1 (+http://www.google.com/bot.html)[lf][lf][split]",
+    "PERSONAL CFT 4|www.personal.com.ar|80|||HTTP DIRECT / PAYLOAD||GET / HTTP/1.1[crlf]Host: emailmarketing.personal.com.ar[crlf][crlf][split][crlf][crlf]GET- / HTTP/1.1[crlf]Host: www.personal.com.ar[lf][lf]GET / HTTP/1.1[crlf]Host: [rotate=[CFT]][lf]Connection:  Upgrade[lf]Upgrade: websocket[lf]User-Agent: Googlebot/2.1 (+http://www.google.com/bot.html)[lf][lf][split]"
 ]
 
 # Escribir o actualizar siempre los 7 métodos descifrados de tus plantillas .LT
