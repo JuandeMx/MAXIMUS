@@ -57,6 +57,14 @@ def load_mx_generator():
 
 load_mx_generator()
 
+# Autocargar e importar plantillas .LT al iniciar
+try:
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from preload_templates import import_all_plantillas
+    import_all_plantillas()
+except Exception as e_preload:
+    print(f"[Preload Templates] Error autocargando plantillas: {e_preload}")
+
 PORT = 8080
 CONFIG_DIR = "/etc/MaximusVpsMx"
 WEB_DIR = os.path.join(CONFIG_DIR, "web-panel")

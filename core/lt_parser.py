@@ -17,8 +17,8 @@ from Crypto.Hash import SHA1, SHA256
 # Known encryption keys for .LT / .MX / SecurePreferences profiles
 NATIVE_KEYS = [
     "909988c9f3714225aebace9546a08a6e7a83ceb66035498e95d23f784bbd8b99#$K@!",
-    "fubgf777gf6",
     "SocksHttpSecretKeySecurePreferences2024",
+    "fubgf777gf6",
     "freelatam123",
     "jgjua2026"
 ]
@@ -47,7 +47,7 @@ def maze_deobfuscate(text):
         for i, b in enumerate(raw):
             xor_decoded.append(b ^ XOR_KEY[i % len(XOR_KEY)])
         
-        words = xor_decoded.decode("utf-8", errors="ignore").split(".")
+        words = xor_decoded.decode("utf-8", errors="ignore").split(" ")
         original_chars = []
         for word in words:
             if word in DICTIONARY:
@@ -73,37 +73,16 @@ def decrypt_profile(raw_str):
     cipher_text = base64.b64decode(parts[2])
 
     for key_str in NATIVE_KEYS:
-        # Try PBKDF2 with SHA-1 and SHA-256
-        for hash_alg in [SHA1, SHA256]:
-            for iterations in [1000, 100]:
-                for key_size in [32, 16]:
+        for hash_alg in [SHA256, SHA1]:
+            for iterations in [1000]:
+                for key_size in [16, 32]:
                     try:
                         key = PBKDF2(key_str, salt, dkLen=key_size, count=iterations, hmac_hash_module=hash_alg)
-                        
-                        # Try AES-GCM
-                        try:
-                            cipher = AES.new(key, AES.MODE_GCM, nonce=iv)
-                            decrypted = cipher.decrypt(cipher_text)
-                            xml_str = decrypted.decode("utf-8", errors="ignore")
-                            if "<map>" in xml_str or "<properties>" in xml_str:
-                                return parse_profile_xml(xml_str)
-                        except Exception:
-                            pass
-
-                        # Try AES-CBC
-                        try:
-                            cipher = AES.new(key, AES.MODE_CBC, iv)
-                            decrypted = cipher.decrypt(cipher_text)
-                            # PKCS7 unpad
-                            pad_len = decrypted[-1]
-                            if pad_len < 16:
-                                decrypted = decrypted[:-pad_len]
-                            xml_str = decrypted.decode("utf-8", errors="ignore")
-                            if "<map>" in xml_str or "<properties>" in xml_str:
-                                return parse_profile_xml(xml_str)
-                        except Exception:
-                            pass
-
+                        cipher = AES.new(key, AES.MODE_GCM, nonce=iv)
+                        decrypted = cipher.decrypt(cipher_text)
+                        xml_str = decrypted.decode("utf-8", errors="ignore")
+                        if "<properties>" in xml_str or "<map>" in xml_str:
+                            return parse_profile_xml(xml_str)
                     except Exception:
                         pass
     return None
@@ -130,22 +109,25 @@ def parse_profile_xml(xml_str):
             if name:
                 props[name] = maze_deobfuscate(val)
         
-        result["ssh_host"] = props.get("serverHost", props.get("ssh_host", props.get("server", "")))
-        result["ssh_port"] = props.get("serverPort", props.get("ssh_port", "22"))
-        result["sni"] = props.get("customSni", props.get("sni", props.get("sslHost", "")))
-        result["payload"] = props.get("customPayload", props.get("payload", props.get("httpPayload", "")))
-        result["proxy_ip"] = props.get("proxyHost", props.get("proxy_ip", ""))
-        result["proxy_port"] = props.get("proxyPort", props.get("proxy_port", ""))
+        result["ssh_host"] = props.get("sshServer", props.get("serverHost", props.get("ssh_host", props.get("server", ""))))
+        result["ssh_port"] = props.get("sshPort", props.get("serverPort", props.get("ssh_port", "22")))
+        result["sni"] = props.get("customSNI", props.get("customSni", props.get("sni", props.get("sslHost", ""))))
+        result["payload"] = props.get("proxyPayload", props.get("customPayload", props.get("payload", props.get("httpPayload", ""))))
+        result["proxy_ip"] = props.get("proxyRemoto", props.get("proxyHost", props.get("proxy_ip", "")))
+        result["proxy_port"] = props.get("proxyRemotoPorta", props.get("proxyPort", props.get("proxy_port", "")))
         
         # Determinar protocolo
-        use_ssl = props.get("use_ssl", "0") == "1" or props.get("tunnelType", "") == "3"
+        use_ssl = props.get("use_ssl", "0") == "1"
+        use_payload = props.get("use_payload", "0") == "1"
         use_v2ray = props.get("use_v2ray", "0") == "1"
         if use_v2ray:
             result["protocol"] = "V2RAY"
+        elif use_ssl and use_payload:
+            result["protocol"] = "SSL + Payload (WebSocket)"
         elif use_ssl:
             result["protocol"] = "SSL / TLS"
         else:
-            result["protocol"] = "DIRECT / PAYLOAD"
+            result["protocol"] = "HTTP DIRECT / PAYLOAD"
             
     except Exception as e:
         print(f"Error parsing XML: {e}")
