@@ -548,7 +548,8 @@ class MasterWebHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/methods":
             load_mx_generator()
             query_components = parse_qs(parsed.query)
-            target_node_ip = query_components.get("node_ip", [""])[0].strip()
+            target_node_ip = query_components.get("node_ip", [""])[0].strip().lower()
+            target_node_name = query_components.get("node_name", [""])[0].strip().lower()
 
             methods = []
 
@@ -588,7 +589,10 @@ class MasterWebHandler(BaseHTTPRequestHandler):
             # 3. Compilar métodos por cada VPS
             if nodes_list:
                 for n_name, n_ip, n_port, d_cf, d_cft in nodes_list:
-                    if target_node_ip and target_node_ip != n_ip:
+                    # Filtrar por IP o por Nombre de Servidor (ej: "Brasil 1" o "Mexico")
+                    if target_node_ip and target_node_ip != n_ip.lower():
+                        continue
+                    if target_node_name and target_node_name not in n_name.lower():
                         continue
 
                     cf_val = d_cf if d_cf else n_ip
