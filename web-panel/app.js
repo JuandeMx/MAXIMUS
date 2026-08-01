@@ -2,19 +2,17 @@
 
 const API_BASE = window.location.origin.includes('http') ? window.location.origin : 'http://127.0.0.1:8080';
 
-// Initial State Databases
-let clientsDB = JSON.parse(localStorage.getItem('mx_clients')) || [];
-let nodesDB = JSON.parse(localStorage.getItem('mx_nodes')) || [
-  { id: 1, name: 'Servidor Principal (Master)', ip: window.location.hostname || '187.209.14.58', port: 22, status: 'ONLINE', users: 1 }
-];
-let methodsDB = JSON.parse(localStorage.getItem('mx_methods')) || [
-  { id: 1, name: 'TELCEL SSL ILIMITADO', protocol: 'SSL + Payload (WebSocket)', sni: 'm.facebook.com', payload: 'GET / HTTP/1.1[crlf]Host: m.facebook.com[crlf][crlf]', port: 443 }
-];
+// Initial State Databases (Direct Real Backend Sync)
+let clientsDB = [];
+let nodesDB = [];
+let methodsDB = [];
+
+// Limpiar la caché antigua del navegador
+localStorage.removeItem('mx_methods');
+localStorage.removeItem('mx_nodes');
 
 function saveState() {
-  localStorage.setItem('mx_clients', JSON.stringify(clientsDB));
-  localStorage.setItem('mx_nodes', JSON.stringify(nodesDB));
-  localStorage.setItem('mx_methods', JSON.stringify(methodsDB));
+  // No caching local state to prevent stale data
 }
 
 async function fetchRealState() {
@@ -22,26 +20,26 @@ async function fetchRealState() {
     const resC = await fetch(`${API_BASE}/api/clients`);
     if (resC.ok) {
       const data = await resC.json();
-      if (data.clients && data.clients.length > 0) {
+      if (data.clients) {
         clientsDB = data.clients;
       }
     }
     const resN = await fetch(`${API_BASE}/api/nodes`);
     if (resN.ok) {
       const data = await resN.json();
-      if (data.nodes && data.nodes.length > 0) {
+      if (data.nodes) {
         nodesDB = data.nodes;
       }
     }
     const resM = await fetch(`${API_BASE}/api/methods`);
     if (resM.ok) {
       const data = await resM.json();
-      if (data.methods && data.methods.length > 0) {
+      if (data.methods) {
         methodsDB = data.methods;
       }
     }
   } catch (e) {
-    console.log("Servidor Backend Master offline o modo estático local.");
+    console.log("Servidor Backend Master offline.");
   }
 }
 
