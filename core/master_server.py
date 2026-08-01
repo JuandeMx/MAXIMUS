@@ -91,6 +91,9 @@ if not os.path.exists(METHODS_DB) or os.path.getsize(METHODS_DB) == 0:
     new_lines = [def_m + "\n" for def_m in DEFAULT_7_METHODS]
     with open(METHODS_DB, "w") as f:
         f.writelines(new_lines)
+else:
+    with open(METHODS_DB, "r") as f:
+        new_lines = f.readlines()
 
 # Autogenerar archivos .mx de descarga para los 7 métodos
 downloads_dir = os.path.join(WEB_DIR, "downloads")
