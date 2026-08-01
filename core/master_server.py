@@ -143,7 +143,10 @@ def _run_real_ssh_install(install_id, ip, port, user, password):
     job["step"] = 0
     job["status"] = "Instalando sshpass en el Master..."
     job["log"].append("[+] Verificando sshpass en el servidor Master...")
-    subprocess.run("apt-get install -y sshpass >/dev/null 2>&1", shell=True)
+    try:
+        subprocess.run(["apt-get", "install", "-y", "sshpass"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=60)
+    except Exception:
+        pass
     job["log"].append("[OK] sshpass listo.")
 
     steps = [
