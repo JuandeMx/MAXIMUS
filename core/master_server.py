@@ -613,7 +613,8 @@ class MasterWebHandler(BaseHTTPRequestHandler):
                         compiled_sni = bm['sni']
                         compiled_payload = bm['payload']
 
-                        # Usar exactamente el puerto guardado en el método (sea 80, 443, 22, 8080, etc.)
+                        # Usar el SSH Host del método (Sat24.com, wap.renxo.com, etc.), si está vacío usar la IP del nodo
+                        final_host = bm['ssh_host'] if bm['ssh_host'] else n_ip
                         final_port = bm['ssh_port']
 
                         mx_content = ""
@@ -621,7 +622,7 @@ class MasterWebHandler(BaseHTTPRequestHandler):
                             try:
                                 mx_content = generate_mx_file(
                                     name=compiled_name,
-                                    ssh_host=n_ip,
+                                    ssh_host=final_host,
                                     ssh_port=final_port,
                                     ssh_user="",
                                     ssh_pass="",
@@ -634,7 +635,7 @@ class MasterWebHandler(BaseHTTPRequestHandler):
                         methods.append({
                             "id": _safe_hash(compiled_name + n_ip),
                             "name": compiled_name,
-                            "ssh_host": n_ip,
+                            "ssh_host": final_host,
                             "ssh_port": final_port,
                             "ssh_user": "",
                             "ssh_pass": "",
@@ -1075,21 +1076,41 @@ class MasterWebHandler(BaseHTTPRequestHandler):
         # POST /api/method/create
         # ----------------------------------------------------------------------
         elif parsed.path == "/api/method/create":
-            name = payload.get("name", "")
+            name = payload.get("name", "").strip()
             ssh_host = payload.get("ssh_host", "").strip()
-            ssh_port = payload.get("ssh_port", 22)
-            # SSH User y SSH Pass vacíos para que la app móvil los pida manualmente
+            ssh_port = payload.get("ssh_port", 80)
             ssh_user = ""
             ssh_pass = ""
             protocol = payload.get("protocol", "")
-            sni = payload.get("sni", "")
+            sni = payload.get("sni", "").strip()
             payload_str = payload.get("payload", "").strip()
 
-            # Asegurar que el generador .MX esté cargado
+            if not name:
+                self._send_json(400, {"error": "Name is required"})
+                return
+
             load_mx_generator()
 
-            with open(METHODS_DB, "a") as f:
-                f.write(f"{name}|{ssh_host}|{ssh_port}|{ssh_user}|{ssh_pass}|{protocol}|{sni}|{payload_str}\n")
+            lines = []
+            if os.path.exists(METHODS_DB):
+                with open(METHODS_DB, "r") as f:
+                    lines = f.readlines()
+
+            updated = False
+            new_lines = []
+            for l in lines:
+                parts = l.strip().split("|")
+                if parts and parts[0].strip() == name:
+                    new_lines.append(f"{name}|{ssh_host}|{ssh_port}|{ssh_user}|{ssh_pass}|{protocol}|{sni}|{payload_str}\n")
+                    updated = True
+                else:
+                    new_lines.append(l)
+
+            if not updated:
+                new_lines.append(f"{name}|{ssh_host}|{ssh_port}|{ssh_user}|{ssh_pass}|{protocol}|{sni}|{payload_str}\n")
+
+            with open(METHODS_DB, "w") as f:
+                f.writelines(new_lines)
 
             # Generar archivo físico .mx en la carpeta de descargas del panel web
             downloads_dir = os.path.join(WEB_DIR, "downloads")
