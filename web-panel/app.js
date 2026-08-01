@@ -332,6 +332,9 @@ function renderMethods() {
       </td>
       <td>
         <div class="action-btns">
+          <button class="btn-sm" onclick="openEditMethodModal('${method.name}')" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border-color: rgba(245, 158, 11, 0.3);">
+            <i data-lucide="edit" style="width: 14px; vertical-align: middle;"></i> Editar
+          </button>
           <button class="btn-sm btn-danger" onclick="deleteMethod(${method.id})">
             <i data-lucide="trash-2" style="width: 14px; vertical-align: middle;"></i>
           </button>
@@ -586,15 +589,50 @@ async function deleteNode(id) {
   renderNodes();
 }
 
-// ACTIONS: CREAR MÉTODO DE CONEXIÓN
-async function handleCreateMethod(event) {
+function openCreateMethodModal() {
+  document.getElementById('modal-method-title').innerText = 'Crear Nuevo Método de Conexión';
+  document.getElementById('m-original-name').value = '';
+  document.getElementById('form-create-method').reset();
+  openModal('modal-create-method');
+}
+
+function openEditMethodModal(methodName) {
+  const method = methodsDB.find(m => m.name === methodName);
+  if (!method) return;
+
+  document.getElementById('modal-method-title').innerText = `Editar Método: ${method.name}`;
+  document.getElementById('m-original-name').value = method.name;
+  document.getElementById('m-name').value = method.name;
+  document.getElementById('m-ssh-host').value = method.ssh_host || '';
+  document.getElementById('m-ssh-port').value = method.ssh_port || 80;
+  document.getElementById('m-proto').value = method.protocol || 'SSL + Payload (WebSocket)';
+  document.getElementById('m-sni').value = method.sni || '';
+  document.getElementById('m-payload').value = method.payload || '';
+
+  openModal('modal-create-method');
+}
+
+// ACTIONS: CREAR O EDITAR MÉTODO DE CONEXIÓN
+async function handleSaveMethod(event) {
   event.preventDefault();
+  const original_name = document.getElementById('m-original-name').value.trim();
   const name = document.getElementById('m-name').value.trim();
   const ssh_host = document.getElementById('m-ssh-host').value.trim();
-  const ssh_port = parseInt(document.getElementById('m-ssh-port').value) || 22;
+  const ssh_port = parseInt(document.getElementById('m-ssh-port').value) || 80;
   const protocol = document.getElementById('m-proto').value;
   const sni = document.getElementById('m-sni').value.trim();
   const payload = document.getElementById('m-payload').value.trim();
+
+  // Si estábamos editando, eliminar el antiguo primero si cambió de nombre
+  if (original_name && original_name !== name) {
+    try {
+      await fetch(`${API_BASE}/api/method/delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: original_name })
+      });
+    } catch (e) {}
+  }
 
   try {
     await fetch(`${API_BASE}/api/method/create`, {
@@ -607,7 +645,7 @@ async function handleCreateMethod(event) {
   await fetchRealState();
   closeModal('modal-create-method');
   renderMethods();
-  alert(`✅ Método de Conexión '${name}' guardado y archivo .mx generado.`);
+  alert(`✅ Método de Conexión '${name}' guardado correctamente.`);
   document.getElementById('form-create-method').reset();
 }
 

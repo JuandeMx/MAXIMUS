@@ -133,7 +133,7 @@
           <input type="text" id="search-method" placeholder="Buscar método de conexión...">
         </div>
         <div style="display: flex; gap: 0.5rem;">
-          <button class="btn-primary" onclick="openModal('modal-create-method')">
+          <button class="btn-primary" onclick="openCreateMethodModal()">
             <i data-lucide="zap"></i> Crear Método Manual
           </button>
         </div>
@@ -273,50 +273,52 @@
     </div>
   </div>
 
-  <!-- MODAL 3: CREAR NUEVO MÉTODO DE CONEXIÓN -->
+  <!-- MODAL 3: CREAR / EDITAR MÉTODO DE CONEXIÓN -->
   <div id="modal-create-method" class="modal-overlay">
     <div class="modal-box">
       <div class="modal-header">
-        <h3><i data-lucide="zap"></i> Crear Nuevo Método de Conexión</h3>
+        <h3><i data-lucide="zap"></i> <span id="modal-method-title">Crear Nuevo Método de Conexión</span></h3>
         <button class="modal-close" onclick="closeModal('modal-create-method')">&times;</button>
       </div>
-      <form id="form-create-method" onsubmit="handleCreateMethod(event)">
+      <form id="form-create-method" onsubmit="handleSaveMethod(event)">
+        <input type="hidden" id="m-original-name">
         <div class="form-group">
           <label>Nombre Comercial (se ve en la app):</label>
-          <input type="text" id="m-name" class="form-control" placeholder="ej: TELCEL SSL ILIMITADO" required>
+          <input type="text" id="m-name" class="form-control" placeholder="ej: PERSONAL CF 1" required>
         </div>
         <div style="display: flex; gap: 1rem;">
           <div class="form-group" style="flex: 2;">
-            <label>SSH Host / IP:</label>
-            <input type="text" id="m-ssh-host" class="form-control" placeholder="ej: 78.14.139.83" required>
+            <label>SSH Host / IP por Defecto:</label>
+            <input type="text" id="m-ssh-host" class="form-control" placeholder="ej: Sat24.com o IP" required>
           </div>
           <div class="form-group" style="flex: 1;">
-            <label>SSH Port:</label>
-            <input type="number" id="m-ssh-port" class="form-control" value="22" required>
+            <label>Puerto SSH / WebSocket:</label>
+            <input type="number" id="m-ssh-port" class="form-control" value="80" required>
           </div>
         </div>
         <div class="form-group">
           <label>Modo de Túnel / Protocolo:</label>
           <select id="m-proto" class="form-control">
             <option value="SSL + Payload (WebSocket)">SSL + Payload (WebSocket)</option>
+            <option value="HTTP DIRECT / PAYLOAD">HTTP DIRECT / PAYLOAD</option>
+            <option value="SSL / TLS">SSL / TLS</option>
             <option value="SSH Directo (TCP)">SSH Directo (TCP)</option>
             <option value="Dropbear + Payload">Dropbear + Payload</option>
             <option value="V2Ray (VLESS WebSocket)">V2Ray (VLESS WebSocket)</option>
-            <option value="V2Ray (REALITY TLS)">V2Ray (REALITY TLS)</option>
             <option value="Hysteria v2 (UDP)">Hysteria v2 (UDP)</option>
           </select>
         </div>
         <div class="form-group">
-          <label>Host SNI (Server Name Indication):</label>
-          <input type="text" id="m-sni" class="form-control" placeholder="ej: m.facebook.com">
+          <label>Host SNI (Usa [CF] o [CFT] si requiere dominios de nodo):</label>
+          <input type="text" id="m-sni" class="form-control" placeholder="ej: www.fahorro.com o [CF]">
         </div>
         <div class="form-group">
-          <label>Payload String (Opcional):</label>
-          <textarea id="m-payload" class="form-control" placeholder="GET / HTTP/1.1[crlf]Host: m.facebook.com[crlf][crlf]"></textarea>
+          <label>Payload String (Usa [CF] o [CFT] para comodines dinámicos):</label>
+          <textarea id="m-payload" class="form-control" style="height: 110px;" placeholder="GET / HTTP/1.1[crlf]Host: [CF][crlf]Upgrade: websocket[crlf][crlf]"></textarea>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn-sm" onclick="closeModal('modal-create-method')">Cancelar</button>
-          <button type="submit" class="btn-primary">Guardar Método</button>
+          <button type="submit" class="btn-primary">Guardar Método de Conexión</button>
         </div>
       </form>
     </div>
