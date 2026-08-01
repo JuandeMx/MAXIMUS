@@ -547,85 +547,120 @@ class MasterWebHandler(BaseHTTPRequestHandler):
 
         if parsed.path == "/api/methods":
             load_mx_generator()
+            query_components = parse_qs(parsed.query)
+            target_node_ip = query_components.get("node_ip", [""])[0].strip()
+
             methods = []
+
+            # 1. Leer todas las VPS/Nodos guardados
+            nodes_list = []
+            if os.path.exists(NODES_DB):
+                with open(NODES_DB, "r") as f:
+                    for line in f:
+                        parts = line.strip().split("|")
+                        if len(parts) >= 2:
+                            n_name = parts[0].strip()
+                            n_ip = parts[1].strip()
+                            n_port = int(parts[2].strip()) if len(parts) > 2 and parts[2].strip().isdigit() else 22
+                            d_cf = parts[3].strip() if len(parts) > 3 else ""
+                            d_cft = parts[4].strip() if len(parts) > 4 else ""
+                            if n_ip not in ["127.0.0.1", "localhost"]:
+                                nodes_list.append((n_name, n_ip, n_port, d_cf, d_cft))
+
+            # 2. Leer las 7 plantillas/métodos base
+            base_methods = []
             if os.path.exists(METHODS_DB):
                 with open(METHODS_DB, "r") as f:
                     for line in f:
                         parts = line.strip().split("|")
                         if len(parts) >= 8:
-                            name = parts[0]
-                            ssh_host = parts[1]
-                            ssh_port = int(parts[2])
-                            ssh_user = parts[3]
-                            ssh_pass = parts[4]
-                            protocol = parts[5]
-                            sni = parts[6]
-                            payload = parts[7]
-
-                            mx_content = ""
-                            if generate_mx_file:
-                                try:
-                                    mx_content = generate_mx_file(
-                                        name=name,
-                                        ssh_host=ssh_host,
-                                        ssh_port=ssh_port,
-                                        ssh_user=ssh_user,
-                                        ssh_pass=ssh_pass,
-                                        sni=sni,
-                                        payload=payload
-                                    )
-                                except Exception as e:
-                                    print(f"Error generating MX content: {e}")
-
-                            methods.append({
-                                "id": _safe_hash(name + ssh_host),
-                                "name": name,
-                                "ssh_host": ssh_host,
-                                "ssh_port": ssh_port,
-                                "ssh_user": ssh_user,
-                                "ssh_pass": ssh_pass,
-                                "protocol": protocol,
-                                "sni": sni,
-                                "payload": payload,
-                                "mx_content": mx_content
+                            base_methods.append({
+                                "name": parts[0].strip(),
+                                "ssh_host": parts[1].strip(),
+                                "ssh_port": int(parts[2].strip()) if parts[2].strip().isdigit() else 80,
+                                "ssh_user": parts[3].strip(),
+                                "ssh_pass": parts[4].strip(),
+                                "protocol": parts[5].strip(),
+                                "sni": parts[6].strip(),
+                                "payload": parts[7].strip()
                             })
-                        elif len(parts) >= 5:
-                            name = parts[0]
-                            ssh_host = "127.0.0.1"
-                            ssh_port = int(parts[4])
-                            ssh_user = "root"
-                            ssh_pass = ""
-                            protocol = parts[1]
-                            sni = parts[2]
-                            payload = parts[3]
 
-                            mx_content = ""
-                            if generate_mx_file:
-                                try:
-                                    mx_content = generate_mx_file(
-                                        name=name,
-                                        ssh_host=ssh_host,
-                                        ssh_port=ssh_port,
-                                        ssh_user=ssh_user,
-                                        ssh_pass=ssh_pass,
-                                        sni=sni,
-                                        payload=payload
-                                    )
-                                except Exception as e:
-                                    print(f"Error generating MX content: {e}")
+            # 3. Compilar métodos por cada VPS
+            if nodes_list:
+                for n_name, n_ip, n_port, d_cf, d_cft in nodes_list:
+                    if target_node_ip and target_node_ip != n_ip:
+                        continue
 
-                            methods.append({
-                                "id": _safe_hash(name),
-                                "name": name,
-                                "ssh_host": ssh_host,
-                                "ssh_port": ssh_port,
-                                "ssh_user": ssh_user,
-                                "ssh_pass": ssh_pass,
-                                "protocol": protocol,
-                                "sni": sni,
-                                "payload": payload,
-                                "mx_content": mx_content
-                            })
+                    cf_val = d_cf if d_cf else n_ip
+                    cft_val = d_cft if d_cft else n_ip
+
+                    for bm in base_methods:
+                        compiled_name = f"[{n_name}] {bm['name']}" if len(nodes_list) > 1 else bm['name']
+                        compiled_sni = bm['sni'].replace("[CF]", cf_val).replace("[HOST]", cf_val).replace("[CFT]", cft_val).replace("[CLOUDFRONT]", cft_val).replace("[IP]", n_ip)
+                        compiled_payload = bm['payload'].replace("[CF]", cf_val).replace("[HOST]", cf_val).replace("[CFT]", cft_val).replace("[CLOUDFRONT]", cft_val).replace("[IP]", n_ip).replace("[rotate=[CFT]]", cft_val)
+
+                        if not compiled_sni or compiled_sni in ["[CF]", "[CFT]"]:
+                            compiled_sni = n_ip
+
+                        mx_content = ""
+                        if generate_mx_file:
+                            try:
+                                mx_content = generate_mx_file(
+                                    name=compiled_name,
+                                    ssh_host=n_ip,
+                                    ssh_port=n_port,
+                                    ssh_user="",
+                                    ssh_pass="",
+                                    sni=compiled_sni,
+                                    payload=compiled_payload
+                                )
+                            except Exception:
+                                pass
+
+                        methods.append({
+                            "id": _safe_hash(compiled_name + n_ip),
+                            "name": compiled_name,
+                            "ssh_host": n_ip,
+                            "ssh_port": n_port,
+                            "ssh_user": "",
+                            "ssh_pass": "",
+                            "protocol": bm['protocol'],
+                            "sni": compiled_sni,
+                            "payload": compiled_payload,
+                            "mx_content": mx_content,
+                            "vps_name": n_name,
+                            "vps_ip": n_ip
+                        })
+            else:
+                for bm in base_methods:
+                    mx_content = ""
+                    if generate_mx_file:
+                        try:
+                            mx_content = generate_mx_file(
+                                name=bm['name'],
+                                ssh_host=bm['ssh_host'],
+                                ssh_port=bm['ssh_port'],
+                                ssh_user="",
+                                ssh_pass="",
+                                sni=bm['sni'],
+                                payload=bm['payload']
+                            )
+                        except Exception:
+                            pass
+
+                    methods.append({
+                        "id": _safe_hash(bm['name'] + bm['ssh_host']),
+                        "name": bm['name'],
+                        "ssh_host": bm['ssh_host'],
+                        "ssh_port": bm['ssh_port'],
+                        "ssh_user": "",
+                        "ssh_pass": "",
+                        "protocol": bm['protocol'],
+                        "sni": bm['sni'],
+                        "payload": bm['payload'],
+                        "mx_content": mx_content
+                    })
+
             self._send_json(200, {"methods": methods})
             return
 
