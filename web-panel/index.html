@@ -132,9 +132,11 @@
           <i data-lucide="search"></i>
           <input type="text" id="search-method" placeholder="Buscar método de conexión...">
         </div>
-        <button class="btn-primary" onclick="openModal('modal-create-method')">
-          <i data-lucide="zap"></i> Crear Nuevo Método de Conexión
-        </button>
+        <div style="display: flex; gap: 0.5rem;">
+          <button class="btn-primary" onclick="openModal('modal-create-method')">
+            <i data-lucide="zap"></i> Crear Método Manual
+          </button>
+        </div>
       </div>
 
       <div class="table-responsive">
@@ -213,6 +215,14 @@
         <div class="form-group">
           <label>Usuario Root</label>
           <input type="text" id="v-user" class="form-control" value="root" required>
+        </div>
+        <div class="form-group">
+          <label>Dominio VPS / Cloudflare (Reemplaza [CF]):</label>
+          <input type="text" id="v-domain-cf" class="form-control" placeholder="ej: mx1.tudominio.com (opcional)">
+        </div>
+        <div class="form-group">
+          <label>Dominio CloudFront (Reemplaza [CFT]):</label>
+          <input type="text" id="v-domain-cft" class="form-control" placeholder="ej: d1234abcd.cloudfront.net (opcional)">
         </div>
         <div class="form-group">
           <label>Contraseña Root SSH</label>

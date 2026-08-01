@@ -384,6 +384,8 @@ async function handleAddVps(event) {
   const port = parseInt(document.getElementById('v-port').value) || 22;
   const user = document.getElementById('v-user').value.trim() || 'root';
   const password = document.getElementById('v-pass').value.trim();
+  const domain_cf = document.getElementById('v-domain-cf') ? document.getElementById('v-domain-cf').value.trim() : '';
+  const domain_cft = document.getElementById('v-domain-cft') ? document.getElementById('v-domain-cft').value.trim() : '';
 
   closeModal('modal-add-vps');
   openModal('modal-installing-vps');
@@ -415,7 +417,7 @@ async function handleAddVps(event) {
     const res = await fetch(`${API_BASE}/api/vps/install`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, ip, port, user, password })
+      body: JSON.stringify({ name, ip, port, user, password, domain_cf, domain_cft })
     });
     const data = await res.json();
     installId = data.install_id || '';

@@ -63,9 +63,10 @@ WEB_DIR = os.path.join(CONFIG_DIR, "web-panel")
 USERS_DB = os.path.join(CONFIG_DIR, "users.db")
 NODES_DB = os.path.join(CONFIG_DIR, "nodes_servers.db")
 METHODS_DB = os.path.join(CONFIG_DIR, "connection_methods.db")
+TEMPLATES_DB = os.path.join(CONFIG_DIR, "method_templates.db")
 
 os.makedirs(CONFIG_DIR, exist_ok=True)
-touch_files = [USERS_DB, NODES_DB, METHODS_DB]
+touch_files = [USERS_DB, NODES_DB, METHODS_DB, TEMPLATES_DB]
 for tf in touch_files:
     if not os.path.exists(tf):
         with open(tf, "w") as f:
@@ -181,7 +182,12 @@ def _run_real_ssh_install(install_id, ip, port, user, password):
         except Exception as e:
             job["log"].append(f"[ERROR] Paso {i+1}: {str(e)}")
 
-    # PASO FINAL: Sincronizar todos los usuarios existentes del Master al nuevo nodo
+    # PASO FINAL: Generar métodos basados en plantillas para este nodo y sincronizar usuarios
+    job["status"] = "Generando métodos de conexión para el nodo..."
+    job["log"].append(f"[+] Compilando plantillas de conexión para {ip}...")
+    methods_created = _compile_node_methods(ip)
+    job["log"].append(f"[OK] {methods_created} método(s) autogenerado(s) para este nodo.")
+
     job["status"] = "Sincronizando usuarios existentes al nuevo nodo..."
     job["log"].append(f"[+] Sincronizando usuarios del Master hacia {ip}...")
     synced = _sync_all_users_to_node(ip)
@@ -190,6 +196,100 @@ def _run_real_ssh_install(install_id, ip, port, user, password):
     job["done"] = True
     job["status"] = "¡Instalación completada con éxito!"
     job["log"].append(f"[SUCCESS] ✅ VPS {ip} lista y sincronizada con {synced} usuarios.")
+
+def _compile_node_methods(node_ip):
+    """Compila todas las plantillas globales en method_templates.db para una VPS específica usando sus dominios"""
+    if not os.path.exists(NODES_DB) or not os.path.exists(TEMPLATES_DB):
+        return 0
+
+    node_data = None
+    with open(NODES_DB, "r") as f:
+        for line in f:
+            parts = line.strip().split("|")
+            if len(parts) >= 2 and parts[1].strip() == node_ip:
+                node_name = parts[0].strip()
+                n_port = parts[2].strip() if len(parts) > 2 else "22"
+                domain_cf = parts[3].strip() if len(parts) > 3 else ""
+                domain_cft = parts[4].strip() if len(parts) > 4 else ""
+                node_data = (node_name, node_ip, n_port, domain_cf, domain_cft)
+                break
+
+    if not node_data:
+        return 0
+
+    node_name, nip, nport, cf_dom, cft_dom = node_data
+
+    templates = []
+    with open(TEMPLATES_DB, "r") as f:
+        for line in f:
+            parts = line.strip().split("|")
+            if len(parts) >= 4:
+                templates.append((parts[0].strip(), parts[1].strip(), parts[2].strip(), parts[3].strip()))
+
+    if not templates:
+        return 0
+
+    # Leer métodos existentes para evitar duplicar
+    existing_methods = set()
+    if os.path.exists(METHODS_DB):
+        with open(METHODS_DB, "r") as f:
+            for line in f:
+                parts = line.strip().split("|")
+                if parts:
+                    existing_methods.add(parts[0].strip())
+
+    created_count = 0
+    downloads_dir = os.path.join(WEB_DIR, "downloads")
+    os.makedirs(downloads_dir, exist_ok=True)
+
+    for t_name, t_proto, t_sni, t_payload in templates:
+        # Nombre final del método: [NombreNodo] NombrePlantilla
+        final_method_name = f"[{node_name}] {t_name}"
+
+        # Reemplazar variables dinámicas
+        compiled_sni = t_sni.replace("[CF]", cf_dom).replace("[HOST]", cf_dom).replace("[CFT]", cft_dom).replace("[CLOUDFRONT]", cft_dom).replace("[IP]", nip)
+        compiled_payload = t_payload.replace("[CF]", cf_dom).replace("[HOST]", cf_dom).replace("[CFT]", cft_dom).replace("[CLOUDFRONT]", cft_dom).replace("[IP]", nip)
+
+        # Si no hay dominó CF/CFT configurado para la VPS, usar la IP
+        if not compiled_sni or compiled_sni in ["[CF]", "[CFT]"]:
+            compiled_sni = nip
+
+        # Guardar o actualizar en connection_methods.db
+        lines = []
+        if os.path.exists(METHODS_DB):
+            with open(METHODS_DB, "r") as f:
+                lines = f.readlines()
+
+        with open(METHODS_DB, "w") as f:
+            for l in lines:
+                if not l.startswith(f"{final_method_name}|"):
+                    f.write(l)
+            f.write(f"{final_method_name}|{nip}|{nport}|||{t_proto}|{compiled_sni}|{compiled_payload}\n")
+
+        # Autogenerar archivo físico .MX
+        import re
+        safe_name = re.sub(r'[^a-zA-Z0-9_\-]', '_', final_method_name)
+        mx_filepath = os.path.join(downloads_dir, f"{safe_name}.mx")
+
+        load_mx_generator()
+        if generate_mx_file:
+            try:
+                generate_mx_file(
+                    name=final_method_name,
+                    ssh_host=nip,
+                    ssh_port=int(nport),
+                    ssh_user="",
+                    ssh_pass="",
+                    sni=compiled_sni,
+                    payload=compiled_payload,
+                    out_path=mx_filepath
+                )
+            except Exception:
+                pass
+
+        created_count += 1
+
+    return created_count
 
 def _sync_all_users_to_node(node_ip):
     """Envía todos los usuarios del Master al nodo remoto vía API puerto 6767"""
@@ -359,6 +459,8 @@ class MasterWebHandler(BaseHTTPRequestHandler):
                 "name": "Servidor Local (Master)",
                 "ip": "127.0.0.1",
                 "port": 22,
+                "domain_cf": "",
+                "domain_cft": "",
                 "status": "ONLINE",
                 "users": 1
             })
@@ -374,10 +476,29 @@ class MasterWebHandler(BaseHTTPRequestHandler):
                                 "name": parts[0],
                                 "ip": parts[1],
                                 "port": int(parts[2]),
+                                "domain_cf": parts[3].strip() if len(parts) > 3 else "",
+                                "domain_cft": parts[4].strip() if len(parts) > 4 else "",
                                 "status": "ONLINE",
                                 "users": 1
                             })
             self._send_json(200, {"nodes": nodes})
+            return
+
+        if parsed.path == "/api/templates":
+            templates = []
+            if os.path.exists(TEMPLATES_DB):
+                with open(TEMPLATES_DB, "r") as f:
+                    for i, line in enumerate(f):
+                        parts = line.strip().split("|")
+                        if len(parts) >= 4:
+                            templates.append({
+                                "id": i + 1,
+                                "name": parts[0],
+                                "protocol": parts[1],
+                                "sni": parts[2],
+                                "payload": parts[3]
+                            })
+            self._send_json(200, {"templates": templates})
             return
 
         if parsed.path == "/api/methods":
@@ -694,19 +815,22 @@ class MasterWebHandler(BaseHTTPRequestHandler):
             port = payload.get("port", 22)
             user = payload.get("user", "root")
             password = payload.get("password", "")
+            domain_cf = payload.get("domain_cf", "").strip()
+            domain_cft = payload.get("domain_cft", "").strip()
 
             # Guardar nodo en nodes_servers.db (evitando duplicados)
-            exists = False
+            lines = []
             if os.path.exists(NODES_DB):
                 with open(NODES_DB, "r") as f:
-                    for line in f:
-                        parts = line.strip().split("|")
-                        if len(parts) >= 2 and parts[1] == ip:
-                            exists = True
-                            break
-            if not exists:
-                with open(NODES_DB, "a") as f:
-                    f.write(f"{name}|{ip}|{port}\n")
+                    lines = f.readlines()
+
+            with open(NODES_DB, "w") as f:
+                for l in lines:
+                    parts = l.strip().split("|")
+                    if len(parts) >= 2 and parts[1].strip() == ip:
+                        continue
+                    f.write(l)
+                f.write(f"{name}|{ip}|{port}|{domain_cf}|{domain_cft}\n")
 
             # Iniciar instalación real en un hilo de fondo
             install_id = f"{ip}_{int(time.time())}"
@@ -853,6 +977,62 @@ class MasterWebHandler(BaseHTTPRequestHandler):
                     print(f"Error writing physical MX file: {e}")
 
             self._send_json(200, {"success": True, "message": f"Método '{name}' guardado y archivo .mx generado."})
+            return
+
+        # ----------------------------------------------------------------------
+        # POST /api/template/create (GUARDAR PLANTILLA Y REGENERAR MÉTODOS PARA NODOS)
+        # ----------------------------------------------------------------------
+        elif parsed.path == "/api/template/create":
+            name = payload.get("name", "").strip()
+            protocol = payload.get("protocol", "SSH")
+            sni = payload.get("sni", "").strip()
+            payload_str = payload.get("payload", "").strip()
+
+            if not name:
+                self._send_json(400, {"error": "Name is required for template"})
+                return
+
+            lines = []
+            if os.path.exists(TEMPLATES_DB):
+                with open(TEMPLATES_DB, "r") as f:
+                    lines = f.readlines()
+
+            with open(TEMPLATES_DB, "w") as f:
+                for l in lines:
+                    if not l.startswith(f"{name}|"):
+                        f.write(l)
+                f.write(f"{name}|{protocol}|{sni}|{payload_str}\n")
+
+            # Re-compilar métodos para todas las VPS registradas
+            total_compiled = 0
+            if os.path.exists(NODES_DB):
+                with open(NODES_DB, "r") as f:
+                    for l in f:
+                        p = l.strip().split("|")
+                        if len(p) >= 2:
+                            total_compiled += _compile_node_methods(p[1].strip())
+
+            self._send_json(200, {
+                "success": True,
+                "message": f"Plantilla '{name}' guardada. Se generaron {total_compiled} métodos para tus nodos VPS."
+            })
+            return
+
+        # ----------------------------------------------------------------------
+        # POST /api/template/delete
+        # ----------------------------------------------------------------------
+        elif parsed.path == "/api/template/delete":
+            name = payload.get("name", "").strip()
+            if name and os.path.exists(TEMPLATES_DB):
+                lines = []
+                with open(TEMPLATES_DB, "r") as f:
+                    lines = f.readlines()
+                with open(TEMPLATES_DB, "w") as f:
+                    for l in lines:
+                        if not l.startswith(f"{name}|"):
+                            f.write(l)
+
+            self._send_json(200, {"success": True, "message": f"Plantilla '{name}' eliminada."})
             return
 
         self._send_json(404, {"error": "Endpoint not found"})
