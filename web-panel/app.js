@@ -93,11 +93,20 @@ function renderClients(filterText = '') {
     const statusText = isExpired ? 'Expirado' : 'Activo';
     const statusClass = isExpired ? 'expired' : 'active';
 
+    let durationLabel = `${client.days || 30} días`;
+    if (client.exp_date && client.exp_date.includes(' ')) {
+      const remainingMs = new Date(client.exp_date) - new Date();
+      if (remainingMs > 0 && remainingMs < 86400000) {
+        const hoursLeft = Math.ceil(remainingMs / (1000 * 60 * 60));
+        durationLabel = `⏳ ${hoursLeft} Horas`;
+      }
+    }
+
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td class="user-cell">${client.username}</td>
       <td><span class="pass-cell">${client.password || '••••••'}</span></td>
-      <td>${client.days || 30} días</td>
+      <td>${durationLabel}</td>
       <td>${client.exp_date || 'N/A'}</td>
       <td>${client.devices || 1} máx.</td>
       <td><span class="badge-status ${statusClass}">${statusText}</span></td>
@@ -390,6 +399,33 @@ async function handleCreateClient(event) {
   await fetchRealState();
   renderClients();
   document.getElementById('form-create-client').reset();
+}
+
+// Botón de creación rápida de usuarios Demo por horas (ej: 2 Horas)
+async function createQuickDemo() {
+  const randomNum = Math.floor(1000 + Math.random() * 9000);
+  const username = `DEMO${randomNum}`;
+  const password = `${Math.floor(100 + Math.random() * 900)}`;
+  const days = 2 / 24.0; // 2 Horas
+
+  try {
+    const res = await fetch(`${API_BASE}/api/client/create`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password, days })
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert(`⏱️ ¡DEMO DE 2 HORAS CREADO!\n\nUsuario: ${username}\nContraseña: ${password}\nExpiración: ${data.exp_date}`);
+    } else {
+      alert(`❌ Error creando demo: ${data.error || 'Error desconocido'}`);
+    }
+  } catch (e) {
+    alert(`❌ Error de conexión con el Maestro.`);
+  }
+
+  await fetchRealState();
+  renderClients();
 }
 
 async function deleteClient(username) {

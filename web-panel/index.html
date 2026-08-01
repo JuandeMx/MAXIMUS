@@ -46,9 +46,14 @@
           <i data-lucide="search"></i>
           <input type="text" id="search-client" placeholder="Buscar cliente por usuario..." onkeyup="filterClients()">
         </div>
-        <button class="btn-primary" onclick="openModal('modal-create-client')">
-          <i data-lucide="user-plus"></i> Crear Nuevo Cliente
-        </button>
+        <div style="display: flex; gap: 0.5rem;">
+          <button class="btn-sm" onclick="createQuickDemo()" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); font-weight: 600; padding: 0.6rem 1rem;">
+            <i data-lucide="clock" style="width: 15px; vertical-align: middle;"></i> Generar Demo 2 Horas
+          </button>
+          <button class="btn-primary" onclick="openModal('modal-create-client')">
+            <i data-lucide="user-plus"></i> Crear Nuevo Cliente
+          </button>
+        </div>
       </div>
 
       <div class="table-responsive">
