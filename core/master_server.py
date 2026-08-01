@@ -129,9 +129,12 @@ def _safe_hash(s):
         h = ((h << 5) + h) + ord(char)
     return h & 0x7FFFFFFF
 
+import shlex
+
 def _ssh_run(ip, port, user, password, cmd):
-    """Ejecuta un comando remoto por SSH usando sshpass. Retorna (exit_code, output)"""
-    ssh_cmd = f"sshpass -p '{password}' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -p {port} {user}@{ip} '{cmd}'"
+    """Ejecuta un comando remoto por SSH usando sshpass con escape seguro de contraseñas complejas"""
+    escaped_pass = password.replace("'", "'\"'\"'")
+    ssh_cmd = f"sshpass -p '{escaped_pass}' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -p {port} {user}@{ip} {shlex.quote(cmd)}"
     result = subprocess.run(ssh_cmd, shell=True, capture_output=True, text=True, timeout=300)
     return result.returncode, result.stdout + result.stderr
 
