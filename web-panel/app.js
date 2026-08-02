@@ -1,6 +1,6 @@
-// Si la web corre en Hosting externo (ej: vpsmx.store), apuntar al Backend Master en IP:8080
+// Si la web corre en Hosting externo HTTPS (ej: vpsmx.store), usar api.php como puente proxy HTTPS
 const API_BASE = (window.location.origin.includes('vpsmx.store') || !window.location.origin.includes(':8080')) 
-  ? 'http://187.127.17.250:8080' 
+  ? `${window.location.origin}/api.php?endpoint=` 
   : window.location.origin;
 
 // Initial State Databases (Direct Real Backend Sync)
