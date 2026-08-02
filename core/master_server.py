@@ -72,8 +72,34 @@ USERS_DB = os.path.join(CONFIG_DIR, "users.db")
 NODES_DB = os.path.join(CONFIG_DIR, "nodes_servers.db")
 METHODS_DB = os.path.join(CONFIG_DIR, "connection_methods.db")
 TEMPLATES_DB = os.path.join(CONFIG_DIR, "method_templates.db")
+SQLITE_DB = os.path.join(CONFIG_DIR, "maximus_panel.db")
 
 os.makedirs(CONFIG_DIR, exist_ok=True)
+
+import sqlite3
+
+def _init_sqlite_database():
+    """Inicializa la Base de Datos SQLite3 oficial para clientes y usuarios de Maximus"""
+    try:
+        conn = sqlite3.connect(SQLITE_DB)
+        cursor = conn.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                password TEXT NOT NULL,
+                exp_date TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                devices INTEGER DEFAULT 1,
+                status TEXT DEFAULT 'Active'
+            )
+        ''')
+        conn.commit()
+        conn.close()
+    except Exception as e_db:
+        print(f"[SQLite DB Init Error] {e_db}")
+
+_init_sqlite_database()
 
 # Lista por defecto con las 7 configuraciones descifradas reales de tus archivos .LT
 DEFAULT_7_METHODS = [
@@ -447,6 +473,20 @@ def execute_local_user_create(username, password, days):
                 f.write(l)
         f.write(f"{username}:{password}:{exp_date_full}\n")
 
+    # 4. Guardar permanentemente en la Base de Datos SQLite3 oficial
+    try:
+        conn = sqlite3.connect(SQLITE_DB)
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO users (username, password, exp_date)
+            VALUES (?, ?, ?)
+            ON CONFLICT(username) DO UPDATE SET password=excluded.password, exp_date=excluded.exp_date
+        ''', (username, password, exp_date_full))
+        conn.commit()
+        conn.close()
+    except Exception as e_sql:
+        print(f"[SQLite Save Error] {e_sql}")
+
     return True, exp_date_full
 
 def execute_local_user_delete(username):
@@ -461,6 +501,16 @@ def execute_local_user_delete(username):
             for l in lines:
                 if not l.startswith(f"{username}:"):
                     f.write(l)
+
+    try:
+        conn = sqlite3.connect(SQLITE_DB)
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM users WHERE username = ?", (username,))
+        conn.commit()
+        conn.close()
+    except Exception as e_del:
+        print(f"[SQLite Delete Error] {e_del}")
+
     return True
 
 class MasterWebHandler(BaseHTTPRequestHandler):
