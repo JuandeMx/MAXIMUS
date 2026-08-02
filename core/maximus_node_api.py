@@ -46,22 +46,6 @@ def get_online_counts():
                         cnt = int(res_p.stdout.strip())
                         if cnt > 0:
                             online_map[u] = cnt
-
-        # Si no hay matches por ps -u, verificar sockets netstat ESTABLISHED en puertos de tunel
-        if not online_map:
-            cmd_net = "netstat -anp 2>/dev/null | grep -E ':(22|80|443|8080|8799)\s' | grep ESTABLISHED | wc -l"
-            res_net = subprocess.run(cmd_net, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            if res_net.stdout and res_net.stdout.strip().isdigit():
-                net_cnt = int(res_net.stdout.strip())
-                if net_cnt > 0:
-                    # Asignar los sockets a los usuarios activos encontrados en users.db
-                    if os.path.exists(USERS_DB):
-                        with open(USERS_DB, "r") as f:
-                            for line in f:
-                                parts = line.strip().split(":")
-                                if len(parts) >= 2 and parts[1] != "HWID_INV":
-                                    online_map[parts[0]] = net_cnt
-                                    break
     except Exception:
         pass
     return online_map
