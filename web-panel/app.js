@@ -1,5 +1,7 @@
+const API_BASE = 'http://187.127.17.250:8080';
+
 function getApiUrl(endpoint) {
-  return `/api.php?endpoint=${encodeURIComponent(endpoint)}`;
+  return `${API_BASE}${endpoint}`;
 }
 
 // Initial State Databases (Direct Real Backend Sync)
