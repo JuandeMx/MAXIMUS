@@ -494,14 +494,24 @@ menu_usuarios() {
                         echo -e " ${RED}No hay usuarios registrados.${NC}"
                     fi
                 else
-                    printf "${WHITE}%-12s | %-12s | %-10s | %-8s | %-6s${NC}\n" "USUARIO" "PASS" "EXPIRA" "HUID" "LIM"
+                    printf "${WHITE}%-12s | %-12s | %-10s | %-4s | %-4s | %-4s${NC}\n" "USUARIO" "PASS" "EXPIRA" "ON" "LIM" "HWID"
                     ui_subhr
                     if [ -s "$USER_DB" ]; then
                         encontrados=0
                         while IFS=: read -r d_user d_pass d_exp d_hwid d_limit d_alias; do
                             if [[ "$d_pass" != "HWID_INV" ]]; then
+                                [ -z "$d_limit" ] && d_limit=1
+                                [ -z "$d_hwid" ] && d_hwid="OFF"
                                 h_color="${GREEN}" ; [ "$d_hwid" == "OFF" ] && h_color="${RED}"
-                                printf " ${CYAN}%-11s${NC} | %-12s | %-10s | %b%-8s${NC} | %-6s\n" "$d_user" "$d_pass" "$d_exp" "$h_color" "$d_hwid" "$d_limit"
+                                on_cnt=$(ps -u -p $(pgrep sshd) 2>/dev/null | grep -w "$d_user" | wc -l)
+                                if [ "$on_cnt" -eq 0 ]; then
+                                    on_cnt=$(netstat -tnp 2>/dev/null | grep -E "sshd|dropbear" | grep ESTABLISHED | grep -w "$d_user" | wc -l)
+                                fi
+                                on_str="${on_cnt}/${d_limit}"
+                                on_color="${GREEN}"
+                                [ "$on_cnt" -eq 0 ] && on_color="${GRAY}"
+                                [ "$on_cnt" -gt "$d_limit" ] && on_color="${RED}"
+                                printf " ${CYAN}%-11s${NC} | %-12s | %-10s | %b%-6s${NC} | %-4s | %b%-4s${NC}\n" "$d_user" "$d_pass" "$d_exp" "$on_color" "$on_str" "$d_limit" "$h_color" "$d_hwid"
                                 encontrados=1
                             fi
                         done < "$USER_DB"
