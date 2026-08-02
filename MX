@@ -502,27 +502,40 @@ menu_usuarios() {
                             if [[ "$d_pass" != "HWID_INV" ]]; then
                                 [ -z "$d_limit" ] && d_limit=1
                                 
-                                # Conteo universal y exacto Dropbear + OpenSSH
+                                # Algoritmo Máximo para Dropbear + OpenSSH
                                 on_cnt=0
                                 
-                                # 1. Conexiones Dropbear en vivo (lsof / netstat PIDs de dropbear)
-                                db_pids=$(ps aux | grep -i "[d]ropbear" | grep -v "root" | awk '{print $2}')
-                                [ -z "$db_pids" ] && db_pids=$(netstat -anp 2>/dev/null | grep -i dropbear | grep ESTABLISHED | awk '{print $7}' | cut -d/ -f1 | sort -u)
-                                
-                                for pid in $db_pids; do
-                                    if [ -n "$pid" ] && [ "$pid" -gt 0 ] 2>/dev/null; then
-                                        p_user=$(ps -o user= -p "$pid" 2>/dev/null | tr -d ' ')
-                                        [ "$p_user" == "$d_user" ] && on_cnt=$((on_cnt + 1))
-                                    fi
-                                done
-
-                                # 2. Conexiones OpenSSH (sshd)
-                                ssh_cnt=$(ps aux | grep -i sshd | grep -w "$d_user" | grep -v grep | wc -l)
+                                # A) SSHD Directo
+                                ssh_cnt=$(ps aux | grep -i "sshd: $d_user" | grep -v grep | wc -l)
                                 on_cnt=$((on_cnt + ssh_cnt))
 
-                                # 3. Si sigue en 0, verificar si existe algún proceso asignado a la cuenta Linux del usuario
-                                if [ "$on_cnt" -eq 0 ] && id "$d_user" >/dev/null 2>&1; then
-                                    on_cnt=$(pgrep -u "$d_user" 2>/dev/null | wc -l)
+                                # B) Dropbear Active Sockets
+                                # Dropbear registra la ip/puerto del socket en el log o en /proc/net/tcp
+                                db_cnt=0
+                                for pid in $(pgrep dropbear 2>/dev/null); do
+                                    # Verificar si el proceso es hijo de la sesión del usuario o tiene coincidencia en auth.log
+                                    if ps -o command= -p "$pid" 2>/dev/null | grep -qw "$d_user"; then
+                                        db_cnt=$((db_cnt + 1))
+                                    elif [ -f /var/log/auth.log ]; then
+                                        if grep -E "dropbear\[$pid\]: Password auth succeeded for '$d_user'" /var/log/auth.log 2>/dev/null | tail -n 1 | grep -q "$pid"; then
+                                            # Validar si el socket de ese pid sigue vivo en netstat
+                                            if netstat -anp 2>/dev/null | grep "$pid/dropbear" | grep -q ESTABLISHED; then
+                                                db_cnt=$((db_cnt + 1))
+                                            fi
+                                        fi
+                                    fi
+                                done
+                                on_cnt=$((on_cnt + db_cnt))
+
+                                # C) Si Dropbear usa tuneles python/stunnel o la cuenta Linux del usuario
+                                if [ "$on_cnt" -eq 0 ]; then
+                                    # Contar cualquier socket ESTABLISHED en puertos SSH/Dropbear (22, 80, 443, 8080)
+                                    conn_sockets=$(netstat -anp 2>/dev/null | grep -E ":(22|80|443|8080|8799)\s" | grep ESTABLISHED | wc -l)
+                                    # Si solo hay 1 usuario registrado y hay sockets activos, asignarlo a ese usuario
+                                    user_total=$(grep -v "HWID_INV" "$USER_DB" 2>/dev/null | wc -l)
+                                    if [ "$user_total" -eq 1 ] && [ "$conn_sockets" -gt 0 ]; then
+                                        on_cnt=$conn_sockets
+                                    fi
                                 fi
 
                                 on_str="${on_cnt}/${d_limit}"
