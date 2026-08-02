@@ -497,7 +497,7 @@ class MasterWebHandler(BaseHTTPRequestHandler):
                             pass_str = parts[1]
                             exp_str = parts[2]
                             users.append({
-                                "id": hash(parts[0]),
+                                "id": _safe_hash(parts[0]),
                                 "username": parts[0],
                                 "password": pass_str,
                                 "exp_date": exp_str,
