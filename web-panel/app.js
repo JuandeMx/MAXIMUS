@@ -3,6 +3,13 @@ const API_BASE = (window.location.origin.includes('vpsmx.store') || !window.loca
   ? `${window.location.origin}/api.php?endpoint=` 
   : window.location.origin;
 
+function getApiUrl(endpoint) {
+  if (API_BASE.includes('api.php?endpoint=')) {
+    return `${API_BASE}${encodeURIComponent(endpoint)}`;
+  }
+  return `${API_BASE}${endpoint}`;
+}
+
 // Initial State Databases (Direct Real Backend Sync)
 let clientsDB = [];
 let nodesDB = [];
@@ -18,21 +25,21 @@ function saveState() {
 
 async function fetchRealState() {
   try {
-    const resC = await fetch(`${API_BASE}/api/clients`);
+    const resC = await fetch(getApiUrl('/api/clients'));
     if (resC.ok) {
       const data = await resC.json();
       if (data.clients) {
         clientsDB = data.clients;
       }
     }
-    const resN = await fetch(`${API_BASE}/api/nodes`);
+    const resN = await fetch(getApiUrl('/api/nodes'));
     if (resN.ok) {
       const data = await resN.json();
       if (data.nodes) {
         nodesDB = data.nodes;
       }
     }
-    const resM = await fetch(`${API_BASE}/api/methods`);
+    const resM = await fetch(getApiUrl('/api/methods'));
     if (resM.ok) {
       const data = await resM.json();
       if (data.methods) {
@@ -537,7 +544,7 @@ async function handleAddVps(event) {
   // Enviar la orden al Backend Master (que ejecuta SSH real)
   let installId = '';
   try {
-    const res = await fetch(`${API_BASE}/api/vps/install`, {
+    const res = await fetch(getApiUrl('/api/vps/install'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, ip, port, user, password, domain_cf, domain_cft })
@@ -562,7 +569,7 @@ async function handleAddVps(event) {
     pollAttempts++;
 
     try {
-      const statusRes = await fetch(`${API_BASE}/api/vps/install/status?id=${installId}`);
+      const statusRes = await fetch(getApiUrl(`/api/vps/install/status?id=${installId}`));
       const status = await statusRes.json();
 
       // Mostrar nuevas líneas de log
@@ -614,7 +621,7 @@ async function syncNode(id) {
   }
 
   try {
-    const res = await fetch(`${API_BASE}/api/vps/sync`, {
+    const res = await fetch(getApiUrl('/api/vps/sync'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ip: node.ip })
@@ -632,7 +639,7 @@ async function syncNode(id) {
 
 async function syncAllNodes() {
   try {
-    const res = await fetch(`${API_BASE}/api/vps/sync`, {
+    const res = await fetch(getApiUrl('/api/vps/sync'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ip: 'all' })
@@ -653,7 +660,7 @@ async function deleteNode(id) {
   const node = nodesDB.find(n => n.id === id);
   if (node) {
     try {
-      await fetch(`${API_BASE}/api/vps/delete`, {
+      await fetch(getApiUrl('/api/vps/delete'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ip: node.ip })
