@@ -104,16 +104,26 @@ function renderClients(filterText = '') {
       }
     }
 
+    const onlineCount = client.online_count !== undefined ? client.online_count : 0;
+    const devLimit = client.devices || 1;
+    const connColor = onlineCount > 0 ? (onlineCount > devLimit ? '#ef4444' : '#10b981') : '#94a3b8';
+    const connBg = onlineCount > 0 ? (onlineCount > devLimit ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)') : 'rgba(148,163,184,0.1)';
+
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td class="user-cell">
         <span style="color: #ffffff; font-weight: 700;">${client.username}</span>
       </td>
+      <td>
+        <span style="background: ${connBg}; color: ${connColor}; border: 1px solid ${connColor}44; font-weight: 700; padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.85rem; display: inline-block;">
+          ⚡ ${onlineCount} / ${devLimit}
+        </span>
+      </td>
       <td>${durationLabel}</td>
       <td><span class="badge-status ${statusClass}">${statusText}</span></td>
       <td>
         <div class="action-btns">
-          <button class="btn-sm" onclick="showUserDetailsModal('${client.username}', '${client.password || '123'}', '${client.exp_date || 'N/A'}', ${client.username.startsWith('DEMO')})" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3);">
+          <button class="btn-sm" onclick="showUserDetailsModal('${client.username}', '${client.password || '123'}', '${client.exp_date || 'N/A'}', ${client.username.startsWith('DEMO')}, ${onlineCount}, ${devLimit})" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3);">
             <i data-lucide="eye" style="width: 14px; vertical-align: middle;"></i> Ver
           </button>
           <button class="btn-sm" onclick="renewClient('${client.username}')">
@@ -377,7 +387,7 @@ function renderMethods() {
   lucide.createIcons();
 }
 
-function showUserDetailsModal(username, password, expDate, isDemo = false) {
+function showUserDetailsModal(username, password, expDate, isDemo = false, onlineCount = 0, devLimit = 1) {
   const textEl = document.getElementById('user-info-text');
   const typeTitle = isDemo ? "🔥 DEMO DE PRUEBA MAXIMUS (2 HORAS) 🔥" : "✅ CLIENTE REGISTRADO - MAXIMUS VIP ✅";
   
@@ -386,6 +396,7 @@ function showUserDetailsModal(username, password, expDate, isDemo = false) {
 ━━━━━━━━━━━━━━━━━━━━━━
 👤 Usuario: ${username}
 🔑 Contraseña: ${password}
+📱 Conexiones: ${onlineCount} / ${devLimit}
 📅 Vencimiento: ${expDate}
 ━━━━━━━━━━━━━━━━━━━━━━
 ⚡ ¡Conéctate usando nuestra App Oficial MAXIMUS!`;

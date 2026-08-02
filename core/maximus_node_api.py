@@ -31,6 +31,33 @@ def get_api_token():
         f.write(default_token)
     return default_token
 
+def get_online_counts():
+    online_map = {}
+    try:
+        # 1. Conexiones SSHD
+        cmd_ssh = "ps -u -p $(pgrep sshd) 2>/dev/null | tail -n +2 | awk '{print $1}'"
+        res_ssh = subprocess.run(cmd_ssh, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        if res_ssh.stdout:
+            for u in res_ssh.stdout.splitlines():
+                u = u.strip()
+                if u and u != "root":
+                    online_map[u] = online_map.get(u, 0) + 1
+        
+        # 2. Conexiones Dropbear / Netstat
+        cmd_db = "netstat -tnp 2>/dev/null | grep -E 'sshd|dropbear' | grep ESTABLISHED | awk '{print $7}' | cut -d/ -f1"
+        res_db = subprocess.run(cmd_db, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        if res_db.stdout:
+            for pid in res_db.stdout.splitlines():
+                pid = pid.strip()
+                if pid.isdigit():
+                    res_owner = subprocess.run(["ps", "-o", "user=", "-p", pid], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                    u_owner = res_owner.stdout.strip()
+                    if u_owner and u_owner != "root":
+                        online_map[u_owner] = online_map.get(u_owner, 0) + 1
+    except Exception:
+        pass
+    return online_map
+
 class NodeAPIHandler(BaseHTTPRequestHandler):
 
     def _send_json(self, status_code, data):
@@ -59,7 +86,6 @@ class NodeAPIHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed = urlparse(self.path)
         if parsed.path in ["/api/v1/health", "/status", "/"]:
-            # Status check
             users_count = 0
             if os.path.exists(USERS_DB):
                 with open(USERS_DB, "r") as f:
@@ -80,12 +106,21 @@ class NodeAPIHandler(BaseHTTPRequestHandler):
 
         if parsed.path == "/api/v1/users":
             users = []
+            online_map = get_online_counts()
             if os.path.exists(USERS_DB):
                 with open(USERS_DB, "r") as f:
                     for line in f:
                         parts = line.strip().split(":")
                         if len(parts) >= 2:
-                            users.append({"username": parts[0], "exp_date": parts[1] if len(parts) > 1 else ""})
+                            u_name = parts[0]
+                            exp_d = parts[1]
+                            dev_limit = int(parts[4]) if len(parts) > 4 and parts[4].isdigit() else 1
+                            users.append({
+                                "username": u_name,
+                                "exp_date": exp_d,
+                                "devices": dev_limit,
+                                "online_count": online_map.get(u_name, 0)
+                            })
             self._send_json(200, {"users": users})
             return
 
