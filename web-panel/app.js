@@ -105,16 +105,19 @@ function renderClients(filterText = '') {
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td class="user-cell">${client.username}</td>
-      <td><span class="pass-cell">${client.password || '••••••'}</span></td>
+      <td class="user-cell" style="cursor: pointer;" onclick="showUserDetailsModal('${client.username}', '${client.password || '123'}', '${client.exp_date || 'N/A'}', ${client.username.startsWith('DEMO')})">
+        <span style="color: #38bdf8; text-decoration: underline; font-weight: 700;">${client.username}</span>
+        <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: normal;">🔍 Toca para copiar datos</div>
+      </td>
       <td>${durationLabel}</td>
-      <td>${client.exp_date || 'N/A'}</td>
-      <td>${client.devices || 1} máx.</td>
       <td><span class="badge-status ${statusClass}">${statusText}</span></td>
       <td>
         <div class="action-btns">
+          <button class="btn-sm" onclick="showUserDetailsModal('${client.username}', '${client.password || '123'}', '${client.exp_date || 'N/A'}', ${client.username.startsWith('DEMO')})" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3);">
+            <i data-lucide="eye" style="width: 14px; vertical-align: middle;"></i> Ver
+          </button>
           <button class="btn-sm" onclick="renewClient('${client.username}')">
-            <i data-lucide="calendar-plus" style="width: 14px; vertical-align: middle;"></i> +30 Días
+            <i data-lucide="calendar-plus" style="width: 14px; vertical-align: middle;"></i> +30d
           </button>
           <button class="btn-sm btn-danger" onclick="deleteClient('${client.username}')">
             <i data-lucide="trash-2" style="width: 14px; vertical-align: middle;"></i>
