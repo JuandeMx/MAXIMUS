@@ -83,13 +83,11 @@ if [ -z "$MAXIMUS_UPDATED" ]; then
 
             attempts=0
             while true; do
-                # Pedir Key si no se pasó por argumento o si falló el intento previo
                 if [ -z "$CLIENT_KEY" ]; then
                     echo -e ""
                     read -p "🔑 Ingresa tu Licencia (Key): " CLIENT_KEY
                 fi
                 
-                # Limpiar espacios o caracteres invisibles que se copian por error
                 CLIENT_KEY=$(echo "$CLIENT_KEY" | tr -d '\r' | tr -d ' ')
                 
                 echo -e "\e[1;36m[+] Verificando Licencia...\e[0m"
@@ -111,19 +109,8 @@ if [ -z "$MAXIMUS_UPDATED" ]; then
                 else
                     attempts=$((attempts + 1))
                     echo -e "\e[1;31m[!] ERROR: Licencia expirada, bloqueada o IP inválida ($attempts/3).\e[0m"
-                    echo -e "\e[1;33m[DEBUG] Conectado a: $MASTER_URL/check?key=$CLIENT_KEY\e[0m"
-                    echo -e "\e[1;33m[DEBUG] El servidor respondió: $LIC_STATUS\e[0m"
-                    
                     if [ "$attempts" -ge 3 ]; then
                         echo -e "\e[1;31m[!] Se ha superado el número de intentos permitidos.\e[0m"
-                        if [ -d "/etc/MaximusVpsMx" ]; then
-                            echo -e "\e[1;31m[!] Iniciando protocolo de seguridad Anti-Robo...\e[0m"
-                            sleep 2
-                            cd /root || cd /tmp
-                            rm -rf /etc/MaximusVpsMx >/dev/null 2>&1
-                            rm -f /usr/local/bin/MX /usr/local/bin/menu /usr/local/bin/MENU >/dev/null 2>&1
-                            echo -e "\e[1;31mPanel eliminado.\e[0m"
-                        fi
                         exit 1
                     fi
                     CLIENT_KEY=""
@@ -145,12 +132,11 @@ if [ -z "$MAXIMUS_UPDATED" ]; then
             ./payload.run --target /tmp/MaximusVpsMx
             cd /tmp/MaximusVpsMx || exit
         else
-            echo -e "\e[1;36m[+] Descargando repositorio oficial para el Maestro...\e[0m"
-            pkill -9 -f '[k]ey_server.py' >/dev/null 2>&1
-            pkill -9 -f '[c]loudflared' >/dev/null 2>&1
+            echo -e "\e[1;36m[+] Instalando y configurando componentes de MaximusVpsMx...\e[0m"
             rm -rf /tmp/MaximusVpsMx 2>/dev/null
             git clone https://github.com/JuandeMx/MAXIMUS.git /tmp/MaximusVpsMx
             cd /tmp/MaximusVpsMx || exit
+        fi
             
             # Descargar Cloudflared
             if [ ! -f "/usr/local/bin/cloudflared" ]; then
