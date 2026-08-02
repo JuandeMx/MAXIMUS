@@ -409,8 +409,7 @@ class ConnectionHandler(threading.Thread):
                     leftover = client_buffer[header_end:]
                     if leftover: target.sendall(leftover)
 
-            # Relay loop & Session tracking
-            authenticated_user = None
+            # Relay loop (Ultrafast Passthrough)
             sockets = [self.client, target]
             while True:
                 r, _, e = select.select(sockets, [], sockets, 3600)
@@ -418,32 +417,12 @@ class ConnectionHandler(threading.Thread):
                 for sock in r:
                     data = sock.recv(BUFLEN)
                     if not data: return
-                    
-                    # Intercept SSH User Auth Request packet to detect logged user
-                    if not authenticated_user and b'ssh-userauth' in data:
-                        try:
-                            # SSH User Auth Packet format contains username string
-                            idx = data.find(b'ssh-userauth')
-                            if idx != -1:
-                                raw_sub = data[idx+12:idx+60]
-                                parts = [p for p in raw_sub.replace(b'\x00', b' ').split() if len(p) >= 2]
-                                for p in parts:
-                                    p_str = p.decode('utf-8', errors='ignore').strip()
-                                    if p_str and p_str not in ['ssh-connection', 'none', 'password', 'keyboard-interactive', 'publickey']:
-                                        authenticated_user = p_str
-                                        # Registrar en /tmp/active_sessions.json
-                                        save_active_session(self.addr[0], authenticated_user)
-                                        break
-                        except: pass
-
                     out = target if sock is self.client else self.client
                     out.sendall(data)
 
         except:
             pass
         finally:
-            if authenticated_user:
-                remove_active_session(self.addr[0], authenticated_user)
             try:
                 self.client.shutdown(socket.SHUT_RDWR)
                 self.client.close()
