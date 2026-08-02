@@ -503,9 +503,13 @@ menu_usuarios() {
                                 [ -z "$d_limit" ] && d_limit=1
                                 [ -z "$d_hwid" ] && d_hwid="OFF"
                                 h_color="${GREEN}" ; [ "$d_hwid" == "OFF" ] && h_color="${RED}"
-                                on_cnt=$(ps -u -p $(pgrep sshd) 2>/dev/null | grep -w "$d_user" | wc -l)
+                                # Conteo exacto para OpenSSH y Dropbear
+                                on_cnt=$(ps aux | grep -E "sshd|dropbear" | grep -w "$d_user" | grep -v grep | wc -l)
                                 if [ "$on_cnt" -eq 0 ]; then
-                                    on_cnt=$(netstat -tnp 2>/dev/null | grep -E "sshd|dropbear" | grep ESTABLISHED | grep -w "$d_user" | wc -l)
+                                    on_cnt=$(ps aux | grep -i "[d]ropbear" | grep -w "$d_user" | wc -l)
+                                fi
+                                if [ "$on_cnt" -eq 0 ]; then
+                                    on_cnt=$(pgrep -u "$d_user" 2>/dev/null | wc -l)
                                 fi
                                 on_str="${on_cnt}/${d_limit}"
                                 on_color="${GREEN}"
