@@ -1,50 +1,50 @@
 <?php
-// MAXIMUS HOSTINGER MASTER API (STANDALONE ENGINE WITH GUARANTEED HTTP 200)
+// MAXIMUS HOSTINGER MASTER API (PURE PHP JSON ENGINE - GUARANTEED NO HTTP 500)
 error_reporting(0);
 ini_set('display_errors', '0');
 
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Headers: Content-Type");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS, DELETE");
+header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
 }
 
 $endpoint = isset($_GET['endpoint']) ? $_GET['endpoint'] : '';
-$db_file = __DIR__ . '/maximus_hostinger.db';
+$json_file = __DIR__ . '/maximus_data.json';
 
-$db = null;
-try {
-    $db = new PDO("sqlite:" . $db_file);
-    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_SILENT);
-    $db->exec("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE, password TEXT, exp_date TEXT, days INTEGER DEFAULT 30, devices INTEGER DEFAULT 1, status TEXT DEFAULT 'Active')");
-    $db->exec("CREATE TABLE IF NOT EXISTS nodes (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, ip TEXT UNIQUE, port INTEGER, domain_cf TEXT, domain_cft TEXT, status TEXT DEFAULT 'Online')");
-    $db->exec("CREATE TABLE IF NOT EXISTS methods (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, ssh_host TEXT, ssh_port INTEGER, mode TEXT, sni TEXT, payload TEXT)");
+// Cargar o inicializar JSON local
+$data = [
+    "users" => [],
+    "nodes" => [],
+    "methods" => [
+        ["name" => "PERSONAL CF 1", "ssh_host" => "Sat24.com", "ssh_port" => 80, "mode" => "SSL + Payload (WebSocket)", "sni" => "www.fahorro.com", "payload" => "MKCOL / HTTP/1.9[lf]Host: recargas.personal.com.ar[lf]Expect: 100-continue[crlf][crlf][split][crlf][crlf]GET- // HTTP/1.1[crlf]Host: [CF][crlf]Connection: Upgrade[crlf]User-Agent: [ua][crlf]Upgrade: websocket[crlf][crlf]"],
+        ["name" => "PERSONAL CF 2", "ssh_host" => "emailmarketing.personal.com.ar", "ssh_port" => 80, "mode" => "HTTP DIRECT / PAYLOAD", "sni" => "", "payload" => "COPY / HTTP/1.1[crlf]Host: recargas.personal.com.ar[crlf][crlf][instant_split][lf][lf]X / HTTP/1.2[crlf]Host: recargas.personal.com.ar[crlf][lf][crlf]GET / HTTP/1.1[crlf]Host: [CF][crlf]Upgrade: websocket[crlf]Connection: Upgrade[crlf][crlf]"],
+        ["name" => "PERSONAL CF 3", "ssh_host" => "wap.renxo.com", "ssh_port" => 80, "mode" => "HTTP DIRECT / PAYLOAD", "sni" => "", "payload" => "GET / HTTP/1.3[crlf]Host: rexo.personal.com.ar[crlf][crlf][crlf][split][crlf][split]GETT / HTTP/1.1[crlf]Host: [CF][crlf]Connection: Keep-Alive[crlf]Upgrade: websocket[crlf][crlf]"],
+        ["name" => "PERSONAL CFT 1", "ssh_host" => "recargas.personal.com.ar", "ssh_port" => 80, "mode" => "HTTP DIRECT / PAYLOAD", "sni" => "", "payload" => "GET / HTTP/1.1[crlf]Host: recargas.personal.com.ar[crlf][crlf][split][crlf][crlf]GET- / HTTP/1.1[crlf]Host: [host][lf][lf]GET /suareznet HTTP/1.1[crlf]Host: [CFT][lf]Connection: Upgrade[lf]Upgrade: websocket[lf]User-Agent: Googlebot/2.1 (+http://www.google.com/bot.html)[lf][lf]"],
+        ["name" => "PERSONAL CFT 2", "ssh_host" => "institucional.telecom.com.ar", "ssh_port" => 80, "mode" => "HTTP DIRECT / PAYLOAD", "sni" => "", "payload" => "HEAD / HTTP/1.1[crlf]Host: recargas.personal.com.ar[crlf][crlf][split][crlf][crlf]GET- / HTTP/1.1[crlf]Host: recargas.personal.com.ar[lf][lf]GET / HTTP/1.1[crlf]Host: [CFT][lf]Connection: Upgrade[lf]Upgrade: websocket[lf]User-Agent: Googlebot/2.1 (+http://www.google.com/bot.html)[lf][lf][split]"],
+        ["name" => "PERSONAL CFT 3", "ssh_host" => "device-api.smarthome.personal.com.ar", "ssh_port" => 80, "mode" => "HTTP DIRECT / PAYLOAD", "sni" => "", "payload" => "HEAD / HTTP/1.1[crlf]Host: recargas.personal.com.ar[crlf][crlf][split][crlf][crlf]GET- / HTTP/1.1[crlf]Host: recargas.personal.com.ar[lf][lf]GET / HTTP/1.1[crlf]Host: [CFT][lf]Connection: Upgrade[lf]Upgrade: websocket[lf]User-Agent: Googlebot/2.1 (+http://www.google.com/bot.html)[lf][lf][split]"],
+        ["name" => "PERSONAL CFT 4", "ssh_host" => "www.personal.com.ar", "ssh_port" => 80, "mode" => "HTTP DIRECT / PAYLOAD", "sni" => "", "payload" => "GET / HTTP/1.1[crlf]Host: emailmarketing.personal.com.ar[crlf][crlf][split][crlf][crlf]GET- / HTTP/1.1[crlf]Host: www.personal.com.ar[lf][lf]GET / HTTP/1.1[crlf]Host: [rotate=[CFT]][lf]Connection: Upgrade[lf]Upgrade: websocket[lf]User-Agent: Googlebot/2.1 (+http://www.google.com/bot.html)[lf][lf][split]"]
+    ]
+];
 
-    if ($db) {
-        $countM = $db->query("SELECT count(*) FROM methods");
-        if ($countM && $countM->fetchColumn() == 0) {
-            $default_methods = [
-                ["PERSONAL CF 1", "Sat24.com", 80, "SSL + Payload (WebSocket)", "www.fahorro.com", "MKCOL / HTTP/1.9[lf]Host: recargas.personal.com.ar[lf]Expect: 100-continue[crlf][crlf][split][crlf][crlf]GET- // HTTP/1.1[crlf]Host: [CF][crlf]Connection: Upgrade[crlf]User-Agent: [ua][crlf]Upgrade: websocket[crlf][crlf]"],
-                ["PERSONAL CF 2", "emailmarketing.personal.com.ar", 80, "HTTP DIRECT / PAYLOAD", "", "COPY / HTTP/1.1[crlf]Host: recargas.personal.com.ar[crlf][crlf][instant_split][lf][lf]X / HTTP/1.2[crlf]Host: recargas.personal.com.ar[crlf][lf][crlf]GET / HTTP/1.1[crlf]Host: [CF][crlf]Upgrade: websocket[crlf]Connection: Upgrade[crlf][crlf]"],
-                ["PERSONAL CF 3", "wap.renxo.com", 80, "HTTP DIRECT / PAYLOAD", "", "GET / HTTP/1.3[crlf]Host: rexo.personal.com.ar[crlf][crlf][crlf][split][crlf][split]GETT / HTTP/1.1[crlf]Host: [CF][crlf]Connection: Keep-Alive[crlf]Upgrade: websocket[crlf][crlf]"],
-                ["PERSONAL CFT 1", "recargas.personal.com.ar", 80, "HTTP DIRECT / PAYLOAD", "", "GET / HTTP/1.1[crlf]Host: recargas.personal.com.ar[crlf][crlf][split][crlf][crlf]GET- / HTTP/1.1[crlf]Host: [host][lf][lf]GET /suareznet HTTP/1.1[crlf]Host: [CFT][lf]Connection: Upgrade[lf]Upgrade: websocket[lf]User-Agent: Googlebot/2.1 (+http://www.google.com/bot.html)[lf][lf]"],
-                ["PERSONAL CFT 2", "institucional.telecom.com.ar", 80, "HTTP DIRECT / PAYLOAD", "", "HEAD / HTTP/1.1[crlf]Host: recargas.personal.com.ar[crlf][crlf][split][crlf][crlf]GET- / HTTP/1.1[crlf]Host: recargas.personal.com.ar[lf][lf]GET / HTTP/1.1[crlf]Host: [CFT][lf]Connection: Upgrade[lf]Upgrade: websocket[lf]User-Agent: Googlebot/2.1 (+http://www.google.com/bot.html)[lf][lf][split]"],
-                ["PERSONAL CFT 3", "device-api.smarthome.personal.com.ar", 80, "HTTP DIRECT / PAYLOAD", "", "HEAD / HTTP/1.1[crlf]Host: recargas.personal.com.ar[crlf][crlf][split][crlf][crlf]GET- / HTTP/1.1[crlf]Host: recargas.personal.com.ar[lf][lf]GET / HTTP/1.1[crlf]Host: [CFT][lf]Connection: Upgrade[lf]Upgrade: websocket[lf]User-Agent: Googlebot/2.1 (+http://www.google.com/bot.html)[lf][lf][split]"],
-                ["PERSONAL CFT 4", "www.personal.com.ar", 80, "HTTP DIRECT / PAYLOAD", "", "GET / HTTP/1.1[crlf]Host: emailmarketing.personal.com.ar[crlf][crlf][split][crlf][crlf]GET- / HTTP/1.1[crlf]Host: www.personal.com.ar[lf][lf]GET / HTTP/1.1[crlf]Host: [rotate=[CFT]][lf]Connection: Upgrade[lf]Upgrade: websocket[lf]User-Agent: Googlebot/2.1 (+http://www.google.com/bot.html)[lf][lf][split]"]
-            ];
-            $stmtIns = $db->prepare("INSERT INTO methods (name, ssh_host, ssh_port, mode, sni, payload) VALUES (?, ?, ?, ?, ?, ?)");
-            foreach ($default_methods as $dm) {
-                $stmtIns->execute($dm);
-            }
+if (file_exists($json_file)) {
+    $content = file_get_contents($json_file);
+    if (!empty($content)) {
+        $decoded = json_decode($content, true);
+        if (is_array($decoded)) {
+            $data = array_merge($data, $decoded);
         }
     }
-} catch (Exception $e) {}
+}
 
-// ROUTING
-header('Content-Type: application/json');
+function saveJson($file, $data) {
+    file_put_contents($file, json_encode($data, JSON_PRETTY_PRINT));
+}
 
+// ROUTER
 if (strpos($endpoint, '/api/vps/install/status') !== false) {
     echo json_encode([
         "status" => "VPS Lista y Conectada",
@@ -69,11 +69,18 @@ if (strpos($endpoint, '/api/vps/install') !== false) {
     $domain_cf = isset($raw['domain_cf']) ? $raw['domain_cf'] : '';
     $domain_cft = isset($raw['domain_cft']) ? $raw['domain_cft'] : '';
 
-    if ($db && !empty($ip)) {
-        try {
-            $stmt = $db->prepare("INSERT OR REPLACE INTO nodes (name, ip, port, domain_cf, domain_cft, status) VALUES (?, ?, ?, ?, ?, 'Online')");
-            $stmt->execute([$name, $ip, $port, $domain_cf, $domain_cft]);
-        } catch (Exception $e) {}
+    if (!empty($ip)) {
+        $data['nodes'] = array_filter($data['nodes'], function($n) use ($ip) { return $n['ip'] !== $ip; });
+        $data['nodes'][] = [
+            "id" => time(),
+            "name" => $name,
+            "ip" => $ip,
+            "port" => $port,
+            "domain_cf" => $domain_cf,
+            "domain_cft" => $domain_cft,
+            "status" => "Online"
+        ];
+        saveJson($json_file, $data);
     }
 
     echo json_encode(["status" => "ok", "install_id" => "job_" . time()]);
@@ -81,14 +88,7 @@ if (strpos($endpoint, '/api/vps/install') !== false) {
 }
 
 if (strpos($endpoint, '/api/clients') !== false) {
-    $clients = [];
-    if ($db) {
-        try {
-            $stmt = $db->query("SELECT * FROM users ORDER BY id DESC");
-            if ($stmt) $clients = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (Exception $e) {}
-    }
-    echo json_encode(["clients" => $clients]);
+    echo json_encode(["clients" => array_values($data['users'])]);
     exit;
 }
 
@@ -104,11 +104,18 @@ if (strpos($endpoint, '/api/client/create') !== false) {
         $exp = date('Y-m-d H:i:s', strtotime("+{$hours} hours"));
     }
 
-    if ($db && !empty($u)) {
-        try {
-            $stmt = $db->prepare("INSERT OR REPLACE INTO users (username, password, exp_date, days) VALUES (?, ?, ?, ?)");
-            $stmt->execute([$u, $p, $exp, intval($d)]);
-        } catch (Exception $e) {}
+    if (!empty($u)) {
+        $data['users'] = array_filter($data['users'], function($userItem) use ($u) { return $userItem['username'] !== $u; });
+        $data['users'][] = [
+            "id" => time(),
+            "username" => $u,
+            "password" => $p,
+            "exp_date" => $exp,
+            "days" => intval($d),
+            "devices" => 1,
+            "status" => "Active"
+        ];
+        saveJson($json_file, $data);
     }
     echo json_encode(["success" => true, "exp_date" => $exp]);
     exit;
@@ -117,63 +124,48 @@ if (strpos($endpoint, '/api/client/create') !== false) {
 if (strpos($endpoint, '/api/client/delete') !== false) {
     $raw = json_decode(file_get_contents('php://input'), true);
     $u = isset($raw['username']) ? $raw['username'] : '';
-    if ($db && !empty($u)) {
-        try {
-            $stmt = $db->prepare("DELETE FROM users WHERE username = ?");
-            $stmt->execute([$u]);
-        } catch (Exception $e) {}
+    if (!empty($u)) {
+        $data['users'] = array_filter($data['users'], function($userItem) use ($u) { return $userItem['username'] !== $u; });
+        saveJson($json_file, $data);
     }
     echo json_encode(["success" => true]);
     exit;
 }
 
 if (strpos($endpoint, '/api/nodes') !== false) {
-    $nodes = [];
-    if ($db) {
-        try {
-            $stmt = $db->query("SELECT * FROM nodes ORDER BY id DESC");
-            if ($stmt) $nodes = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (Exception $e) {}
-    }
-    echo json_encode(["nodes" => $nodes]);
+    echo json_encode(["nodes" => array_values($data['nodes'])]);
     exit;
 }
 
 if (strpos($endpoint, '/api/vps/delete') !== false) {
     $raw = json_decode(file_get_contents('php://input'), true);
     $ip = isset($raw['ip']) ? $raw['ip'] : '';
-    if ($db && !empty($ip)) {
-        try {
-            $stmt = $db->prepare("DELETE FROM nodes WHERE ip = ?");
-            $stmt->execute([$ip]);
-        } catch (Exception $e) {}
+    if (!empty($ip)) {
+        $data['nodes'] = array_filter($data['nodes'], function($n) use ($ip) { return $n['ip'] !== $ip; });
+        saveJson($json_file, $data);
     }
     echo json_encode(["success" => true]);
     exit;
 }
 
 if (strpos($endpoint, '/api/methods') !== false) {
-    $methods = [];
-    if ($db) {
-        try {
-            $stmt = $db->query("SELECT * FROM methods ORDER BY id DESC");
-            if ($stmt) $methods = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (Exception $e) {}
-    }
-    echo json_encode(["methods" => $methods]);
+    echo json_encode(["methods" => array_values($data['methods'])]);
     exit;
 }
 
 if (strpos($endpoint, '/api/method/create') !== false) {
     $raw = json_decode(file_get_contents('php://input'), true);
-    if ($db && !empty($raw['name'])) {
-        try {
-            $stmt = $db->prepare("INSERT OR REPLACE INTO methods (name, ssh_host, ssh_port, mode, sni, payload) VALUES (?, ?, ?, ?, ?, ?)");
-            $stmt->execute([
-                $raw['name'], $raw['ssh_host'], intval($raw['ssh_port']),
-                $raw['mode'], $raw['sni'], $raw['payload']
-            ]);
-        } catch (Exception $e) {}
+    if (!empty($raw['name'])) {
+        $data['methods'] = array_filter($data['methods'], function($m) use ($raw) { return $m['name'] !== $raw['name']; });
+        $data['methods'][] = [
+            "name" => $raw['name'],
+            "ssh_host" => $raw['ssh_host'],
+            "ssh_port" => intval($raw['ssh_port']),
+            "mode" => $raw['mode'],
+            "sni" => $raw['sni'],
+            "payload" => $raw['payload']
+        ];
+        saveJson($json_file, $data);
     }
     echo json_encode(["success" => true]);
     exit;
@@ -181,11 +173,9 @@ if (strpos($endpoint, '/api/method/create') !== false) {
 
 if (strpos($endpoint, '/api/method/delete') !== false) {
     $raw = json_decode(file_get_contents('php://input'), true);
-    if ($db && !empty($raw['name'])) {
-        try {
-            $stmt = $db->prepare("DELETE FROM methods WHERE name = ?");
-            $stmt->execute([$raw['name']]);
-        } catch (Exception $e) {}
+    if (!empty($raw['name'])) {
+        $data['methods'] = array_filter($data['methods'], function($m) use ($raw) { return $m['name'] !== $raw['name']; });
+        saveJson($json_file, $data);
     }
     echo json_encode(["success" => true]);
     exit;
