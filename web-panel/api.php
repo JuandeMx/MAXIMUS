@@ -66,6 +66,8 @@ if (strpos($endpoint, '/api/vps/install') !== false) {
     $name = isset($raw['name']) ? $raw['name'] : 'Nodo VPS';
     $ip = isset($raw['ip']) ? $raw['ip'] : '';
     $port = isset($raw['port']) ? intval($raw['port']) : 22;
+    $user = isset($raw['user']) ? $raw['user'] : 'root';
+    $password = isset($raw['password']) ? $raw['password'] : '';
     $domain_cf = isset($raw['domain_cf']) ? $raw['domain_cf'] : '';
     $domain_cft = isset($raw['domain_cft']) ? $raw['domain_cft'] : '';
 
@@ -83,7 +85,13 @@ if (strpos($endpoint, '/api/vps/install') !== false) {
         saveJson($json_file, $data);
     }
 
-    echo json_encode(["status" => "ok", "install_id" => "job_" . time()]);
+    $install_id = "job_" . time();
+
+    // Ejecución SSH Real en segundo plano si sshpass/ssh está disponible en el servidor Hostinger
+    $ssh_cmd = "sshpass -p " . escapeshellarg($password) . " ssh -o StrictHostKeyChecking=no -p {$port} {$user}@{$ip} 'rm -rf /tmp/MaximusVpsMx && git clone https://github.com/JuandeMx/MAXIMUS.git /tmp/MaximusVpsMx && cd /tmp/MaximusVpsMx && chmod +x install.sh && bash install.sh' > /dev/null 2>&1 &";
+    @exec($ssh_cmd);
+
+    echo json_encode(["status" => "ok", "install_id" => $install_id]);
     exit;
 }
 
