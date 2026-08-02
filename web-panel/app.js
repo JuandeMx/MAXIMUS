@@ -541,20 +541,30 @@ async function handleAddVps(event) {
   titleEl.innerText = `Conectando al Backend Master para instalar en ${ip}...`;
   barEl.style.width = '5%';
 
-  // Enviar la orden al Backend Master (que ejecuta SSH real)
   let installId = '';
   try {
-    const res = await fetch(getApiUrl('/api/vps/install'), {
+    const apiUrl = getApiUrl('/api/vps/install');
+    appendLog(`[+] Conectando a URL: ${apiUrl}...`);
+    const res = await fetch(apiUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, ip, port, user, password, domain_cf, domain_cft })
     });
-    const data = await res.json();
+    const textData = await res.text();
+    appendLog(`[+] Respuesta Servidor (HTTP ${res.status}): ${textData.substring(0, 180)}`);
+    let data = {};
+    try { data = JSON.parse(textData); } catch(errP) {}
     installId = data.install_id || '';
+    if (!res.ok || !installId) {
+      appendLog(`[ERROR] El servidor respondió con error: ${textData}`, 'error');
+      titleEl.innerText = `Fallo en el servidor: HTTP ${res.status}`;
+      footerEl.style.display = 'flex';
+      return;
+    }
     appendLog(`[OK] Backend Master recibió la orden. ID: ${installId}`, 'success');
   } catch (e) {
-    appendLog(`[ERROR] No se pudo contactar al Backend Master.`, 'error');
-    titleEl.innerText = `Error de conexión con el Backend Master.`;
+    appendLog(`[ERROR] Detalle exacto de falla de red: ${e.name} - ${e.message}`, 'error');
+    titleEl.innerText = `Error de conexión: ${e.message}`;
     footerEl.style.display = 'flex';
     return;
   }
