@@ -105,9 +105,8 @@ function renderClients(filterText = '') {
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td class="user-cell" style="cursor: pointer;" onclick="showUserDetailsModal('${client.username}', '${client.password || '123'}', '${client.exp_date || 'N/A'}', ${client.username.startsWith('DEMO')})">
-        <span style="color: #38bdf8; text-decoration: underline; font-weight: 700;">${client.username}</span>
-        <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: normal;">🔍 Toca para copiar datos</div>
+      <td class="user-cell">
+        <span style="color: #ffffff; font-weight: 700;">${client.username}</span>
       </td>
       <td>${durationLabel}</td>
       <td><span class="badge-status ${statusClass}">${statusText}</span></td>
