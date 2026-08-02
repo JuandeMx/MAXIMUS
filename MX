@@ -502,16 +502,28 @@ menu_usuarios() {
                             if [[ "$d_pass" != "HWID_INV" ]]; then
                                 [ -z "$d_limit" ] && d_limit=1
                                 
-                                # Conteo ultrarrealista cruzando procesos Dropbear/OpenSSH en Linux
+                                # Algoritmo Exacto ChumoGH / LATAM: Cruzar sockets ESTABLISHED de Dropbear y OpenSSH con PIDs
                                 on_cnt=0
-                                if id "$d_user" >/dev/null 2>&1; then
-                                    # 1. PIDs de sshd / dropbear autenticados
-                                    on_cnt=$(ps -u "$d_user" 2>/dev/null | grep -E "sshd|dropbear|sh|bash" | wc -l)
-                                    if [ "$on_cnt" -eq 0 ]; then
-                                        on_cnt=$(netstat -tnp 2>/dev/null | grep -E "sshd|dropbear" | grep ESTABLISHED | grep -w "$d_user" | wc -l)
-                                    fi
+                                # 1. Dropbear (Dropbear no crea subusuarios de sistema, usa procesos hijos dropbear con el socket)
+                                db_pids=$(netstat -anp 2>/dev/null | grep -i dropbear | grep ESTABLISHED | awk '{print $7}' | cut -d/ -f1 | sort -u)
+                                if [ -n "$db_pids" ]; then
+                                    for pid in $db_pids; do
+                                        # Buscar nombre de usuario autenticado en el proceso o logs de dropbear
+                                        if ps -fp "$pid" 2>/dev/null | grep -qw "$d_user" || grep -E "Password auth succeeded for '$d_user'" /var/log/auth.log 2>/dev/null | grep -q "$pid"; then
+                                            on_cnt=$((on_cnt + 1))
+                                        fi
+                                    done
                                 fi
-                                
+
+                                # 2. OpenSSH (sshd)
+                                ssh_cnt=$(ps aux | grep -i sshd | grep -w "$d_user" | grep -v grep | wc -l)
+                                on_cnt=$((on_cnt + ssh_cnt))
+
+                                # 3. Respaldo general si el proceso corre bajo el usuario
+                                if [ "$on_cnt" -eq 0 ] && id "$d_user" >/dev/null 2>&1; then
+                                    on_cnt=$(pgrep -u "$d_user" 2>/dev/null | wc -l)
+                                fi
+
                                 on_str="${on_cnt}/${d_limit}"
                                 on_color="${GREEN}"
                                 [ "$on_cnt" -eq 0 ] && on_color="${GRAY}"
@@ -529,17 +541,28 @@ menu_usuarios() {
                 ui_pause
                 ;;
             8)
-                echo -e "\n${YELLOW}▶ MONITOR DE CONEXIONES ELITE${NC}"
+                echo -e "\n${YELLOW}▶ MONITOR DE CONEXIONES ELITE (REAL-TIME)${NC}"
                 ui_hr
-                printf "${WHITE}%-15s | %-15s | %-15s${NC}\n" "USUARIO" "IP ORIGEN" "DISPOSITIVO"
+                printf "${WHITE}%-15s | %-18s | %-12s${NC}\n" "USUARIO" "IP ORIGEN" "PROTOCOLO"
                 ui_subhr
-                # Monitor Simple: Cruzamos procesos de SSH/Dropbear con netstat
-                netstat -antp 2>/dev/null | grep -E "sshd|dropbear" | grep ESTABLISHED | awk '{print $5, $7}' | while read -r rip rproc; do
-                    u_ip=$(echo $rip | cut -d: -f1)
-                    u_pid=$(echo $rproc | cut -d/ -f1)
-                    u_name=$(ps -u -p $u_pid 2>/dev/null | tail -n 1 | awk '{print $1}')
-                    [ -z "$u_name" ] && u_name="Unknown"
-                    printf " ${GREEN}%-14s${NC} | %-15s | ${CYAN}Verified${NC}\n" "$u_name" "$u_ip"
+                # Cruzar sockets ESTABLISHED de Dropbear / SSHD con logs
+                found_conn=0
+                netstat -anp 2>/dev/null | grep -E "sshd|dropbear" | grep ESTABLISHED | while read -r line; do
+                    rip=$(echo "$line" | awk '{print $5}' | cut -d: -f1)
+                    pid=$(echo "$line" | awk '{print $7}' | cut -d/ -f1)
+                    proto="Dropbear"
+                    echo "$line" | grep -qi "sshd" && proto="OpenSSH"
+                    
+                    # Identificar nombre de usuario
+                    uname=$(ps -o user= -p "$pid" 2>/dev/null | tr -d ' ')
+                    if [ -z "$uname" ] || [ "$uname" == "root" ] || [ "$uname" == "dropbear" ]; then
+                        uname=$(grep -E "Password auth succeeded for" /var/log/auth.log 2>/dev/null | grep "$pid" | tail -n 1 | awk '{print $10}' | tr -d "'")
+                    fi
+                    
+                    if [ -n "$uname" ] && [ "$uname" != "root" ]; then
+                        printf " ${GREEN}%-14s${NC} | %-18s | ${CYAN}%-12s${NC}\n" "$uname" "$rip" "$proto"
+                        found_conn=1
+                    fi
                 done
                 ui_hr
                 ui_pause
