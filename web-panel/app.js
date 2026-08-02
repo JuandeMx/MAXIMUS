@@ -1,6 +1,7 @@
-// MAXIMUS MASTER PANEL - Application Logic & Real Multi-Node Sync Engine
-
-const API_BASE = window.location.origin.includes('http') ? window.location.origin : 'http://127.0.0.1:8080';
+// Si la web corre en Hosting externo (ej: vpsmx.store), apuntar al Backend Master en IP:8080
+const API_BASE = (window.location.origin.includes('vpsmx.store') || !window.location.origin.includes(':8080')) 
+  ? 'http://187.127.17.250:8080' 
+  : window.location.origin;
 
 // Initial State Databases (Direct Real Backend Sync)
 let clientsDB = [];
