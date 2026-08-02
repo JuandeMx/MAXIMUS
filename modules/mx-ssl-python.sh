@@ -251,7 +251,36 @@ LISTENING_ADDR = '0.0.0.0'
 LISTENING_PORT = ${PROXY_PORT}
 BUFLEN = 16384
 TIMEOUT = 60
-DEFAULT_HOST = '127.0.0.1:${DROPBEAR_PORT}'
+import os, json
+
+SESSIONS_FILE = '/tmp/active_sessions.json'
+session_lock = threading.Lock()
+
+def save_active_session(ip, user):
+    with session_lock:
+        data = {}
+        if os.path.exists(SESSIONS_FILE):
+            try:
+                with open(SESSIONS_FILE, 'r') as f:
+                    data = json.load(f)
+            except: pass
+        if user not in data: data[user] = 0
+        data[user] += 1
+        with open(SESSIONS_FILE, 'w') as f:
+            json.dump(data, f)
+
+def remove_active_session(ip, user):
+    with session_lock:
+        if os.path.exists(SESSIONS_FILE):
+            try:
+                with open(SESSIONS_FILE, 'r') as f:
+                    data = json.load(f)
+                if user in data:
+                    data[user] -= 1
+                    if data[user] <= 0: del data[user]
+                with open(SESSIONS_FILE, 'w') as f:
+                    json.dump(data, f)
+            except: pass
 
 # Responses based on user status configuration
 RESPONSE_WS = f'HTTP/1.1 101 ${STATUS_TEXT}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n'.encode('utf-8')
@@ -380,7 +409,8 @@ class ConnectionHandler(threading.Thread):
                     leftover = client_buffer[header_end:]
                     if leftover: target.sendall(leftover)
 
-            # Relay loop
+            # Relay loop & Session tracking
+            authenticated_user = None
             sockets = [self.client, target]
             while True:
                 r, _, e = select.select(sockets, [], sockets, 3600)
@@ -388,12 +418,32 @@ class ConnectionHandler(threading.Thread):
                 for sock in r:
                     data = sock.recv(BUFLEN)
                     if not data: return
+                    
+                    # Intercept SSH User Auth Request packet to detect logged user
+                    if not authenticated_user and b'ssh-userauth' in data:
+                        try:
+                            # SSH User Auth Packet format contains username string
+                            idx = data.find(b'ssh-userauth')
+                            if idx != -1:
+                                raw_sub = data[idx+12:idx+60]
+                                parts = [p for p in raw_sub.replace(b'\x00', b' ').split() if len(p) >= 2]
+                                for p in parts:
+                                    p_str = p.decode('utf-8', errors='ignore').strip()
+                                    if p_str and p_str not in ['ssh-connection', 'none', 'password', 'keyboard-interactive', 'publickey']:
+                                        authenticated_user = p_str
+                                        # Registrar en /tmp/active_sessions.json
+                                        save_active_session(self.addr[0], authenticated_user)
+                                        break
+                        except: pass
+
                     out = target if sock is self.client else self.client
                     out.sendall(data)
 
         except:
             pass
         finally:
+            if authenticated_user:
+                remove_active_session(self.addr[0], authenticated_user)
             try:
                 self.client.shutdown(socket.SHUT_RDWR)
                 self.client.close()

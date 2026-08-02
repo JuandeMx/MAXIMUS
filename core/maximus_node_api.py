@@ -34,6 +34,19 @@ def get_api_token():
 def get_online_counts():
     online_map = {}
     try:
+        # 1. Sesiones registadas en Proxy Python (/tmp/active_sessions.json)
+        sessions_file = "/tmp/active_sessions.json"
+        if os.path.exists(sessions_file):
+            try:
+                with open(sessions_file, "r") as sf:
+                    py_data = json.load(sf)
+                    if isinstance(py_data, dict):
+                        for u_name, u_cnt in py_data.items():
+                            if u_cnt > 0:
+                                online_map[u_name] = u_cnt
+            except: pass
+
+        # 2. Conexiones por cuenta de usuario Linux
         cmd_users = "cut -d: -f1 /etc/passwd"
         res_users = subprocess.run(cmd_users, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         if res_users.stdout:
@@ -45,7 +58,7 @@ def get_online_counts():
                     if res_p.stdout and res_p.stdout.strip().isdigit():
                         cnt = int(res_p.stdout.strip())
                         if cnt > 0:
-                            online_map[u] = cnt
+                            online_map[u] = online_map.get(u, 0) + cnt
     except Exception:
         pass
     return online_map
