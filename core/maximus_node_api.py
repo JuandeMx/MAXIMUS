@@ -34,26 +34,18 @@ def get_api_token():
 def get_online_counts():
     online_map = {}
     try:
-        # 1. ps aux para sshd y dropbear
-        cmd = "ps aux | grep -E 'sshd|dropbear' | grep -v grep | awk '{print $1}'"
-        res = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        if res.stdout:
-            for u in res.stdout.splitlines():
-                u = u.strip()
-                if u and u not in ["root", "nobody", "syslog"]:
-                    online_map[u] = online_map.get(u, 0) + 1
-
-        # 2. Respaldar con pgrep por usuario Linux registrado
         cmd_users = "cut -d: -f1 /etc/passwd"
         res_users = subprocess.run(cmd_users, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         if res_users.stdout:
             for u in res_users.stdout.splitlines():
                 u = u.strip()
-                if u and u not in ["root", "nobody", "syslog"] and u not in online_map:
-                    res_p = subprocess.run(["pgrep", "-u", u], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-                    if res_p.stdout and res_p.stdout.strip():
-                        count_p = len(res_p.stdout.strip().splitlines())
-                        online_map[u] = count_p
+                if u and u not in ["root", "nobody", "syslog", "daemon", "bin"]:
+                    cmd_p = f"ps -u {u} 2>/dev/null | grep -E 'sshd|dropbear|sh|bash' | wc -l"
+                    res_p = subprocess.run(cmd_p, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                    if res_p.stdout and res_p.stdout.strip().isdigit():
+                        cnt = int(res_p.stdout.strip())
+                        if cnt > 0:
+                            online_map[u] = cnt
     except Exception:
         pass
     return online_map

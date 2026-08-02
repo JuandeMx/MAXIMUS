@@ -494,28 +494,29 @@ menu_usuarios() {
                         echo -e " ${RED}No hay usuarios registrados.${NC}"
                     fi
                 else
-                    printf "${WHITE}%-12s | %-12s | %-10s | %-4s | %-4s | %-4s${NC}\n" "USUARIO" "PASS" "EXPIRA" "ON" "LIM" "HWID"
+                    printf "${WHITE}%-12s | %-12s | %-10s | %-10s${NC}\n" "USUARIO" "PASS" "EXPIRA" "CONEXION"
                     ui_subhr
                     if [ -s "$USER_DB" ]; then
                         encontrados=0
                         while IFS=: read -r d_user d_pass d_exp d_hwid d_limit d_alias; do
                             if [[ "$d_pass" != "HWID_INV" ]]; then
                                 [ -z "$d_limit" ] && d_limit=1
-                                [ -z "$d_hwid" ] && d_hwid="OFF"
-                                h_color="${GREEN}" ; [ "$d_hwid" == "OFF" ] && h_color="${RED}"
-                                # Conteo exacto para OpenSSH y Dropbear
-                                on_cnt=$(ps aux | grep -E "sshd|dropbear" | grep -w "$d_user" | grep -v grep | wc -l)
-                                if [ "$on_cnt" -eq 0 ]; then
-                                    on_cnt=$(ps aux | grep -i "[d]ropbear" | grep -w "$d_user" | wc -l)
+                                
+                                # Conteo ultrarrealista cruzando procesos Dropbear/OpenSSH en Linux
+                                on_cnt=0
+                                if id "$d_user" >/dev/null 2>&1; then
+                                    # 1. PIDs de sshd / dropbear autenticados
+                                    on_cnt=$(ps -u "$d_user" 2>/dev/null | grep -E "sshd|dropbear|sh|bash" | wc -l)
+                                    if [ "$on_cnt" -eq 0 ]; then
+                                        on_cnt=$(netstat -tnp 2>/dev/null | grep -E "sshd|dropbear" | grep ESTABLISHED | grep -w "$d_user" | wc -l)
+                                    fi
                                 fi
-                                if [ "$on_cnt" -eq 0 ]; then
-                                    on_cnt=$(pgrep -u "$d_user" 2>/dev/null | wc -l)
-                                fi
+                                
                                 on_str="${on_cnt}/${d_limit}"
                                 on_color="${GREEN}"
                                 [ "$on_cnt" -eq 0 ] && on_color="${GRAY}"
                                 [ "$on_cnt" -gt "$d_limit" ] && on_color="${RED}"
-                                printf " ${CYAN}%-11s${NC} | %-12s | %-10s | %b%-6s${NC} | %-4s | %b%-4s${NC}\n" "$d_user" "$d_pass" "$d_exp" "$on_color" "$on_str" "$d_limit" "$h_color" "$d_hwid"
+                                printf " ${CYAN}%-11s${NC} | %-12s | %-10s | %b%-10s${NC}\n" "$d_user" "$d_pass" "$d_exp" "$on_color" "$on_str"
                                 encontrados=1
                             fi
                         done < "$USER_DB"
