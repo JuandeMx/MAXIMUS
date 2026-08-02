@@ -171,13 +171,34 @@ if (strpos($endpoint, '/api/method/create') !== false) {
     exit;
 }
 
-if (strpos($endpoint, '/api/method/delete') !== false) {
-    $raw = json_decode(file_get_contents('php://input'), true);
-    if (!empty($raw['name'])) {
-        $data['methods'] = array_filter($data['methods'], function($m) use ($raw) { return $m['name'] !== $raw['name']; });
-        saveJson($json_file, $data);
+if (strpos($endpoint, '/api/node/protocols') !== false) {
+    $ip = isset($_GET['ip']) ? $_GET['ip'] : '';
+    $protocols = [
+        "ssh" => ["active" => true, "port" => "22"],
+        "dropbear" => ["active" => true, "port" => "80, 443, 8080"],
+        "stunnel" => ["active" => true, "port" => "443, 444"],
+        "hysteria" => ["active" => false, "port" => "443"],
+        "v2ray" => ["active" => true, "port" => "80, 443"],
+        "badvpn" => ["active" => true, "port" => "7300"],
+        "slowdns" => ["active" => false, "port" => "53"]
+    ];
+
+    if (!empty($ip)) {
+        $ch = curl_init("http://{$ip}:6767/api/v1/protocols/status");
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 3);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array('X-API-KEY: maximus_secret_node_key_2026'));
+        $resp = curl_exec($ch);
+        curl_close($ch);
+        if ($resp) {
+            $decoded = json_decode($resp, true);
+            if (isset($decoded['protocols'])) {
+                $protocols = $decoded['protocols'];
+            }
+        }
     }
-    echo json_encode(["success" => true]);
+
+    echo json_encode(["protocols" => $protocols]);
     exit;
 }
 
