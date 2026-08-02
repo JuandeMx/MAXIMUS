@@ -494,40 +494,14 @@ menu_usuarios() {
                         echo -e " ${RED}No hay usuarios registrados.${NC}"
                     fi
                 else
-                    printf "${WHITE}%-12s | %-12s | %-10s | %-10s${NC}\n" "USUARIO" "PASS" "EXPIRA" "CONEXION"
+                    printf "${WHITE}%-12s | %-12s | %-10s | %-8s | %-6s${NC}\n" "USUARIO" "PASS" "EXPIRA" "HUID" "LIM"
                     ui_subhr
                     if [ -s "$USER_DB" ]; then
                         encontrados=0
                         while IFS=: read -r d_user d_pass d_exp d_hwid d_limit d_alias; do
                             if [[ "$d_pass" != "HWID_INV" ]]; then
-                                [ -z "$d_limit" ] && d_limit=1
-                                
-                                # Algoritmo Limpio: Filtrado exacto de usuarios autenticados SSHD, Dropbear y Python Proxy
-                                on_cnt=0
-                                
-                                # 1. Sesiones registadas en Proxy Python WebSocket (/tmp/active_sessions.json)
-                                if [ -f /tmp/active_sessions.json ]; then
-                                    py_cnt=$(grep -o "\"$d_user\": [0-9]*" /tmp/active_sessions.json 2>/dev/null | cut -d: -f2 | tr -d ' ')
-                                    if [ -n "$py_cnt" ] && [ "$py_cnt" -gt 0 ] 2>/dev/null; then
-                                        on_cnt=$((on_cnt + py_cnt))
-                                    fi
-                                fi
-
-                                # 2. Sesiones OpenSSH autenticadas
-                                ssh_cnt=$(ps aux | grep -i "sshd: $d_user" | grep -v grep | wc -l)
-                                on_cnt=$((on_cnt + ssh_cnt))
-
-                                # 3. Sesiones Dropbear autenticadas
-                                if id "$d_user" >/dev/null 2>&1; then
-                                    db_user_cnt=$(ps -u "$d_user" -o comm= 2>/dev/null | grep -E "dropbear|sh|bash" | wc -l)
-                                    on_cnt=$((on_cnt + db_user_cnt))
-                                fi
-
-                                on_str="${on_cnt}/${d_limit}"
-                                on_color="${GREEN}"
-                                [ "$on_cnt" -eq 0 ] && on_color="${GRAY}"
-                                [ "$on_cnt" -gt "$d_limit" ] && on_color="${RED}"
-                                printf " ${CYAN}%-11s${NC} | %-12s | %-10s | %b%-10s${NC}\n" "$d_user" "$d_pass" "$d_exp" "$on_color" "$on_str"
+                                h_color="${GREEN}" ; [ "$d_hwid" == "OFF" ] && h_color="${RED}"
+                                printf " ${CYAN}%-11s${NC} | %-12s | %-10s | %b%-8s${NC} | %-6s\n" "$d_user" "$d_pass" "$d_exp" "$h_color" "$d_hwid" "$d_limit"
                                 encontrados=1
                             fi
                         done < "$USER_DB"
