@@ -90,22 +90,6 @@ if ($endpoint === '/api/vps/delete' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
-if ($endpoint === '/api/vps/install' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-    $raw = json_decode(file_get_contents('php://input'), true);
-    $name = isset($raw['name']) ? $raw['name'] : 'Nodo VPS';
-    $ip = isset($raw['ip']) ? $raw['ip'] : '';
-    $port = isset($raw['port']) ? intval($raw['port']) : 22;
-    $domain_cf = isset($raw['domain_cf']) ? $raw['domain_cf'] : '';
-    $domain_cft = isset($raw['domain_cft']) ? $raw['domain_cft'] : '';
-
-    $stmt = $db->prepare("INSERT OR REPLACE INTO nodes (name, ip, port, domain_cf, domain_cft, status) VALUES (?, ?, ?, ?, ?, 'Online')");
-    $stmt->execute([$name, $ip, $port, $domain_cf, $domain_cft]);
-
-    $install_id = "job_" . time();
-    echo json_encode(["status" => "ok", "install_id" => $install_id]);
-    exit;
-}
-
 if (strpos($endpoint, '/api/vps/install/status') !== false) {
     echo json_encode([
         "status" => "VPS Lista y Conectada",
@@ -119,6 +103,22 @@ if (strpos($endpoint, '/api/vps/install/status') !== false) {
             "[SUCCESS] ✅ ¡VPS conectada e integrada correctamente en Hostinger!"
         ]
     ]);
+    exit;
+}
+
+if (strpos($endpoint, '/api/vps/install') !== false && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $raw = json_decode(file_get_contents('php://input'), true);
+    $name = isset($raw['name']) ? $raw['name'] : 'Nodo VPS';
+    $ip = isset($raw['ip']) ? $raw['ip'] : '';
+    $port = isset($raw['port']) ? intval($raw['port']) : 22;
+    $domain_cf = isset($raw['domain_cf']) ? $raw['domain_cf'] : '';
+    $domain_cft = isset($raw['domain_cft']) ? $raw['domain_cft'] : '';
+
+    $stmt = $db->prepare("INSERT OR REPLACE INTO nodes (name, ip, port, domain_cf, domain_cft, status) VALUES (?, ?, ?, ?, ?, 'Online')");
+    $stmt->execute([$name, $ip, $port, $domain_cf, $domain_cft]);
+
+    $install_id = "job_" . time();
+    echo json_encode(["status" => "ok", "install_id" => $install_id]);
     exit;
 }
 
