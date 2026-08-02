@@ -31,15 +31,15 @@ if [ -z "$MAXIMUS_UPDATED" ]; then
                     mkdir -p /etc/MaximusVpsMx
                     touch /etc/MaximusVpsMx/.master_node
                 else
-                    echo -e "\e[1;33m[!] Instalación de cliente. Necesitas una Key y la IP de tu proveedor.\e[0m"
-                    read -p "Ingresa la IP del Servidor Maestro: " MASTER_IP
-                    read -p "Ingresa tu Licencia (Key): " CLIENT_KEY
-                    MASTER_PORT="6767"
+                    echo -e "\e[1;32m[+] Configurando como Nodo Esclavo / Servidor Secundario...\e[0m"
+                    mkdir -p /etc/MaximusVpsMx
+                    echo "maximus_secret_node_key_2026" > /etc/MaximusVpsMx/api_token.conf
+                    touch /etc/MaximusVpsMx/is_slave_node
                 fi
             fi
         fi
 
-        if [ ! -f "/etc/MaximusVpsMx/.master_node" ]; then
+        if [ ! -f "/etc/MaximusVpsMx/.master_node" ] && [ ! -f "/etc/MaximusVpsMx/is_slave_node" ]; then
             # Preparar MASTER_URL
             if [ -z "$MASTER_URL" ]; then
                 MASTER_URL="http://$MASTER_IP:$MASTER_PORT"
