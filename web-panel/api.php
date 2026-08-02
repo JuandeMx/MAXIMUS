@@ -87,9 +87,15 @@ if (strpos($endpoint, '/api/vps/install') !== false) {
 
     $install_id = "job_" . time();
 
-    // Ejecución SSH Real en segundo plano si sshpass/ssh está disponible en el servidor Hostinger
-    $ssh_cmd = "sshpass -p " . escapeshellarg($password) . " ssh -o StrictHostKeyChecking=no -p {$port} {$user}@{$ip} 'rm -rf /tmp/MaximusVpsMx && git clone https://github.com/JuandeMx/MAXIMUS.git /tmp/MaximusVpsMx && cd /tmp/MaximusVpsMx && chmod +x install.sh && bash install.sh' > /dev/null 2>&1 &";
-    @exec($ssh_cmd);
+    // Ejecución SSH Real en segundo plano (si exec no está restringido por Hostinger)
+    if (function_exists('exec')) {
+        try {
+            $pass_arg = escapeshellarg($password);
+            $user_ip_arg = escapeshellarg("{$user}@{$ip}");
+            $ssh_cmd = "sshpass -p {$pass_arg} ssh -o StrictHostKeyChecking=no -p {$port} {$user_ip_arg} 'rm -rf /tmp/MaximusVpsMx && git clone https://github.com/JuandeMx/MAXIMUS.git /tmp/MaximusVpsMx && cd /tmp/MaximusVpsMx && chmod +x install.sh && bash install.sh' > /dev/null 2>&1 &";
+            @exec($ssh_cmd);
+        } catch (Throwable $exSsh) {}
+    }
 
     echo json_encode(["status" => "ok", "install_id" => $install_id]);
     exit;
