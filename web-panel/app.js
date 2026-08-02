@@ -1,13 +1,5 @@
-// Si la web corre en Hosting externo HTTPS (ej: vpsmx.store), usar api.php como puente proxy HTTPS
-const API_BASE = (window.location.origin.includes('vpsmx.store') || !window.location.origin.includes(':8080')) 
-  ? `${window.location.origin}/api.php?endpoint=` 
-  : window.location.origin;
-
 function getApiUrl(endpoint) {
-  if (API_BASE.includes('api.php?endpoint=')) {
-    return `${API_BASE}${encodeURIComponent(endpoint)}`;
-  }
-  return `${API_BASE}${endpoint}`;
+  return `/api.php?endpoint=${encodeURIComponent(endpoint)}`;
 }
 
 // Initial State Databases (Direct Real Backend Sync)
