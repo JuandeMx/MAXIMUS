@@ -251,36 +251,7 @@ LISTENING_ADDR = '0.0.0.0'
 LISTENING_PORT = ${PROXY_PORT}
 BUFLEN = 16384
 TIMEOUT = 60
-import os, json
-
-SESSIONS_FILE = '/tmp/active_sessions.json'
-session_lock = threading.Lock()
-
-def save_active_session(ip, user):
-    with session_lock:
-        data = {}
-        if os.path.exists(SESSIONS_FILE):
-            try:
-                with open(SESSIONS_FILE, 'r') as f:
-                    data = json.load(f)
-            except: pass
-        if user not in data: data[user] = 0
-        data[user] += 1
-        with open(SESSIONS_FILE, 'w') as f:
-            json.dump(data, f)
-
-def remove_active_session(ip, user):
-    with session_lock:
-        if os.path.exists(SESSIONS_FILE):
-            try:
-                with open(SESSIONS_FILE, 'r') as f:
-                    data = json.load(f)
-                if user in data:
-                    data[user] -= 1
-                    if data[user] <= 0: del data[user]
-                with open(SESSIONS_FILE, 'w') as f:
-                    json.dump(data, f)
-            except: pass
+DEFAULT_HOST = '127.0.0.1:${DROPBEAR_PORT}'
 
 # Responses based on user status configuration
 RESPONSE_WS = f'HTTP/1.1 101 ${STATUS_TEXT}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n'.encode('utf-8')
@@ -409,7 +380,7 @@ class ConnectionHandler(threading.Thread):
                     leftover = client_buffer[header_end:]
                     if leftover: target.sendall(leftover)
 
-            # Relay loop (Ultrafast Passthrough)
+            # Relay loop
             sockets = [self.client, target]
             while True:
                 r, _, e = select.select(sockets, [], sockets, 3600)

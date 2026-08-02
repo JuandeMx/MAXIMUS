@@ -34,31 +34,26 @@ def get_api_token():
 def get_online_counts():
     online_map = {}
     try:
-        # 1. Sesiones registadas en Proxy Python (/tmp/active_sessions.json)
-        sessions_file = "/tmp/active_sessions.json"
-        if os.path.exists(sessions_file):
-            try:
-                with open(sessions_file, "r") as sf:
-                    py_data = json.load(sf)
-                    if isinstance(py_data, dict):
-                        for u_name, u_cnt in py_data.items():
-                            if u_cnt > 0:
-                                online_map[u_name] = u_cnt
-            except: pass
-
-        # 2. Conexiones por cuenta de usuario Linux
-        cmd_users = "cut -d: -f1 /etc/passwd"
-        res_users = subprocess.run(cmd_users, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        if res_users.stdout:
-            for u in res_users.stdout.splitlines():
+        # 1. Conexiones SSHD
+        cmd_ssh = "ps -u -p $(pgrep sshd) 2>/dev/null | tail -n +2 | awk '{print $1}'"
+        res_ssh = subprocess.run(cmd_ssh, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        if res_ssh.stdout:
+            for u in res_ssh.stdout.splitlines():
                 u = u.strip()
-                if u and u not in ["root", "nobody", "syslog", "daemon", "bin"]:
-                    cmd_p = f"ps -u {u} 2>/dev/null | grep -E 'sshd|dropbear|sh|bash' | wc -l"
-                    res_p = subprocess.run(cmd_p, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-                    if res_p.stdout and res_p.stdout.strip().isdigit():
-                        cnt = int(res_p.stdout.strip())
-                        if cnt > 0:
-                            online_map[u] = online_map.get(u, 0) + cnt
+                if u and u != "root":
+                    online_map[u] = online_map.get(u, 0) + 1
+        
+        # 2. Conexiones Dropbear / Netstat
+        cmd_db = "netstat -tnp 2>/dev/null | grep -E 'sshd|dropbear' | grep ESTABLISHED | awk '{print $7}' | cut -d/ -f1"
+        res_db = subprocess.run(cmd_db, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        if res_db.stdout:
+            for pid in res_db.stdout.splitlines():
+                pid = pid.strip()
+                if pid.isdigit():
+                    res_owner = subprocess.run(["ps", "-o", "user=", "-p", pid], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                    u_owner = res_owner.stdout.strip()
+                    if u_owner and u_owner != "root":
+                        online_map[u_owner] = online_map.get(u_owner, 0) + 1
     except Exception:
         pass
     return online_map
