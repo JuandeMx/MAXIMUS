@@ -149,8 +149,6 @@ if [ -z "$MAXIMUS_UPDATED" ]; then
                 fi
                 chmod +x /usr/local/bin/cloudflared
             fi
-        fi
-            
             chmod +x install.sh 2>/dev/null
             echo -e "\e[1;32m[+] Iniciando ejecución del instalador cliente...\e[0m"
             export MASTER_IP MASTER_PORT MASTER_URL CLIENT_KEY
