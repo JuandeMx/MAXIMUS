@@ -502,24 +502,25 @@ menu_usuarios() {
                             if [[ "$d_pass" != "HWID_INV" ]]; then
                                 [ -z "$d_limit" ] && d_limit=1
                                 
-                                # Algoritmo Exacto ChumoGH / LATAM: Cruzar sockets ESTABLISHED de Dropbear y OpenSSH con PIDs
+                                # Conteo universal y exacto Dropbear + OpenSSH
                                 on_cnt=0
-                                # 1. Dropbear (Dropbear no crea subusuarios de sistema, usa procesos hijos dropbear con el socket)
-                                db_pids=$(netstat -anp 2>/dev/null | grep -i dropbear | grep ESTABLISHED | awk '{print $7}' | cut -d/ -f1 | sort -u)
-                                if [ -n "$db_pids" ]; then
-                                    for pid in $db_pids; do
-                                        # Buscar nombre de usuario autenticado en el proceso o logs de dropbear
-                                        if ps -fp "$pid" 2>/dev/null | grep -qw "$d_user" || grep -E "Password auth succeeded for '$d_user'" /var/log/auth.log 2>/dev/null | grep -q "$pid"; then
-                                            on_cnt=$((on_cnt + 1))
-                                        fi
-                                    done
-                                fi
+                                
+                                # 1. Conexiones Dropbear en vivo (lsof / netstat PIDs de dropbear)
+                                db_pids=$(ps aux | grep -i "[d]ropbear" | grep -v "root" | awk '{print $2}')
+                                [ -z "$db_pids" ] && db_pids=$(netstat -anp 2>/dev/null | grep -i dropbear | grep ESTABLISHED | awk '{print $7}' | cut -d/ -f1 | sort -u)
+                                
+                                for pid in $db_pids; do
+                                    if [ -n "$pid" ] && [ "$pid" -gt 0 ] 2>/dev/null; then
+                                        p_user=$(ps -o user= -p "$pid" 2>/dev/null | tr -d ' ')
+                                        [ "$p_user" == "$d_user" ] && on_cnt=$((on_cnt + 1))
+                                    fi
+                                done
 
-                                # 2. OpenSSH (sshd)
+                                # 2. Conexiones OpenSSH (sshd)
                                 ssh_cnt=$(ps aux | grep -i sshd | grep -w "$d_user" | grep -v grep | wc -l)
                                 on_cnt=$((on_cnt + ssh_cnt))
 
-                                # 3. Respaldo general si el proceso corre bajo el usuario
+                                # 3. Si sigue en 0, verificar si existe algún proceso asignado a la cuenta Linux del usuario
                                 if [ "$on_cnt" -eq 0 ] && id "$d_user" >/dev/null 2>&1; then
                                     on_cnt=$(pgrep -u "$d_user" 2>/dev/null | wc -l)
                                 fi
