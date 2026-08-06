@@ -185,7 +185,7 @@ class NodeAPIHandler(BaseHTTPRequestHandler):
                     "BADVPN": (["badvpn-udpgw", "badvpn"], "7300"),
                     "DROPBEAR": (["dropbear"], "44"),
                     "SSL / TLS": (["stunnel4", "stunnel"], "443"),
-                    "WEBSOCKET / PYTHON": (["ws-epro", "mx-proxy", "socks.py", "python_ws"], "80"),
+                    "WEBSOCKET / PYTHON": (["ws-epro", "mx-proxy", "socks.py", "python_ws", "python", "python3"], "80"),
                     "V2RAY / XRAY NATIVO": (["xray", "v2ray-custom", "maximus-v2ray"], "443"),
                     "SSH DIRECT": (["sshd"], "22")
                 }
