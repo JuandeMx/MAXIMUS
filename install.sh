@@ -162,15 +162,8 @@ if [ -z "$MAXIMUS_UPDATED" ]; then
                 fi
                 chmod +x /usr/local/bin/cloudflared
             fi
-            # Evitar bucle si ya es slave node
-            if [ ! -f "/etc/MaximusVpsMx/is_slave_node" ]; then
-                chmod +x install.sh 2>/dev/null
-                echo -e "\e[1;32m[+] Iniciando ejecución del instalador cliente...\e[0m"
-                export MASTER_IP MASTER_PORT MASTER_URL CLIENT_KEY
-                exec ./install.sh
-                echo -e "\e[1;31m[!] ERROR FATAL: No se pudo iniciar el instalador cliente.\e[0m"
-                exit 1
-            fi
+            # Si se instala directamente desde GitHub, continuar con la instalación sin exec ./install.sh
+            chmod +x install.sh 2>/dev/null
         fi
     fi
 
