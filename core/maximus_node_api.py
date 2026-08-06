@@ -147,26 +147,33 @@ class NodeAPIHandler(BaseHTTPRequestHandler):
                 real_ports_list.sort()
                 listening_ports_str = " ".join(str(p) for p in real_ports_list) if real_ports_list else "22 44 53 80 443 6767 7300"
 
-                # Check common VPN services matching MAXIMUS panel options
+                # Check common VPN services matching MAXIMUS panel options with strict systemctl and listening port check
                 services_map = {
-                    "BADVPN": (["badvpn-udpgw", "badvpn"], "7300"),
-                    "DROPBEAR": (["dropbear"], "44"),
-                    "SSL / TLS": (["stunnel", "stunnel4"], "443"),
-                    "SSL + PYTHON": (["python", "websocket", "ws"], "80"),
-                    "WEBSOCKET STATUS": (["websocket", "python3"], "80"),
-                    "V2RAY / XRAY NATIVO": (["xray", "v2ray"], "443"),
-                    "SSH DIRECT": (["sshd", "ssh"], "22")
+                    "BADVPN": (["badvpn-udpgw", "badvpn"], 7300),
+                    "DROPBEAR": (["dropbear"], 44),
+                    "SSL / TLS": (["stunnel", "stunnel4"], 443),
+                    "WEBSOCKET / PYTHON": (["ws-epro", "mx-proxy", "python3"], 80),
+                    "V2RAY / XRAY NATIVO": (["xray", "v2ray", "maximus-v2ray"], 443),
+                    "SSH DIRECT": (["sshd", "ssh"], 22)
                 }
 
-                for label, (pats, default_p) in services_map.items():
-                    # Check if any port matches
-                    matched_ports = [str(p) for p in real_ports_list if str(p) in default_p.split(", ")]
-                    port_display = ", ".join(matched_ports) if matched_ports else default_p
-                    is_online = len(matched_ports) > 0 or any(pat in p_res.stdout.lower() for pat in pats)
+                for label, (pats, expected_port) in services_map.items():
+                    # Check if port is actually listening in real_ports_list
+                    port_is_listening = expected_port in real_ports_list
+
+                    # Check systemctl active status
+                    svc_active = False
+                    for pat in pats:
+                        res = subprocess.run(["systemctl", "is-active", "--quiet", pat])
+                        if res.returncode == 0:
+                            svc_active = True
+                            break
+
+                    is_online = port_is_listening and svc_active
 
                     active_services[label] = {
                         "status": "ONLINE" if is_online else "OFFLINE",
-                        "port": port_display
+                        "port": str(expected_port)
                     }
             except Exception:
                 pass
