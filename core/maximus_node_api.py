@@ -147,33 +147,52 @@ class NodeAPIHandler(BaseHTTPRequestHandler):
                 real_ports_list.sort()
                 listening_ports_str = " ".join(str(p) for p in real_ports_list) if real_ports_list else "22 44 53 80 443 6767 7300"
 
-                # Check common VPN services matching MAXIMUS panel options with strict systemctl and listening port check
+                # Detect real active listening ports dynamically per process
+                # Command ss -tulpn output format: ... users:(("dropbear",pid=123,fd=4))
+                raw_ss = ""
+                try:
+                    ss_res = subprocess.run("ss -tulpn", shell=True, capture_output=True, text=True)
+                    raw_ss = ss_res.stdout
+                except Exception:
+                    pass
+
+                def get_ports_for_pats(svc_patterns):
+                    matched_ports = []
+                    for line in raw_ss.splitlines():
+                        line_lower = line.lower()
+                        if any(pat in line_lower for pat in svc_patterns):
+                            parts = line.split()
+                            if len(parts) >= 5:
+                                local_addr = parts[4] if (parts[0].startswith('tcp') or parts[0].startswith('udp')) else parts[3]
+                                if ':' in local_addr:
+                                    port_str = local_addr.split(':')[-1]
+                                    if port_str.isdigit() and port_str not in matched_ports:
+                                        matched_ports.append(port_str)
+                    return ", ".join(matched_ports) if matched_ports else ""
+
                 services_map = {
-                    "BADVPN": (["badvpn-udpgw", "badvpn"], 7300),
-                    "DROPBEAR": (["dropbear"], 44),
-                    "SSL / TLS": (["stunnel", "stunnel4"], 443),
-                    "WEBSOCKET / PYTHON": (["ws-epro", "mx-proxy", "python3"], 80),
-                    "V2RAY / XRAY NATIVO": (["xray", "v2ray", "maximus-v2ray"], 443),
-                    "SSH DIRECT": (["sshd", "ssh"], 22)
+                    "BADVPN": (["badvpn-udpgw", "badvpn", "7300", "7100", "7200"], "7300"),
+                    "DROPBEAR": (["dropbear"], "444"),
+                    "SSL / TLS": (["stunnel", "stunnel4"], "443"),
+                    "WEBSOCKET / PYTHON": (["ws-epro", "mx-proxy", "python", "websocket", "8080"], "8080"),
+                    "V2RAY / XRAY NATIVO": (["xray", "v2ray", "maximus-v2ray"], "443"),
+                    "SSH DIRECT": (["sshd", "/usr/sbin/sshd"], "22")
                 }
 
-                for label, (pats, expected_port) in services_map.items():
-                    # Check if port is actually listening in real_ports_list
-                    port_is_listening = expected_port in real_ports_list
-
-                    # Check systemctl active status
-                    svc_active = False
-                    for pat in pats:
-                        res = subprocess.run(["systemctl", "is-active", "--quiet", pat])
-                        if res.returncode == 0:
-                            svc_active = True
-                            break
-
-                    is_online = port_is_listening and svc_active
+                for label, (pats, fallback_p) in services_map.items():
+                    detected_ports = get_ports_for_pats(pats)
+                    is_online = bool(detected_ports)
+                    
+                    if not is_online:
+                        for pat in pats:
+                            res = subprocess.run(["systemctl", "is-active", "--quiet", pat])
+                            if res.returncode == 0:
+                                is_online = True
+                                break
 
                     active_services[label] = {
                         "status": "ONLINE" if is_online else "OFFLINE",
-                        "port": str(expected_port)
+                        "port": detected_ports if detected_ports else fallback_p
                     }
             except Exception:
                 pass
