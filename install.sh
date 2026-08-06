@@ -21,7 +21,12 @@ if [ -z "$MAXIMUS_UPDATED" ]; then
         
         # Si NO hay MASTER_IP, es directo desde GitHub
         if [ -z "$MASTER_IP" ]; then
-            if [ -f "/etc/MaximusVpsMx/.master_node" ]; then
+            if [ "$1" == "--slave" ] || [ "$CLIENT_KEY" == "slave" ]; then
+                echo -e "\e[1;32m[+] Configuración no interactiva como Nodo Esclavo / Servidor Secundario activa.\e[0m"
+                mkdir -p /etc/MaximusVpsMx
+                echo "maximus_secret_node_key_2026" > /etc/MaximusVpsMx/api_token.conf
+                touch /etc/MaximusVpsMx/is_slave_node
+            elif [ -f "/etc/MaximusVpsMx/.master_node" ]; then
                 echo -e "\e[1;36m[+] Actualización de Nodo Maestro detectada automáticamente.\e[0m"
             else
                 echo -e "\e[1;36m[+] Instalación directa desde Repositorio detectada.\e[0m"
