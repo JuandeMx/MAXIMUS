@@ -265,14 +265,14 @@ instalar_psutil_local() {
 echo -e "\e[1;32m[+] Actualizando repositorios e instalando dependencias...\e[0m"
 # Eliminar repositorios defectuosos comunes en proveedores (Hostinger Monarx) para evitar bloqueos
 rm -f /etc/apt/sources.list.d/monarx.list 2>/dev/null
-apt-get update -y
-DEBIAN_FRONTEND=noninteractive apt-get install -y python3 python3-pip python3-psutil squid net-tools curl wget iptables vnstat cron ufw ncurses-bin jq cmake make gcc build-essential g++ netcat-openbsd openssl psmisc screen
+apt-get update -y >/dev/null 2>&1 || true
+DEBIAN_FRONTEND=noninteractive apt-get install -y python3 python3-pip python3-psutil squid net-tools curl wget iptables vnstat cron ufw ncurses-bin jq cmake make gcc build-essential g++ netcat-openbsd openssl psmisc screen >/dev/null 2>&1 || true
 
 # Asegurar la correcta instalación de psutil
 instalar_psutil_local
 
 # Instalar pycryptodome para el generador de perfiles .MX
-pip3 install pycryptodome --break-system-packages >/dev/null 2>&1 || pip3 install pycryptodome >/dev/null 2>&1
+pip3 install pycryptodome --break-system-packages >/dev/null 2>&1 || pip3 install pycryptodome >/dev/null 2>&1 || true
 
 # 1.5 Firewall Local
 echo -e "\e[1;32m[+] Blindando Puertos Nativos con UFW...\e[0m"
@@ -574,4 +574,6 @@ echo -e "\n\e[1;36m=========================================================\e[0
 echo -e "\e[1;32m   [+] INSTALACIÓN DE MAXIMUS ELITE PANEL COMPLETADA.    \e[0m"
 echo -e "\e[1;33m   [!] CONFIGURACIÓN BOT: MX -> Sistema -> Telegram Bot\e[0m"
 echo -e "\e[1;36m=========================================================\e[0m\n"
+
+exit 0
 
