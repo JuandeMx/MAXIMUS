@@ -90,12 +90,46 @@ class NodeAPIHandler(BaseHTTPRequestHandler):
             if os.path.exists(USERS_DB):
                 with open(USERS_DB, "r") as f:
                     users_count = len([line for line in f if line.strip()])
+
+            # Obtener métricas reales del sistema usando psutil / subprocess
+            cpu_usage = 0.0
+            ram_usage = 0.0
+            ram_total_gb = 0.0
+            disk_usage = 0.0
+            disk_total_gb = 0.0
+            uptime_str = "0d 0h"
+
+            try:
+                import psutil
+                cpu_usage = round(psutil.cpu_percent(interval=0.1), 1)
+                ram = psutil.virtual_memory()
+                ram_usage = round(ram.percent, 1)
+                ram_total_gb = round(ram.total / (1024 ** 3), 1)
+
+                disk = psutil.disk_usage('/')
+                disk_usage = round(disk.percent, 1)
+                disk_total_gb = round(disk.total / (1024 ** 3), 1)
+
+                # Uptime
+                uptime_sec = int(datetime.datetime.now().timestamp() - psutil.boot_time())
+                d = uptime_sec // 86400
+                h = (uptime_sec % 86400) // 3600
+                m = (uptime_sec % 3600) // 60
+                uptime_str = f"{d}d {h}h {m}m"
+            except Exception:
+                pass
             
             self._send_json(200, {
                 "status": "ONLINE",
                 "version": "7.3",
                 "hostname": os.uname().nodename,
                 "users_registered": users_count,
+                "cpuUsage": cpu_usage,
+                "ramUsage": ram_usage,
+                "ramTotalGb": ram_total_gb,
+                "diskUsage": disk_usage,
+                "diskTotalGb": disk_total_gb,
+                "uptime": uptime_str,
                 "timestamp": datetime.datetime.now().isoformat()
             })
             return
