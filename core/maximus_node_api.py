@@ -185,16 +185,20 @@ class NodeAPIHandler(BaseHTTPRequestHandler):
                     "BADVPN": (["badvpn-udpgw", "badvpn"], "7300"),
                     "DROPBEAR": (["dropbear"], "44"),
                     "SSL / TLS": (["stunnel4", "stunnel"], "443"),
-                    "WEBSOCKET / PYTHON": (["ws-epro", "mx-proxy", "socks.py"], "80"),
+                    "WEBSOCKET / PYTHON": (["ws-epro", "mx-proxy", "socks.py", "python_ws"], "80"),
                     "V2RAY / XRAY NATIVO": (["xray", "v2ray-custom", "maximus-v2ray"], "443"),
                     "SSH DIRECT": (["sshd"], "22")
                 }
 
                 for label, (pats, default_port) in services_map.items():
                     ports_str = find_ports_for_service(pats)
+                    # Forzar exclusion de 6767
+                    if ports_str == "6767" or "6767" in ports_str.split(", "):
+                        ports_list = [p for p in ports_str.split(", ") if p != "6767"]
+                        ports_str = ", ".join(ports_list)
+
                     is_online = bool(ports_str)
 
-                    # Si el puerto está activo en ss, mostrar el puerto real. Si está OFFLINE, mostrar el puerto por defecto pero en estado DETENIDO.
                     active_services[label] = {
                         "status": "ONLINE" if is_online else "OFFLINE",
                         "port": ports_str if is_online else default_port
