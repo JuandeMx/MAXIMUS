@@ -177,10 +177,12 @@ class NodeAPIHandler(BaseHTTPRequestHandler):
                         for pat in service_patterns:
                             if pat in proc_info:
                                 # For BADVPN, strictly allow main listening ports 7100, 7200, 7300
-                                if is_badvpn and port not in ["7100", "7200", "7300"]:
-                                    continue
-                                if port not in matched:
-                                    matched.append(port)
+                                if is_badvpn:
+                                    if port in ["7100", "7200", "7300"] and port not in matched:
+                                        matched.append(port)
+                                else:
+                                    if port not in matched:
+                                        matched.append(port)
                     matched.sort(key=lambda x: int(x))
                     return ", ".join(matched)
 
