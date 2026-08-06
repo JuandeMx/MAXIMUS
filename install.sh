@@ -489,6 +489,27 @@ if [ -n "$CLIENT_KEY" ]; then
     fi
 fi
 
+# Configurar e Iniciar API de Nodo (Port 6767) tanto para Maestro como Esclavo
+echo -e "\e[1;36m[+] Configurando Servicio API de Nodo MAXIMUS (Puerto 6767)...\e[0m"
+cat << 'EOF' > /etc/systemd/system/maximus-node-api.service
+[Unit]
+Description=Maximus VPS Node API Service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /etc/MaximusVpsMx/core/maximus_node_api.py
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable maximus-node-api 2>/dev/null
+systemctl restart maximus-node-api 2>/dev/null
+
 # Iniciar servidor Python y compilar automáticamente si es maestro
 if [ -f "/etc/MaximusVpsMx/.master_node" ]; then
     echo -e "\e[1;36m[+] Creando copia de seguridad local en /var/MaximusVpsMx_backup...\e[0m"
