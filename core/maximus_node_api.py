@@ -99,6 +99,10 @@ class NodeAPIHandler(BaseHTTPRequestHandler):
             disk_total_gb = 0.0
             uptime_str = "0d 0h"
 
+            net_bytes_sent = 0
+            net_bytes_recv = 0
+            active_services = {}
+
             try:
                 import psutil
                 cpu_usage = round(psutil.cpu_percent(interval=0.1), 1)
@@ -110,12 +114,60 @@ class NodeAPIHandler(BaseHTTPRequestHandler):
                 disk_usage = round(disk.percent, 1)
                 disk_total_gb = round(disk.total / (1024 ** 3), 1)
 
+                # Network I/O (bytes sent/received)
+                net = psutil.net_io_counters()
+                net_bytes_sent = net.bytes_sent
+                net_bytes_recv = net.bytes_recv
+
                 # Uptime
                 uptime_sec = int(datetime.datetime.now().timestamp() - psutil.boot_time())
                 d = uptime_sec // 86400
                 h = (uptime_sec % 86400) // 3600
                 m = (uptime_sec % 3600) // 60
                 uptime_str = f"{d}d {h}h {m}m"
+
+                # Parse all active TCP and UDP listening ports directly on Linux
+                real_ports_list = []
+                listening_ports_str = ""
+                try:
+                    p_res = subprocess.run("ss -tulpn || netstat -tulpn", shell=True, capture_output=True, text=True)
+                    for line in p_res.stdout.splitlines():
+                        line_clean = line.strip().lower()
+                        if line_clean.startswith("tcp") or line_clean.startswith("udp"):
+                            parts = line_clean.split()
+                            if len(parts) >= 4:
+                                local_addr = parts[4] if parts[0].startswith('tcp') or parts[0].startswith('udp') else parts[3]
+                                if ':' in local_addr:
+                                    port = local_addr.split(':')[-1]
+                                    if port.isdigit() and int(port) not in real_ports_list:
+                                        real_ports_list.append(int(port))
+                except Exception:
+                    pass
+
+                real_ports_list.sort()
+                listening_ports_str = " ".join(str(p) for p in real_ports_list) if real_ports_list else "22 44 53 80 443 6767 7300"
+
+                # Check common VPN services matching MAXIMUS panel options
+                services_map = {
+                    "BADVPN": (["badvpn-udpgw", "badvpn"], "7300"),
+                    "DROPBEAR": (["dropbear"], "44"),
+                    "SSL / TLS": (["stunnel", "stunnel4"], "443"),
+                    "SSL + PYTHON": (["python", "websocket", "ws"], "80"),
+                    "WEBSOCKET STATUS": (["websocket", "python3"], "80"),
+                    "V2RAY / XRAY NATIVO": (["xray", "v2ray"], "443"),
+                    "SSH DIRECT": (["sshd", "ssh"], "22")
+                }
+
+                for label, (pats, default_p) in services_map.items():
+                    # Check if any port matches
+                    matched_ports = [str(p) for p in real_ports_list if str(p) in default_p.split(", ")]
+                    port_display = ", ".join(matched_ports) if matched_ports else default_p
+                    is_online = len(matched_ports) > 0 or any(pat in p_res.stdout.lower() for pat in pats)
+
+                    active_services[label] = {
+                        "status": "ONLINE" if is_online else "OFFLINE",
+                        "port": port_display
+                    }
             except Exception:
                 pass
             
@@ -129,6 +181,9 @@ class NodeAPIHandler(BaseHTTPRequestHandler):
                 "ramTotalGb": ram_total_gb,
                 "diskUsage": disk_usage,
                 "diskTotalGb": disk_total_gb,
+                "bytesSent": net_bytes_sent,
+                "bytesRecv": net_bytes_recv,
+                "activeServices": active_services,
                 "uptime": uptime_str,
                 "timestamp": datetime.datetime.now().isoformat()
             })
