@@ -176,8 +176,8 @@ class NodeAPIHandler(BaseHTTPRequestHandler):
                     for port, proc_info in port_to_process.items():
                         for pat in service_patterns:
                             if pat in proc_info:
-                                # For BADVPN, only list main daemon ports (under 10000) like 7100, 7200, 7300
-                                if is_badvpn and int(port) > 10000:
+                                # For BADVPN, strictly allow main listening ports 7100, 7200, 7300
+                                if is_badvpn and port not in ["7100", "7200", "7300"]:
                                     continue
                                 if port not in matched:
                                     matched.append(port)
