@@ -147,8 +147,8 @@ class NodeAPIHandler(BaseHTTPRequestHandler):
                 real_ports_list.sort()
                 listening_ports_str = " ".join(str(p) for p in real_ports_list) if real_ports_list else "22 44 53 80 443 6767 7300"
 
-                # Parse ss / netstat listening ports and associate process names directly
-                real_listening = {}
+                # Parse ss -tulpn output and extract process names for each listening port
+                port_to_process = {}
                 try:
                     p_res = subprocess.run("ss -tulpn", shell=True, capture_output=True, text=True)
                     for line in p_res.stdout.splitlines():
@@ -159,46 +159,45 @@ class NodeAPIHandler(BaseHTTPRequestHandler):
                                 addr = parts[4] if (parts[0].startswith('tcp') or parts[0].startswith('udp')) else parts[3]
                                 if ':' in addr:
                                     port = addr.split(':')[-1]
-                                    if port.isdigit():
-                                        proc_info = line_l[line_l.find('users:'):] if 'users:' in line_l else line_l
-                                        real_listening[port] = proc_info
+                                    if port.isdigit() and port != "6767": # Excluir el propio puerto 6767 de la API de Node
+                                        # Extraer nombre del proceso entre comillas dentro de users:(("nombre",...
+                                        proc_str = ""
+                                        if 'users:' in line_l:
+                                            users_part = line_l[line_l.find('users:'):]
+                                            proc_str = users_part
+                                        else:
+                                            proc_str = line_l
+                                        port_to_process[port] = proc_str
                 except Exception:
                     pass
 
-                def find_ports_matching(patterns):
+                def find_ports_for_service(service_patterns):
                     matched = []
-                    for port, proc_info in real_listening.items():
-                        if any(pat in proc_info for pat in patterns):
-                            if port not in matched:
-                                matched.append(port)
+                    for port, proc_info in port_to_process.items():
+                        for pat in service_patterns:
+                            if pat in proc_info:
+                                if port not in matched:
+                                    matched.append(port)
                     matched.sort(key=lambda x: int(x))
                     return ", ".join(matched)
 
                 services_map = {
-                    "BADVPN": (["badvpn", "7300", "7100", "7200"], "7300"),
-                    "DROPBEAR": (["dropbear"], "444"),
-                    "SSL / TLS": (["stunnel", "stunnel4"], "443"),
-                    "WEBSOCKET / PYTHON": (["python", "ws-epro", "proxy", "8080", "80"], "8080"),
-                    "V2RAY / XRAY NATIVO": (["xray", "v2ray"], "443"),
-                    "SSH DIRECT": (["sshd", "ssh"], "22")
+                    "BADVPN": (["badvpn-udpgw", "badvpn"], "7300"),
+                    "DROPBEAR": (["dropbear"], "44"),
+                    "SSL / TLS": (["stunnel4", "stunnel"], "443"),
+                    "WEBSOCKET / PYTHON": (["ws-epro", "mx-proxy", "socks.py"], "80"),
+                    "V2RAY / XRAY NATIVO": (["xray", "v2ray-custom", "maximus-v2ray"], "443"),
+                    "SSH DIRECT": (["sshd"], "22")
                 }
 
-                for label, (pats, fallback_p) in services_map.items():
-                    ports_str = find_ports_matching(pats)
-                    is_active = bool(ports_str)
+                for label, (pats, default_port) in services_map.items():
+                    ports_str = find_ports_for_service(pats)
+                    is_online = bool(ports_str)
 
-                    # Backup check via systemctl if not found in ss
-                    if not is_active:
-                        for pat in pats:
-                            if not pat.isdigit():
-                                r = subprocess.run(["systemctl", "is-active", "--quiet", pat])
-                                if r.returncode == 0:
-                                    is_active = True
-                                    break
-
+                    # Si el puerto está activo en ss, mostrar el puerto real. Si está OFFLINE, mostrar el puerto por defecto pero en estado DETENIDO.
                     active_services[label] = {
-                        "status": "ONLINE" if is_active else "OFFLINE",
-                        "port": ports_str if ports_str else fallback_p
+                        "status": "ONLINE" if is_online else "OFFLINE",
+                        "port": ports_str if is_online else default_port
                     }
             except Exception:
                 pass
