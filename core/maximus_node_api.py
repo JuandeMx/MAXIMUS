@@ -171,27 +171,34 @@ class NodeAPIHandler(BaseHTTPRequestHandler):
                 except Exception:
                     pass
 
-                def find_ports_for_service(service_patterns):
+                def find_ports_for_service(service_patterns, is_badvpn=False):
                     matched = []
                     for port, proc_info in port_to_process.items():
                         for pat in service_patterns:
                             if pat in proc_info:
+                                # For BADVPN, only list main daemon ports (under 10000) like 7100, 7200, 7300
+                                if is_badvpn and int(port) > 10000:
+                                    continue
                                 if port not in matched:
                                     matched.append(port)
                     matched.sort(key=lambda x: int(x))
                     return ", ".join(matched)
 
                 services_map = {
-                    "BADVPN": (["badvpn-udpgw", "badvpn"], "7300"),
-                    "DROPBEAR": (["dropbear"], "44"),
-                    "SSL / TLS": (["stunnel4", "stunnel"], "443"),
-                    "WEBSOCKET / PYTHON": (["ws-epro", "mx-proxy", "socks.py", "python_ws", "python", "python3"], "80"),
-                    "V2RAY / XRAY NATIVO": (["xray", "v2ray-custom", "maximus-v2ray"], "443"),
-                    "SSH DIRECT": (["sshd"], "22")
+                    "BADVPN": (["badvpn-udpgw", "badvpn"], "7300", True),
+                    "DROPBEAR": (["dropbear"], "44", False),
+                    "SSL / TLS": (["stunnel4", "stunnel"], "443", False),
+                    "WEBSOCKET / PYTHON": (["ws-epro", "mx-proxy", "socks.py", "python_ws", "python", "python3"], "80", False),
+                    "V2RAY / XRAY NATIVO": (["xray", "v2ray-custom", "maximus-v2ray"], "443", False),
+                    "SSH DIRECT": (["sshd"], "22", False)
                 }
 
-                for label, (pats, default_port) in services_map.items():
-                    ports_str = find_ports_for_service(pats)
+                for label, tuple_val in services_map.items():
+                    pats = tuple_val[0]
+                    default_port = tuple_val[1]
+                    is_bad = tuple_val[2]
+
+                    ports_str = find_ports_for_service(pats, is_bad)
                     # Forzar exclusion de 6767
                     if ports_str == "6767" or "6767" in ports_str.split(", "):
                         ports_list = [p for p in ports_str.split(", ") if p != "6767"]
