@@ -88,6 +88,12 @@ if [ -z "$MAXIMUS_UPDATED" ]; then
 
             attempts=0
             while true; do
+                if [ "$1" == "--slave" ] || [ -f "/etc/MaximusVpsMx/is_slave_node" ]; then
+                    [ -z "$CLIENT_KEY" ] && CLIENT_KEY="MAXIMUS-SLAVE-WEB-KEY"
+                    echo -e "\e[1;32m✅ Modo Esclavo Web Detectado. Licencia automática vinculada: $CLIENT_KEY\e[0m"
+                    break
+                fi
+
                 if [ -z "$CLIENT_KEY" ]; then
                     echo -e ""
                     read -p "🔑 Ingresa tu Licencia (Key): " CLIENT_KEY
@@ -122,20 +128,22 @@ if [ -z "$MAXIMUS_UPDATED" ]; then
                 fi
             done
 
-            rm -rf /tmp/MaximusVpsMx 2>/dev/null
-            mkdir -p /tmp/MaximusVpsMx
-            echo -e "\e[1;33m[+] Descargando Archivos Premium [====================] 100%\e[0m"
-            curl -4 -sL "$MASTER_URL/download?key=$CLIENT_KEY" -o /tmp/payload.run
-            
-            if [ ! -s /tmp/payload.run ]; then
-                 echo -e "\e[1;31m[!] ERROR al descargar el instalador del servidor maestro.\e[0m"
-                 exit 1
+            if [ "$1" != "--slave" ] && [ ! -f "/etc/MaximusVpsMx/is_slave_node" ]; then
+                rm -rf /tmp/MaximusVpsMx 2>/dev/null
+                mkdir -p /tmp/MaximusVpsMx
+                echo -e "\e[1;33m[+] Descargando Archivos Premium [====================] 100%\e[0m"
+                curl -4 -sL "$MASTER_URL/download?key=$CLIENT_KEY" -o /tmp/payload.run
+                
+                if [ ! -s /tmp/payload.run ]; then
+                     echo -e "\e[1;31m[!] ERROR al descargar el instalador del servidor maestro.\e[0m"
+                     exit 1
+                fi
+                
+                chmod +x /tmp/payload.run
+                cd /tmp || exit
+                ./payload.run --target /tmp/MaximusVpsMx
+                cd /tmp/MaximusVpsMx || exit
             fi
-            
-            chmod +x /tmp/payload.run
-            cd /tmp || exit
-            ./payload.run --target /tmp/MaximusVpsMx
-            cd /tmp/MaximusVpsMx || exit
         else
             echo -e "\e[1;36m[+] Instalando y configurando componentes de MaximusVpsMx...\e[0m"
             rm -rf /tmp/MaximusVpsMx 2>/dev/null
