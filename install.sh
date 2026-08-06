@@ -146,9 +146,12 @@ if [ -z "$MAXIMUS_UPDATED" ]; then
             fi
         else
             echo -e "\e[1;36m[+] Instalando y configurando componentes de MaximusVpsMx...\e[0m"
-            rm -rf /tmp/MaximusVpsMx 2>/dev/null
-            git clone https://github.com/JuandeMx/MAXIMUS.git /tmp/MaximusVpsMx
-            cd /tmp/MaximusVpsMx || exit
+            cd /root || cd /tmp
+            if [ ! -d "/tmp/MaximusVpsMx" ]; then
+                rm -rf /tmp/MaximusVpsMx 2>/dev/null
+                git clone https://github.com/JuandeMx/MAXIMUS.git /tmp/MaximusVpsMx
+            fi
+            cd /tmp/MaximusVpsMx 2>/dev/null || true
         fi
             
             # Descargar Cloudflared
