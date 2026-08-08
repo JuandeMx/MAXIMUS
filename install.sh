@@ -461,6 +461,17 @@ if [ -f /etc/MaximusVpsMx/core/maximus-node-api.service ]; then
     systemctl restart maximus-node-api >/dev/null 2>&1
 fi
 
+# Habilitar e Iniciar Servicio Web Panel (Puerto 84) en Nodos Maestros
+if [ -f /etc/MaximusVpsMx/.master_node ]; then
+    echo -e "\e[1;36m[+] Configurando e iniciando MAXIMUS PANEL Web en Puerto 84...\e[0m"
+    if [ -f /etc/MaximusVpsMx/core/maximus-webpanel.service ]; then
+        cp -f /etc/MaximusVpsMx/core/maximus-webpanel.service /etc/systemd/system/
+        systemctl daemon-reload
+        systemctl enable maximus-webpanel >/dev/null 2>&1
+        systemctl restart maximus-webpanel >/dev/null 2>&1
+    fi
+fi
+
 # Habilitar servicio Master Web Dashboard Backend (Puerto 8080) SOLO en Nodos Maestros
 if [ -f /etc/MaximusVpsMx/.master_node ] && [ -f /etc/MaximusVpsMx/core/maximus-master-web.service ]; then
     cp -f /etc/MaximusVpsMx/core/maximus-master-web.service /etc/systemd/system/
@@ -597,6 +608,11 @@ fi
 # Fin de Instalación
 echo -e "\n\e[1;36m=========================================================\e[0m"
 echo -e "\e[1;32m   [+] INSTALACIÓN DE MAXIMUS ELITE PANEL COMPLETADA.    \e[0m"
+if [ -f /etc/MaximusVpsMx/.master_node ]; then
+    MY_IP=$(curl -4 -sL https://api.ipify.org || hostname -I | awk '{print $1}')
+    echo -e "\e[1;33m   🌐 ACCESO WEB PANEL: http://$MY_IP:84\e[0m"
+    echo -e "\e[1;37m   🔑 Usuario por defecto: admin | Contraseña: admin\e[0m"
+fi
 echo -e "\e[1;33m   [!] CONFIGURACIÓN BOT: MX -> Sistema -> Telegram Bot\e[0m"
 echo -e "\e[1;36m=========================================================\e[0m\n"
 

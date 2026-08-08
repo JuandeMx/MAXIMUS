@@ -1,0 +1,14 @@
+[Unit]
+Description=Maximus Master Web Panel Node Service (Port 84)
+After=network.target
+
+[Service]
+User=root
+WorkingDirectory=/etc/MaximusVpsMx/web-panel
+ExecStart=/usr/bin/node /etc/MaximusVpsMx/web-panel/server.js
+Restart=always
+RestartSec=3
+Environment=PORT=84
+
+[Install]
+WantedBy=multi-user.target

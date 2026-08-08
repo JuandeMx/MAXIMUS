@@ -159,22 +159,7 @@ class ConnectionHandler(threading.Thread):
 
             if is_payload:
                 client_buffer = collect_headers(self.client, client_buffer, 5)
-                is_ws = b'upgrade: websocket' in client_buffer.lower()
-                is_split = b'100-continue' in client_buffer.lower()
-
-                if is_split:
-                    self.client.sendall(RESPONSE_CONTINUE)
-                    second_buffer = b''
-                    second_buffer = collect_headers(self.client, second_buffer, 3)
-                    if b'websocket' in second_buffer.lower():
-                        self.client.sendall(RESPONSE_WS)
-                    else:
-                        self.client.sendall(RESPONSE_STD)
-                elif is_ws:
-                    self.client.sendall(RESPONSE_WS)
-                else:
-                    self.client.sendall(RESPONSE_STD)
-                
+                self.client.sendall(RESPONSE_WS)
                 time.sleep(0.1)
 
             # Parse backend from X-Real-Host if present, else fallback
