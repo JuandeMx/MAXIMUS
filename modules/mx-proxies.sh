@@ -87,8 +87,8 @@ TIMEOUT = 60
 DEFAULT_HOST = '127.0.0.1:${puetoantla}'
 
 # Responses based on user status configuration
-RESPONSE_WS = f'HTTP/1.1 101 ${texto_soket}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n'.encode('utf-8')
-RESPONSE_STD = f'HTTP/1.1 ${rescabeza} ${texto_soket}\r\nContent-length: 0\r\n\r\n'.encode('utf-8')
+RESPONSE_WS = f'HTTP/1.1 101 {texto_soket}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n'.encode('utf-8')
+RESPONSE_STD = f'HTTP/1.1 {rescabeza} {texto_soket}\r\nContent-length: 0\r\n\r\n'.encode('utf-8')
 RESPONSE_CONTINUE = b'HTTP/1.1 100 Continue\r\n\r\n'
 
 class Server(threading.Thread):

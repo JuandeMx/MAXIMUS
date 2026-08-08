@@ -254,8 +254,8 @@ TIMEOUT = 60
 DEFAULT_HOST = '127.0.0.1:${DROPBEAR_PORT}'
 
 # Responses based on user status configuration
-RESPONSE_WS = f'HTTP/1.1 101 ${STATUS_TEXT}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n'.encode('utf-8')
-RESPONSE_STD = f'HTTP/1.1 ${STATUS_CODE} ${STATUS_TEXT}\r\nContent-length: 0\r\n\r\n'.encode('utf-8')
+RESPONSE_WS = f'HTTP/1.1 101 {STATUS_TEXT}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n'.encode('utf-8')
+RESPONSE_STD = f'HTTP/1.1 {STATUS_CODE} {STATUS_TEXT}\r\nContent-length: 0\r\n\r\n'.encode('utf-8')
 RESPONSE_CONTINUE = b'HTTP/1.1 100 Continue\r\n\r\n'
 
 class Server(threading.Thread):
