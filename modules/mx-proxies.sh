@@ -75,9 +75,11 @@ ws_editable() {
         echo -e "${YELLOW}[+] Generando y configurando proxy WebSocket...${NC}"
         
         # Escribir script Python dinámico
+        mkdir -p /etc/MaximusVpsMx/core
+        mkdir -p /var/log/MaximusVpsMx
         cat <<EOF >/etc/MaximusVpsMx/core/PDirect-${porta_socket}.py
 # -*- coding: utf-8 -*-
-import socket, threading, select, sys, time
+import socket, threading, select, sys, time, os
 
 # Config
 LISTENING_ADDR = '0.0.0.0'
@@ -86,9 +88,24 @@ BUFLEN = 16384
 TIMEOUT = 60
 DEFAULT_HOST = '127.0.0.1:${puetoantla}'
 
+def obtener_banner_chico():
+    path = "/etc/MaximusVpsMx/core/small_banner.txt"
+    if os.path.exists(path):
+        try:
+            with open(path, "r", encoding="utf-8", errors="ignore") as f:
+                text = f.read().strip().replace("\r", "").replace("\n", " ")
+                if text:
+                    return text
+        except:
+            pass
+    return "By SCRIPT | LATAM"
+
+STATUS_TEXT = obtener_banner_chico()
+STATUS_CODE = "${rescabeza}"
+
 # Responses based on user status configuration
-RESPONSE_WS = f'HTTP/1.1 101 {texto_soket}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n'.encode('utf-8')
-RESPONSE_STD = f'HTTP/1.1 {rescabeza} {texto_soket}\r\nContent-length: 0\r\n\r\n'.encode('utf-8')
+RESPONSE_WS = ('HTTP/1.1 101 ' + STATUS_TEXT + '\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n').encode('utf-8', errors='ignore')
+RESPONSE_STD = ('HTTP/1.1 ' + STATUS_CODE + ' ' + STATUS_TEXT + '\r\nContent-length: 0\r\n\r\n').encode('utf-8', errors='ignore')
 RESPONSE_CONTINUE = b'HTTP/1.1 100 Continue\r\n\r\n'
 
 class Server(threading.Thread):
@@ -264,12 +281,29 @@ EOF
         chmod +x /etc/MaximusVpsMx/core/PDirect-${porta_socket}.py
         ufw allow ${porta_socket}/tcp >/dev/null 2>&1
         
-        # Ejecutar
-        screen -dmS pydic-${porta_socket} $PY_EXEC /etc/MaximusVpsMx/core/PDirect-${porta_socket}.py 2>/dev/null
+        # Ejecutar en screen con log y fallback nohup
+        screen -wipe >/dev/null 2>&1
+        screen -dmS "pydic-${porta_socket}" bash -c "$PY_EXEC /etc/MaximusVpsMx/core/PDirect-${porta_socket}.py >> /var/log/MaximusVpsMx/pydic_${porta_socket}.log 2>&1"
+        sleep 1
+        if ! ps aux | grep -v grep | grep -q "PDirect-${porta_socket}"; then
+            nohup $PY_EXEC /etc/MaximusVpsMx/core/PDirect-${porta_socket}.py >> /var/log/MaximusVpsMx/pydic_${porta_socket}.log 2>&1 &
+            sleep 1
+        fi
         
-        echo "${porta_socket}" >> /etc/MaximusVpsMx/core/PDirect.log
+        touch /etc/MaximusVpsMx/core/PDirect.log
+        if ! grep -q -w "${porta_socket}" /etc/MaximusVpsMx/core/PDirect.log 2>/dev/null; then
+            echo "${porta_socket}" >> /etc/MaximusVpsMx/core/PDirect.log
+        fi
         
-        echo -e "${GREEN}✓ PROXY WEBSOCKET ACTIVO EN PUERTO: $porta_socket${NC}"
+        if ps aux | grep -v grep | grep -q "PDirect-${porta_socket}" || ss -tlnp 2>/dev/null | grep -q ":${porta_socket} "; then
+            echo -e "${GREEN}✓ PROXY WEBSOCKET ACTIVO EN PUERTO: $porta_socket${NC}"
+        else
+            echo -e "${RED}❌ Error al iniciar el proxy Python en puerto $porta_socket${NC}"
+            if [ -s "/var/log/MaximusVpsMx/pydic_${porta_socket}.log" ]; then
+                echo -e "${YELLOW}  [Log de error]:${NC}"
+                tail -n 5 "/var/log/MaximusVpsMx/pydic_${porta_socket}.log"
+            fi
+        fi
         ui_pause
     }
 

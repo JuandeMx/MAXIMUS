@@ -236,15 +236,24 @@ EOF
     # ═══════════ PASO 4: PROXY PYTHON WEBSOCKET ═══════════
     echo -e "\n${YELLOW}[2/3] Configurando Proxy Python WebSocket en puerto $PROXY_PORT...${NC}"
     
-    # Matar proxy previo en ese puerto si existiera
-    fuser -k $PROXY_PORT/tcp >/dev/null 2>&1
+    # Matar proxy previo en ese puerto si existiera de forma forzada
+    fuser -k -9 $PROXY_PORT/tcp >/dev/null 2>&1
+    pkill -9 -f "PDirect-${PROXY_PORT}\.py" >/dev/null 2>&1
     sleep 1
+
+    # Asegurar screen y python3
+    if ! command -v screen >/dev/null 2>&1; then
+        DEBIAN_FRONTEND=noninteractive apt-get install -y screen >/dev/null 2>&1
+    fi
+    PY_EXEC="python3"
+    command -v python3 >/dev/null 2>&1 || PY_EXEC="python"
 
     # Generar script Python dinámico
     mkdir -p /etc/MaximusVpsMx/core
+    mkdir -p /var/log/MaximusVpsMx
     cat <<PYEOF >/etc/MaximusVpsMx/core/PDirect-${PROXY_PORT}.py
 # -*- coding: utf-8 -*-
-import socket, threading, select, sys, time
+import socket, threading, select, sys, time, os
 
 # Config
 LISTENING_ADDR = '0.0.0.0'
@@ -253,9 +262,24 @@ BUFLEN = 16384
 TIMEOUT = 60
 DEFAULT_HOST = '127.0.0.1:${DROPBEAR_PORT}'
 
+def obtener_banner_chico():
+    path = "/etc/MaximusVpsMx/core/small_banner.txt"
+    if os.path.exists(path):
+        try:
+            with open(path, "r", encoding="utf-8", errors="ignore") as f:
+                text = f.read().strip().replace("\r", "").replace("\n", " ")
+                if text:
+                    return text
+        except:
+            pass
+    return "By MAXIMUS | ELITE"
+
+STATUS_TEXT = obtener_banner_chico()
+STATUS_CODE = "${STATUS_CODE}"
+
 # Responses based on user status configuration
-RESPONSE_WS = f'HTTP/1.1 101 {STATUS_TEXT}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n'.encode('utf-8')
-RESPONSE_STD = f'HTTP/1.1 {STATUS_CODE} {STATUS_TEXT}\r\nContent-length: 0\r\n\r\n'.encode('utf-8')
+RESPONSE_WS = ('HTTP/1.1 101 ' + STATUS_TEXT + '\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n').encode('utf-8', errors='ignore')
+RESPONSE_STD = ('HTTP/1.1 ' + STATUS_CODE + ' ' + STATUS_TEXT + '\r\nContent-length: 0\r\n\r\n').encode('utf-8', errors='ignore')
 RESPONSE_CONTINUE = b'HTTP/1.1 100 Continue\r\n\r\n'
 
 class Server(threading.Thread):
@@ -431,15 +455,31 @@ PYEOF
     chmod +x /etc/MaximusVpsMx/core/PDirect-${PROXY_PORT}.py
     ufw allow ${PROXY_PORT}/tcp >/dev/null 2>&1
     
-    # Ejecutar en screen
-    screen -dmS pydic-${PROXY_PORT} python3 /etc/MaximusVpsMx/core/PDirect-${PROXY_PORT}.py 2>/dev/null
-    echo "${PROXY_PORT}" >> /etc/MaximusVpsMx/core/PDirect.log
+    # Ejecutar en screen con log de inicio y fallback nohup si screen falla
+    screen -wipe >/dev/null 2>&1
+    screen -dmS "pydic-${PROXY_PORT}" bash -c "$PY_EXEC /etc/MaximusVpsMx/core/PDirect-${PROXY_PORT}.py >> /var/log/MaximusVpsMx/pydic_${PROXY_PORT}.log 2>&1"
     
     sleep 1
-    if ps aux | grep -v grep | grep -q "PDirect-${PROXY_PORT}"; then
+    # Si no inició en screen, intentar nohup directamente en segundo plano
+    if ! ps aux | grep -v grep | grep -q "PDirect-${PROXY_PORT}"; then
+        nohup $PY_EXEC /etc/MaximusVpsMx/core/PDirect-${PROXY_PORT}.py >> /var/log/MaximusVpsMx/pydic_${PROXY_PORT}.log 2>&1 &
+        sleep 1
+    fi
+
+    # Registrar puerto en log
+    touch /etc/MaximusVpsMx/core/PDirect.log
+    if ! grep -q -w "${PROXY_PORT}" /etc/MaximusVpsMx/core/PDirect.log 2>/dev/null; then
+        echo "${PROXY_PORT}" >> /etc/MaximusVpsMx/core/PDirect.log
+    fi
+    
+    if ps aux | grep -v grep | grep -q "PDirect-${PROXY_PORT}" || ss -tlnp 2>/dev/null | grep -q ":${PROXY_PORT} "; then
         echo -e "${GREEN}  ✓ Proxy Python WS ACTIVO en puerto $PROXY_PORT -> Dropbear $DROPBEAR_PORT${NC}"
     else
-        echo -e "${RED}  ❌ Error al iniciar el proxy Python${NC}"
+        echo -e "${RED}  ❌ Error al iniciar el proxy Python en puerto $PROXY_PORT${NC}"
+        if [ -s "/var/log/MaximusVpsMx/pydic_${PROXY_PORT}.log" ]; then
+            echo -e "${YELLOW}  [Log de error]:${NC}"
+            tail -n 5 "/var/log/MaximusVpsMx/pydic_${PROXY_PORT}.log"
+        fi
     fi
 
     # ═══════════ PASO 5: SSL STUNNEL4 ═══════════
