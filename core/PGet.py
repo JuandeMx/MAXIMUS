@@ -1,5 +1,18 @@
 # -*- coding: utf-8 -*-
-import sys, time, getopt, socket, threading, base64
+import sys, time, getopt, socket, threading, base64, os
+
+# Optimizacion de recursos y memoria de hilos
+try:
+    threading.stack_size(256 * 1024)
+except:
+    pass
+
+try:
+    import resource
+    soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+    resource.setrlimit(resource.RLIMIT_NOFILE, (max(soft, 65535), max(hard, 65535)))
+except:
+    pass
 
 # CONFIG
 CONFIG_LISTENING = '0.0.0.0:8799'
@@ -454,6 +467,14 @@ class Server(threading.Thread):
                     self.log('opening connection - ' + str(addr), Logger.LOG_INFO)
                     self.acceptClient(c)
                 except socket.timeout:
+                    continue
+                except (ConnectionAbortedError, ConnectionResetError, BlockingIOError, InterruptedError):
+                    continue
+                except OSError:
+                    time.sleep(0.05)
+                    continue
+                except Exception:
+                    time.sleep(0.05)
                     continue
         except Exception as e:
             self.log('connection error - ' + str(type(e)) + ' - ' + str(e), Logger.LOG_ERROR)

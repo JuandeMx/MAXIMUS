@@ -1,5 +1,5 @@
 #!/bin/bash
-# MaximusVpsMx - Super Panel v11.2.42 (Premium)
+# MaximusVpsMx - Super Panel v11.2.48 (Premium)
 # Modificado para Submenús y Funciones Avanzadas + Hysteria v2 Manager
 
 # SEGURIDAD: Solo root puede ejecutar este panel
@@ -1351,7 +1351,7 @@ menu_protocolos() {
         
         # WEBSOKET STATUS EDITABLE
         ws_p=""
-        if ps aux | grep -v grep | grep -E -q "PDirect-|ws-epro"; then
+        if ps aux | grep -v grep | grep -E -q "PDirect-|ws-epro" || systemctl list-units --type=service --state=running 2>/dev/null | grep -q "mx-proxy-"; then
             ws_p=$(ps aux | grep -E 'PDirect-|ws-epro' | grep -v grep | grep -Po 'PDirect-\K[0-9]+' | sort -u -n | tr '\n' ',' | sed 's/,$//')
             [ -z "$ws_p" ] && [ -f /etc/MaximusVpsMx/core/PDirect.log ] && ws_p=$(cat /etc/MaximusVpsMx/core/PDirect.log 2>/dev/null | tr '\n' ',' | sed 's/,$//')
             [ -z "$ws_p" ] && ws_p="Activo"
@@ -1362,8 +1362,9 @@ menu_protocolos() {
         
         # PROXY OPENVPN
         popen_p=""
-        if ps aux | grep -v grep | grep -q "POpen.py"; then
+        if ps aux | grep -v grep | grep -q "POpen.py" || systemctl list-units --type=service --state=running 2>/dev/null | grep -q "mx-popen-"; then
             popen_p=$(ps aux | grep POpen.py | grep -v grep | awk '{print $NF}' | grep -E '^[0-9]+$' | tr '\n' ',' | sed 's/,$//')
+            [ -z "$popen_p" ] && [ -f /etc/MaximusVpsMx/core/POpen.log ] && popen_p=$(cat /etc/MaximusVpsMx/core/POpen.log 2>/dev/null | tr '\n' ',' | sed 's/,$//')
             [ -z "$popen_p" ] && popen_p="Activo"
             st_popen="${GREEN}[ ACTIVO : $popen_p ]${NC}"
         else
@@ -1372,8 +1373,9 @@ menu_protocolos() {
         
         # PROXY PUBLICO
         ppub_p=""
-        if ps aux | grep -v grep | grep -q "PPub.py"; then
+        if ps aux | grep -v grep | grep -q "PPub.py" || systemctl list-units --type=service --state=running 2>/dev/null | grep -q "mx-ppub-"; then
             ppub_p=$(ps aux | grep PPub.py | grep -v grep | awk '{print $NF}' | grep -E '^[0-9]+$' | tr '\n' ',' | sed 's/,$//')
+            [ -z "$ppub_p" ] && [ -f /etc/MaximusVpsMx/core/PPub.log ] && ppub_p=$(cat /etc/MaximusVpsMx/core/PPub.log 2>/dev/null | tr '\n' ',' | sed 's/,$//')
             [ -z "$ppub_p" ] && ppub_p="Activo"
             st_ppub="${GREEN}[ ACTIVO : $ppub_p ]${NC}"
         else
@@ -1382,8 +1384,9 @@ menu_protocolos() {
         
         # PROXY PRIVADO
         ppriv_p=""
-        if ps aux | grep -v grep | grep -q "PPriv.py"; then
+        if ps aux | grep -v grep | grep -q "PPriv.py" || systemctl list-units --type=service --state=running 2>/dev/null | grep -q "mx-ppriv-"; then
             ppriv_p=$(ps aux | grep PPriv.py | grep -v grep | awk '{print $NF}' | grep -E '^[0-9]+$' | tr '\n' ',' | sed 's/,$//')
+            [ -z "$ppriv_p" ] && [ -f /etc/MaximusVpsMx/core/PPriv.log ] && ppriv_p=$(cat /etc/MaximusVpsMx/core/PPriv.log 2>/dev/null | tr '\n' ',' | sed 's/,$//')
             [ -z "$ppriv_p" ] && ppriv_p="Activo"
             st_ppriv="${GREEN}[ ACTIVO : $ppriv_p ]${NC}"
         else
@@ -1391,7 +1394,7 @@ menu_protocolos() {
         fi
 
         # SSL + PYTHON (Combo)
-        if systemctl is-active --quiet stunnel4 2>/dev/null && ps aux | grep -v grep | grep -q "PDirect-"; then
+        if systemctl is-active --quiet stunnel4 2>/dev/null && (ps aux | grep -v grep | grep -q "PDirect-" || systemctl list-units --type=service --state=running 2>/dev/null | grep -q "mx-proxy-"); then
             st_sslpy="${GREEN}[ ACTIVO : SSL $ssl_p | WS $ws_p ]${NC}"
         else
             st_sslpy="${RED}[ OFF ]${NC}"

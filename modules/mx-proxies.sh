@@ -81,6 +81,19 @@ ws_editable() {
 # -*- coding: utf-8 -*-
 import socket, threading, select, sys, time, os
 
+# Optimizacion de recursos y memoria de hilos
+try:
+    threading.stack_size(256 * 1024)
+except:
+    pass
+
+try:
+    import resource
+    soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+    resource.setrlimit(resource.RLIMIT_NOFILE, (max(soft, 65535), max(hard, 65535)))
+except:
+    pass
+
 # Config
 LISTENING_ADDR = '0.0.0.0'
 LISTENING_PORT = ${porta_socket}
@@ -108,35 +121,73 @@ RESPONSE_WS = ('HTTP/1.1 101 ' + STATUS_TEXT + '\r\nUpgrade: websocket\r\nConnec
 RESPONSE_STD = ('HTTP/1.1 ' + STATUS_CODE + ' ' + STATUS_TEXT + '\r\nContent-length: 0\r\n\r\n').encode('utf-8', errors='ignore')
 RESPONSE_CONTINUE = b'HTTP/1.1 100 Continue\r\n\r\n'
 
+def configure_socket(sock):
+    try:
+        sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+        if hasattr(socket, 'TCP_KEEPIDLE'):
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, 20)
+        if hasattr(socket, 'TCP_KEEPINTVL'):
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 10)
+        if hasattr(socket, 'TCP_KEEPCNT'):
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 3)
+    except:
+        pass
+
 class Server(threading.Thread):
     def __init__(self, host, port):
         threading.Thread.__init__(self)
+        self.daemon = True
         self.running = False
         self.host = host
         self.port = port
+        self.soc = None
 
     def run(self):
-        try:
-            self.soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.soc.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            self.soc.settimeout(2)
-            self.soc.bind((self.host, self.port))
-            self.soc.listen(100)
-            self.running = True
-            while self.running:
-                try:
-                    c, addr = self.soc.accept()
-                    c.setblocking(1)
-                except socket.timeout:
-                    continue
+        self.running = True
+        while self.running:
+            try:
+                self.soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.soc.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                self.soc.settimeout(2.0)
+                self.soc.bind((self.host, self.port))
+                self.soc.listen(256)
+                break
+            except Exception:
+                time.sleep(2)
+                if not self.running:
+                    return
+
+        while self.running:
+            try:
+                c, addr = self.soc.accept()
+                c.setblocking(1)
+            except socket.timeout:
+                continue
+            except (ConnectionAbortedError, ConnectionResetError, BlockingIOError, InterruptedError):
+                continue
+            except OSError:
+                time.sleep(0.05)
+                continue
+            except Exception:
+                time.sleep(0.05)
+                continue
+
+            try:
                 conn = ConnectionHandler(c, addr)
                 conn.daemon = True
                 conn.start()
+            except Exception:
+                try:
+                    c.close()
+                except:
+                    pass
+
+        try:
+            if self.soc:
+                self.soc.close()
         except:
             pass
-        finally:
-            self.running = False
-            self.soc.close()
 
 def collect_headers(sock, initial_buffer, timeout_sec):
     buf = initial_buffer
@@ -162,14 +213,16 @@ class ConnectionHandler(threading.Thread):
     def run(self):
         target = None
         try:
-            self.client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-            self.client.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+            configure_socket(self.client)
 
             # Peeking the initial packet
             client_buffer = b''
             r, _, _ = select.select([self.client], [], [], 0.5)
             if r:
                 client_buffer = self.client.recv(BUFLEN)
+
+            if not client_buffer:
+                return
 
             is_ssh = client_buffer.startswith(b'SSH-')
             is_payload = (not is_ssh) and (len(client_buffer) > 0)
@@ -192,7 +245,7 @@ class ConnectionHandler(threading.Thread):
                 else:
                     self.client.sendall(RESPONSE_STD)
                 
-                time.sleep(0.1)
+                time.sleep(0.05)
 
             # Parse backend from X-Real-Host if present, else fallback
             hostPort = ''
@@ -214,7 +267,7 @@ class ConnectionHandler(threading.Thread):
                 host = '127.0.0.1'
 
             target = socket.create_connection((host, port), timeout=3)
-            target.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+            configure_socket(target)
 
             # Send initial data to backend
             if is_ssh:
@@ -230,10 +283,10 @@ class ConnectionHandler(threading.Thread):
                     leftover = client_buffer[header_end:]
                     if leftover: target.sendall(leftover)
 
-            # Relay loop
+            # Relay loop con timeout de 300s para limpiar conexiones zombi
             sockets = [self.client, target]
             while True:
-                r, _, e = select.select(sockets, [], sockets, 3600)
+                r, _, e = select.select(sockets, [], sockets, 300)
                 if not r or e: break
                 for sock in r:
                     data = sock.recv(BUFLEN)
@@ -269,22 +322,55 @@ class ConnectionHandler(threading.Thread):
             return ''
 
 if __name__ == '__main__':
-    try:
-        server = Server(LISTENING_ADDR, LISTENING_PORT)
-        server.start()
-        while True:
+    server = Server(LISTENING_ADDR, LISTENING_PORT)
+    server.start()
+    while True:
+        try:
+            time.sleep(3)
+            if not server.is_alive():
+                server = Server(LISTENING_ADDR, LISTENING_PORT)
+                server.start()
+        except KeyboardInterrupt:
+            server.running = False
+            break
+        except:
             time.sleep(2)
-    except:
-        pass
 EOF
 
         chmod +x /etc/MaximusVpsMx/core/PDirect-${porta_socket}.py
         ufw allow ${porta_socket}/tcp >/dev/null 2>&1
         
-        # Ejecutar en screen con log y fallback nohup
-        screen -wipe >/dev/null 2>&1
-        screen -dmS "pydic-${porta_socket}" bash -c "$PY_EXEC /etc/MaximusVpsMx/core/PDirect-${porta_socket}.py >> /var/log/MaximusVpsMx/pydic_${porta_socket}.log 2>&1"
+        # Crear y arrancar servicio Systemd con auto-reinicio siempre activo
+        cat <<SVCEOF >/etc/systemd/system/mx-proxy-${porta_socket}.service
+[Unit]
+Description=Maximus Python Proxy Port ${porta_socket}
+After=network.target
+
+[Service]
+Type=simple
+User=root
+LimitNOFILE=65535
+ExecStart=$PY_EXEC /etc/MaximusVpsMx/core/PDirect-${porta_socket}.py
+Restart=always
+RestartSec=2
+StandardOutput=append:/var/log/MaximusVpsMx/pydic_${porta_socket}.log
+StandardError=append:/var/log/MaximusVpsMx/pydic_${porta_socket}.log
+
+[Install]
+WantedBy=multi-user.target
+SVCEOF
+
+        systemctl daemon-reload >/dev/null 2>&1
+        systemctl enable --now mx-proxy-${porta_socket}.service >/dev/null 2>&1
+        systemctl restart mx-proxy-${porta_socket}.service >/dev/null 2>&1
         sleep 1
+
+        # Fallback con screen y nohup
+        if ! ps aux | grep -v grep | grep -q "PDirect-${porta_socket}"; then
+            screen -wipe >/dev/null 2>&1
+            screen -dmS "pydic-${porta_socket}" bash -c "$PY_EXEC /etc/MaximusVpsMx/core/PDirect-${porta_socket}.py >> /var/log/MaximusVpsMx/pydic_${porta_socket}.log 2>&1"
+            sleep 1
+        fi
         if ! ps aux | grep -v grep | grep -q "PDirect-${porta_socket}"; then
             nohup $PY_EXEC /etc/MaximusVpsMx/core/PDirect-${porta_socket}.py >> /var/log/MaximusVpsMx/pydic_${porta_socket}.log 2>&1 &
             sleep 1
@@ -296,7 +382,7 @@ EOF
         fi
         
         if ps aux | grep -v grep | grep -q "PDirect-${porta_socket}" || ss -tlnp 2>/dev/null | grep -q ":${porta_socket} "; then
-            echo -e "${GREEN}✓ PROXY WEBSOCKET ACTIVO EN PUERTO: $porta_socket${NC}"
+            echo -e "${GREEN}✓ PROXY WEBSOCKET ACTIVO EN PUERTO: $porta_socket [SYSTEMD ON]${NC}"
         else
             echo -e "${RED}❌ Error al iniciar el proxy Python en puerto $porta_socket${NC}"
             if [ -s "/var/log/MaximusVpsMx/pydic_${porta_socket}.log" ]; then
@@ -322,7 +408,13 @@ EOF
         ui_subhr
         
         read -p "Digite el puerto a desactivar: " portselect
+        systemctl stop mx-proxy-${portselect}.service >/dev/null 2>&1
+        systemctl disable mx-proxy-${portselect}.service >/dev/null 2>&1
+        rm -f /etc/systemd/system/mx-proxy-${portselect}.service
+        systemctl daemon-reload >/dev/null 2>&1
+
         screen -S pydic-${portselect} -p 0 -X quit >/dev/null 2>&1
+        pkill -9 -f "PDirect-${portselect}\.py" >/dev/null 2>&1
         rm -f /etc/MaximusVpsMx/core/PDirect-${portselect}.py
         sed -i "/^${portselect}$/d" "$log_file"
         
@@ -364,18 +456,48 @@ proxy_openvpn() {
         
         ufw allow ${porta_socket}/tcp >/dev/null 2>&1
         
-        # Iniciar backend
-        screen -dmS popenvpn-${porta_socket} $PY_EXEC /etc/MaximusVpsMx/core/POpen.py "$porta_socket" "$texto_soket" 2>/dev/null
+        # Crear y arrancar servicio Systemd con auto-reinicio siempre activo
+        cat <<SVCEOF >/etc/systemd/system/mx-popen-${porta_socket}.service
+[Unit]
+Description=Maximus OpenVPN Python Proxy Port ${porta_socket}
+After=network.target
+
+[Service]
+Type=simple
+User=root
+LimitNOFILE=65535
+ExecStart=$PY_EXEC /etc/MaximusVpsMx/core/POpen.py "${porta_socket}" "${texto_soket}"
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
+SVCEOF
+
+        systemctl daemon-reload >/dev/null 2>&1
+        systemctl enable --now mx-popen-${porta_socket}.service >/dev/null 2>&1
+        systemctl restart mx-popen-${porta_socket}.service >/dev/null 2>&1
+        sleep 1
+
+        # Fallback backend con screen
+        if ! ps aux | grep -v grep | grep -q "POpen.*${porta_socket}"; then
+            screen -dmS popenvpn-${porta_socket} $PY_EXEC /etc/MaximusVpsMx/core/POpen.py "$porta_socket" "$texto_soket" 2>/dev/null
+        fi
         
         echo "${porta_socket}" >> /etc/MaximusVpsMx/core/POpen.log
         
         ui_hr
-        echo -e "${GREEN}✓ PROXY OPENVPN ACTIVO EN PUERTO: $porta_socket${NC}"
+        echo -e "${GREEN}✓ PROXY OPENVPN ACTIVO EN PUERTO: $porta_socket [SYSTEMD ON]${NC}"
         ui_pause
     }
 
     desactivar_popen() {
         ui_header "DESACTIVAR PROXY OPENVPN"
+        systemctl stop "mx-popen-*.service" >/dev/null 2>&1
+        systemctl disable "mx-popen-*.service" >/dev/null 2>&1
+        rm -f /etc/systemd/system/mx-popen-*.service
+        systemctl daemon-reload >/dev/null 2>&1
+
         # Detener screens
         killall -9 POpen.py >/dev/null 2>&1
         for pid in $(ps aux | grep 'POpen.py' | grep -v grep | awk '{print $2}'); do
@@ -422,18 +544,48 @@ proxy_publico() {
         
         ufw allow ${porta_socket}/tcp >/dev/null 2>&1
         
-        # Iniciar backend
-        screen -dmS ppublico-${porta_socket} $PY_EXEC /etc/MaximusVpsMx/core/PPub.py "$porta_socket" "$texto_soket" 2>/dev/null
+        # Crear y arrancar servicio Systemd con auto-reinicio
+        cat <<SVCEOF >/etc/systemd/system/mx-ppub-${porta_socket}.service
+[Unit]
+Description=Maximus Public Python Proxy Port ${porta_socket}
+After=network.target
+
+[Service]
+Type=simple
+User=root
+LimitNOFILE=65535
+ExecStart=$PY_EXEC /etc/MaximusVpsMx/core/PPub.py "${porta_socket}" "${texto_soket}"
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
+SVCEOF
+
+        systemctl daemon-reload >/dev/null 2>&1
+        systemctl enable --now mx-ppub-${porta_socket}.service >/dev/null 2>&1
+        systemctl restart mx-ppub-${porta_socket}.service >/dev/null 2>&1
+        sleep 1
+
+        # Fallback backend con screen
+        if ! ps aux | grep -v grep | grep -q "PPub.*${porta_socket}"; then
+            screen -dmS ppublico-${porta_socket} $PY_EXEC /etc/MaximusVpsMx/core/PPub.py "$porta_socket" "$texto_soket" 2>/dev/null
+        fi
         
         echo "${porta_socket}" >> /etc/MaximusVpsMx/core/PPub.log
         
         ui_hr
-        echo -e "${GREEN}✓ PROXY PÚBLICO ACTIVO EN PUERTO: $porta_socket${NC}"
+        echo -e "${GREEN}✓ PROXY PÚBLICO ACTIVO EN PUERTO: $porta_socket [SYSTEMD ON]${NC}"
         ui_pause
     }
 
     desactivar_ppub() {
         ui_header "DESACTIVAR PROXY PÚBLICO"
+        systemctl stop "mx-ppub-*.service" >/dev/null 2>&1
+        systemctl disable "mx-ppub-*.service" >/dev/null 2>&1
+        rm -f /etc/systemd/system/mx-ppub-*.service
+        systemctl daemon-reload >/dev/null 2>&1
+
         killall -9 PPub.py >/dev/null 2>&1
         for pid in $(ps aux | grep 'PPub.py' | grep -v grep | awk '{print $2}'); do
             kill -9 "$pid" 2>/dev/null
@@ -480,18 +632,48 @@ proxy_privado() {
         local_ip=$(get_public_ip)
         ufw allow ${porta_socket}/tcp >/dev/null 2>&1
         
-        # Iniciar backend (PPriv usa python3)
-        screen -dmS pprivado-${porta_socket} python3 /etc/MaximusVpsMx/core/PPriv.py "$porta_socket" "$texto_soket" "$local_ip"
+        # Crear y arrancar servicio Systemd con auto-reinicio
+        cat <<SVCEOF >/etc/systemd/system/mx-ppriv-${porta_socket}.service
+[Unit]
+Description=Maximus Private Python Proxy Port ${porta_socket}
+After=network.target
+
+[Service]
+Type=simple
+User=root
+LimitNOFILE=65535
+ExecStart=$PY_EXEC /etc/MaximusVpsMx/core/PPriv.py "${porta_socket}" "${texto_soket}" "${local_ip}"
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
+SVCEOF
+
+        systemctl daemon-reload >/dev/null 2>&1
+        systemctl enable --now mx-ppriv-${porta_socket}.service >/dev/null 2>&1
+        systemctl restart mx-ppriv-${porta_socket}.service >/dev/null 2>&1
+        sleep 1
+
+        # Fallback backend con screen
+        if ! ps aux | grep -v grep | grep -q "PPriv.*${porta_socket}"; then
+            screen -dmS pprivado-${porta_socket} $PY_EXEC /etc/MaximusVpsMx/core/PPriv.py "$porta_socket" "$texto_soket" "$local_ip"
+        fi
         
         echo "${porta_socket}" >> /etc/MaximusVpsMx/core/PPriv.log
         
         ui_hr
-        echo -e "${GREEN}✓ PROXY PRIVADO ACTIVO EN PUERTO: $porta_socket${NC}"
+        echo -e "${GREEN}✓ PROXY PRIVADO ACTIVO EN PUERTO: $porta_socket [SYSTEMD ON]${NC}"
         ui_pause
     }
 
     desactivar_ppriv() {
         ui_header "DESACTIVAR PROXY PRIVADO"
+        systemctl stop "mx-ppriv-*.service" >/dev/null 2>&1
+        systemctl disable "mx-ppriv-*.service" >/dev/null 2>&1
+        rm -f /etc/systemd/system/mx-ppriv-*.service
+        systemctl daemon-reload >/dev/null 2>&1
+
         killall -9 PPriv.py >/dev/null 2>&1
         for pid in $(ps aux | grep 'PPriv.py' | grep -v grep | awk '{print $2}'); do
             kill -9 "$pid" 2>/dev/null
@@ -538,16 +720,46 @@ get_tunnel() {
         
         ufw allow ${porta_socket}/tcp >/dev/null 2>&1
         
-        # Iniciar backend
-        screen -dmS getpy $PY_EXEC /etc/MaximusVpsMx/core/PGet.py -b "0.0.0.0:$porta_socket" -p "/etc/MaximusVpsMx/core/pwd.pwd" 2>/dev/null
+        # Crear y arrancar servicio Systemd con auto-reinicio
+        cat <<SVCEOF >/etc/systemd/system/mx-pget-${porta_socket}.service
+[Unit]
+Description=Maximus Gettunel Proxy Port ${porta_socket}
+After=network.target
+
+[Service]
+Type=simple
+User=root
+LimitNOFILE=65535
+ExecStart=$PY_EXEC /etc/MaximusVpsMx/core/PGet.py -b "0.0.0.0:${porta_socket}" -p "/etc/MaximusVpsMx/core/pwd.pwd"
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
+SVCEOF
+
+        systemctl daemon-reload >/dev/null 2>&1
+        systemctl enable --now mx-pget-${porta_socket}.service >/dev/null 2>&1
+        systemctl restart mx-pget-${porta_socket}.service >/dev/null 2>&1
+        sleep 1
+
+        # Fallback con screen
+        if ! ps aux | grep -v grep | grep -q "PGet"; then
+            screen -dmS getpy $PY_EXEC /etc/MaximusVpsMx/core/PGet.py -b "0.0.0.0:$porta_socket" -p "/etc/MaximusVpsMx/core/pwd.pwd" 2>/dev/null
+        fi
         
         ui_hr
-        echo -e "${GREEN}✓ GETTUNEL ACTIVO EN PUERTO: $porta_socket${NC}"
+        echo -e "${GREEN}✓ GETTUNEL ACTIVO EN PUERTO: $porta_socket [SYSTEMD ON]${NC}"
         ui_pause
     }
 
     desactivar_get() {
         ui_header "DESACTIVAR PROXY GETTUNEL"
+        systemctl stop "mx-pget-*.service" >/dev/null 2>&1
+        systemctl disable "mx-pget-*.service" >/dev/null 2>&1
+        rm -f /etc/systemd/system/mx-pget-*.service
+        systemctl daemon-reload >/dev/null 2>&1
+
         killall -9 PGet.py >/dev/null 2>&1
         for pid in $(ps aux | grep 'PGet.py' | grep -v grep | awk '{print $2}'); do
             kill -9 "$pid" 2>/dev/null

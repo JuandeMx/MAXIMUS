@@ -248,12 +248,25 @@ EOF
     PY_EXEC="python3"
     command -v python3 >/dev/null 2>&1 || PY_EXEC="python"
 
-    # Generar script Python dinámico
+    # Generar script Python dinámico blindado
     mkdir -p /etc/MaximusVpsMx/core
     mkdir -p /var/log/MaximusVpsMx
     cat <<PYEOF >/etc/MaximusVpsMx/core/PDirect-${PROXY_PORT}.py
 # -*- coding: utf-8 -*-
 import socket, threading, select, sys, time, os
+
+# Optimizacion de recursos y memoria de hilos
+try:
+    threading.stack_size(256 * 1024)
+except:
+    pass
+
+try:
+    import resource
+    soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+    resource.setrlimit(resource.RLIMIT_NOFILE, (max(soft, 65535), max(hard, 65535)))
+except:
+    pass
 
 # Config
 LISTENING_ADDR = '0.0.0.0'
@@ -282,35 +295,73 @@ RESPONSE_WS = ('HTTP/1.1 101 ' + STATUS_TEXT + '\r\nUpgrade: websocket\r\nConnec
 RESPONSE_STD = ('HTTP/1.1 ' + STATUS_CODE + ' ' + STATUS_TEXT + '\r\nContent-length: 0\r\n\r\n').encode('utf-8', errors='ignore')
 RESPONSE_CONTINUE = b'HTTP/1.1 100 Continue\r\n\r\n'
 
+def configure_socket(sock):
+    try:
+        sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+        if hasattr(socket, 'TCP_KEEPIDLE'):
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, 20)
+        if hasattr(socket, 'TCP_KEEPINTVL'):
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 10)
+        if hasattr(socket, 'TCP_KEEPCNT'):
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 3)
+    except:
+        pass
+
 class Server(threading.Thread):
     def __init__(self, host, port):
         threading.Thread.__init__(self)
+        self.daemon = True
         self.running = False
         self.host = host
         self.port = port
+        self.soc = None
 
     def run(self):
-        try:
-            self.soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.soc.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            self.soc.settimeout(2)
-            self.soc.bind((self.host, self.port))
-            self.soc.listen(100)
-            self.running = True
-            while self.running:
-                try:
-                    c, addr = self.soc.accept()
-                    c.setblocking(1)
-                except socket.timeout:
-                    continue
+        self.running = True
+        while self.running:
+            try:
+                self.soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.soc.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                self.soc.settimeout(2.0)
+                self.soc.bind((self.host, self.port))
+                self.soc.listen(256)
+                break
+            except Exception:
+                time.sleep(2)
+                if not self.running:
+                    return
+
+        while self.running:
+            try:
+                c, addr = self.soc.accept()
+                c.setblocking(1)
+            except socket.timeout:
+                continue
+            except (ConnectionAbortedError, ConnectionResetError, BlockingIOError, InterruptedError):
+                continue
+            except OSError:
+                time.sleep(0.05)
+                continue
+            except Exception:
+                time.sleep(0.05)
+                continue
+
+            try:
                 conn = ConnectionHandler(c, addr)
                 conn.daemon = True
                 conn.start()
+            except Exception:
+                try:
+                    c.close()
+                except:
+                    pass
+
+        try:
+            if self.soc:
+                self.soc.close()
         except:
             pass
-        finally:
-            self.running = False
-            self.soc.close()
 
 def collect_headers(sock, initial_buffer, timeout_sec):
     buf = initial_buffer
@@ -336,14 +387,16 @@ class ConnectionHandler(threading.Thread):
     def run(self):
         target = None
         try:
-            self.client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-            self.client.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+            configure_socket(self.client)
 
             # Peeking the initial packet
             client_buffer = b''
             r, _, _ = select.select([self.client], [], [], 0.5)
             if r:
                 client_buffer = self.client.recv(BUFLEN)
+
+            if not client_buffer:
+                return
 
             is_ssh = client_buffer.startswith(b'SSH-')
             is_payload = (not is_ssh) and (len(client_buffer) > 0)
@@ -366,7 +419,7 @@ class ConnectionHandler(threading.Thread):
                 else:
                     self.client.sendall(RESPONSE_STD)
                 
-                time.sleep(0.1)
+                time.sleep(0.05)
 
             # Parse backend from X-Real-Host if present, else fallback
             hostPort = ''
@@ -388,7 +441,7 @@ class ConnectionHandler(threading.Thread):
                 host = '127.0.0.1'
 
             target = socket.create_connection((host, port), timeout=3)
-            target.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+            configure_socket(target)
 
             # Send initial data to backend
             if is_ssh:
@@ -404,10 +457,10 @@ class ConnectionHandler(threading.Thread):
                     leftover = client_buffer[header_end:]
                     if leftover: target.sendall(leftover)
 
-            # Relay loop
+            # Relay loop con timeout de 300s para limpiar conexiones zombi
             sockets = [self.client, target]
             while True:
-                r, _, e = select.select(sockets, [], sockets, 3600)
+                r, _, e = select.select(sockets, [], sockets, 300)
                 if not r or e: break
                 for sock in r:
                     data = sock.recv(BUFLEN)
@@ -443,24 +496,55 @@ class ConnectionHandler(threading.Thread):
             return ''
 
 if __name__ == '__main__':
-    try:
-        server = Server(LISTENING_ADDR, LISTENING_PORT)
-        server.start()
-        while True:
+    server = Server(LISTENING_ADDR, LISTENING_PORT)
+    server.start()
+    while True:
+        try:
+            time.sleep(3)
+            if not server.is_alive():
+                server = Server(LISTENING_ADDR, LISTENING_PORT)
+                server.start()
+        except KeyboardInterrupt:
+            server.running = False
+            break
+        except:
             time.sleep(2)
-    except:
-        pass
 PYEOF
 
     chmod +x /etc/MaximusVpsMx/core/PDirect-${PROXY_PORT}.py
     ufw allow ${PROXY_PORT}/tcp >/dev/null 2>&1
     
-    # Ejecutar en screen con log de inicio y fallback nohup si screen falla
-    screen -wipe >/dev/null 2>&1
-    screen -dmS "pydic-${PROXY_PORT}" bash -c "$PY_EXEC /etc/MaximusVpsMx/core/PDirect-${PROXY_PORT}.py >> /var/log/MaximusVpsMx/pydic_${PROXY_PORT}.log 2>&1"
-    
+    # Crear servicio Systemd para auto-reinicio continuo e inmune a cierres de SSH
+    cat <<SVCEOF >/etc/systemd/system/mx-proxy-${PROXY_PORT}.service
+[Unit]
+Description=Maximus Python Proxy Port ${PROXY_PORT}
+After=network.target
+
+[Service]
+Type=simple
+User=root
+LimitNOFILE=65535
+ExecStart=$PY_EXEC /etc/MaximusVpsMx/core/PDirect-${PROXY_PORT}.py
+Restart=always
+RestartSec=2
+StandardOutput=append:/var/log/MaximusVpsMx/pydic_${PROXY_PORT}.log
+StandardError=append:/var/log/MaximusVpsMx/pydic_${PROXY_PORT}.log
+
+[Install]
+WantedBy=multi-user.target
+SVCEOF
+
+    systemctl daemon-reload >/dev/null 2>&1
+    systemctl enable --now mx-proxy-${PROXY_PORT}.service >/dev/null 2>&1
+    systemctl restart mx-proxy-${PROXY_PORT}.service >/dev/null 2>&1
     sleep 1
-    # Si no inició en screen, intentar nohup directamente en segundo plano
+
+    # Fallback con screen/nohup si systemd no estuviera activo
+    if ! ps aux | grep -v grep | grep -q "PDirect-${PROXY_PORT}"; then
+        screen -wipe >/dev/null 2>&1
+        screen -dmS "pydic-${PROXY_PORT}" bash -c "$PY_EXEC /etc/MaximusVpsMx/core/PDirect-${PROXY_PORT}.py >> /var/log/MaximusVpsMx/pydic_${PROXY_PORT}.log 2>&1"
+        sleep 1
+    fi
     if ! ps aux | grep -v grep | grep -q "PDirect-${PROXY_PORT}"; then
         nohup $PY_EXEC /etc/MaximusVpsMx/core/PDirect-${PROXY_PORT}.py >> /var/log/MaximusVpsMx/pydic_${PROXY_PORT}.log 2>&1 &
         sleep 1
@@ -473,7 +557,7 @@ PYEOF
     fi
     
     if ps aux | grep -v grep | grep -q "PDirect-${PROXY_PORT}" || ss -tlnp 2>/dev/null | grep -q ":${PROXY_PORT} "; then
-        echo -e "${GREEN}  ✓ Proxy Python WS ACTIVO en puerto $PROXY_PORT -> Dropbear $DROPBEAR_PORT${NC}"
+        echo -e "${GREEN}  ✓ Proxy Python WS ACTIVO en puerto $PROXY_PORT -> Dropbear $DROPBEAR_PORT [SYSTEMD ON]${NC}"
     else
         echo -e "${RED}  ❌ Error al iniciar el proxy Python en puerto $PROXY_PORT${NC}"
         if [ -s "/var/log/MaximusVpsMx/pydic_${PROXY_PORT}.log" ]; then
@@ -544,7 +628,12 @@ desactivar_ssl_python() {
     ui_header "DESINSTALAR SSL + PYTHON"
     echo -e "${YELLOW}[+] Deteniendo todos los componentes...${NC}"
     
-    # Detener proxies Python
+    # Detener servicios systemd y proxies Python
+    systemctl stop "mx-proxy-*.service" >/dev/null 2>&1
+    systemctl disable "mx-proxy-*.service" >/dev/null 2>&1
+    rm -f /etc/systemd/system/mx-proxy-*.service
+    systemctl daemon-reload >/dev/null 2>&1
+
     for pid in $(ps aux | grep 'PDirect-' | grep -v grep | awk '{print $2}'); do
         kill -9 "$pid" 2>/dev/null
     done
@@ -574,7 +663,7 @@ while true; do
     
     # Status
     systemctl is-active --quiet dropbear 2>/dev/null && st_drop="${GREEN}[ ACTIVO ]${NC}" || st_drop="${RED}[ OFF ]${NC}"
-    ps aux | grep -v grep | grep -q "PDirect-" && st_py="${GREEN}[ ACTIVO ]${NC}" || st_py="${RED}[ OFF ]${NC}"
+    (ps aux | grep -v grep | grep -q "PDirect-" || systemctl list-units --type=service --state=running 2>/dev/null | grep -q "mx-proxy-") && st_py="${GREEN}[ ACTIVO ]${NC}" || st_py="${RED}[ OFF ]${NC}"
     systemctl is-active --quiet stunnel4 2>/dev/null && st_ssl="${GREEN}[ ACTIVO ]${NC}" || st_ssl="${RED}[ OFF ]${NC}"
     
     echo -e "  ${WHITE}Estado Actual:${NC}"

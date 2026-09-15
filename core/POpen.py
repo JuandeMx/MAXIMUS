@@ -1,5 +1,18 @@
 # -*- coding: utf-8 -*-
-import socket, threading, select, sys, time
+import socket, threading, select, sys, time, os
+
+# Optimizacion de recursos y memoria de hilos
+try:
+    threading.stack_size(256 * 1024)
+except:
+    pass
+
+try:
+    import resource
+    soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+    resource.setrlimit(resource.RLIMIT_NOFILE, (max(soft, 65535), max(hard, 65535)))
+except:
+    pass
 
 # Config
 LISTENING_ADDR = '0.0.0.0'
@@ -16,38 +29,75 @@ else:
 BUFLEN = 16384
 TIMEOUT = 60
 
-# stack responses to satisfy HTTP Custom
 RESPONSE = f'HTTP/1.1 200 {STATUS_TEXT}\r\nContent-length: 0\r\n\r\nHTTP/1.1 200 Connection established\r\n\r\n'.encode('utf-8')
+
+def configure_socket(sock):
+    try:
+        sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+        if hasattr(socket, 'TCP_KEEPIDLE'):
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, 20)
+        if hasattr(socket, 'TCP_KEEPINTVL'):
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 10)
+        if hasattr(socket, 'TCP_KEEPCNT'):
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 3)
+    except:
+        pass
 
 class Server(threading.Thread):
     def __init__(self, host, port):
         threading.Thread.__init__(self)
+        self.daemon = True
         self.running = False
         self.host = host
         self.port = port
+        self.soc = None
 
     def run(self):
-        try:
-            self.soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.soc.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            self.soc.settimeout(2)
-            self.soc.bind((self.host, self.port))
-            self.soc.listen(100)
-            self.running = True
-            while self.running:
-                try:
-                    c, addr = self.soc.accept()
-                    c.setblocking(1)
-                except socket.timeout:
-                    continue
+        self.running = True
+        while self.running:
+            try:
+                self.soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.soc.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                self.soc.settimeout(2.0)
+                self.soc.bind((self.host, self.port))
+                self.soc.listen(256)
+                break
+            except Exception:
+                time.sleep(2)
+                if not self.running:
+                    return
+
+        while self.running:
+            try:
+                c, addr = self.soc.accept()
+                c.setblocking(1)
+            except socket.timeout:
+                continue
+            except (ConnectionAbortedError, ConnectionResetError, BlockingIOError, InterruptedError):
+                continue
+            except OSError:
+                time.sleep(0.05)
+                continue
+            except Exception:
+                time.sleep(0.05)
+                continue
+
+            try:
                 conn = ConnectionHandler(c, addr)
                 conn.daemon = True
                 conn.start()
+            except Exception:
+                try:
+                    c.close()
+                except:
+                    pass
+
+        try:
+            if self.soc:
+                self.soc.close()
         except:
             pass
-        finally:
-            self.running = False
-            self.soc.close()
 
 def collect_headers(sock, initial_buffer, timeout_sec):
     buf = initial_buffer
@@ -73,8 +123,7 @@ class ConnectionHandler(threading.Thread):
     def run(self):
         target = None
         try:
-            self.client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-            self.client.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+            configure_socket(self.client)
 
             # Receive headers from client
             client_buffer = b''
@@ -82,7 +131,7 @@ class ConnectionHandler(threading.Thread):
             if r:
                 client_buffer = self.client.recv(BUFLEN)
 
-            if len(client_buffer) == 0:
+            if not client_buffer:
                 return
 
             client_buffer = collect_headers(self.client, client_buffer, 5)
@@ -90,7 +139,6 @@ class ConnectionHandler(threading.Thread):
             # Parse target from CONNECT line or Host header
             hostPort = self.findHeader(client_buffer, 'Host')
             if not hostPort:
-                # Fallback to parse from CONNECT method line: "CONNECT 127.0.0.1:1194 HTTP/1.1"
                 try:
                     lines = client_buffer.decode('utf-8', errors='ignore').split('\r\n')
                     parts = lines[0].split(' ')
@@ -100,7 +148,6 @@ class ConnectionHandler(threading.Thread):
                     pass
 
             if not hostPort:
-                # Default fallback
                 hostPort = '127.0.0.1:1194'
 
             i = hostPort.find(':')
@@ -115,15 +162,15 @@ class ConnectionHandler(threading.Thread):
                 host = '127.0.0.1'
 
             target = socket.create_connection((host, port), timeout=3)
-            target.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+            configure_socket(target)
 
             # Respond success to client
             self.client.sendall(RESPONSE)
 
-            # Relay loop
+            # Relay loop con timeout de 300s para limpiar conexiones zombi
             sockets = [self.client, target]
             while True:
-                r, _, e = select.select(sockets, [], sockets, 3600)
+                r, _, e = select.select(sockets, [], sockets, 300)
                 if not r or e: break
                 for sock in r:
                     data = sock.recv(BUFLEN)
@@ -159,10 +206,17 @@ class ConnectionHandler(threading.Thread):
             return ''
 
 if __name__ == '__main__':
-    try:
-        server = Server(LISTENING_ADDR, LISTENING_PORT)
-        server.start()
-        while True:
+    server = Server(LISTENING_ADDR, LISTENING_PORT)
+    server.start()
+    while True:
+        try:
+            time.sleep(3)
+            if not server.is_alive():
+                server = Server(LISTENING_ADDR, LISTENING_PORT)
+                server.start()
+        except KeyboardInterrupt:
+            server.running = False
+            break
+        except:
             time.sleep(2)
-    except:
-        pass
+
