@@ -21,7 +21,7 @@ BUFLEN = 131072
 
 def obtener_banner_chico():
     import os
-    default_text = "[MAXIMUS C J&J] Si te revendieron este servidor TE ESTAFARON - Grupo: https://chat.whatsapp.com/Gmti2GoprFa0Uf4tuGD4dP?s=cl&p=a&ilr=0"
+    default_text = "MAXIMUS VPS"
     path = "/etc/MaximusVpsMx/core/small_banner.txt"
     if os.path.exists(path):
         try:

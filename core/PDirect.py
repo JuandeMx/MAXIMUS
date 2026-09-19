@@ -26,7 +26,7 @@ TIMEOUT = 60
 DEFAULT_HOST = '127.0.0.1:443'
 
 def obtener_banner_chico():
-    default_text = "By MAXIMUS | ELITE"
+    default_text = "MAXIMUS VPS"
     path = "/etc/MaximusVpsMx/core/small_banner.txt"
     if os.path.exists(path):
         try:
