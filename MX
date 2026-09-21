@@ -670,7 +670,7 @@ purgar_sistema_total() {
 
     # 1. Detener y Deshabilitar Servicios Systemd
     echo -e "${CYAN}[+] Fulminando servicios systemd...${NC}"
-    local services=("stunnel4" "dropbear" "mx-proxy" "badvpn" "mx-slowdns" "udp-custom" "hysteria" "ws-epro" "sshd" "ssh" "mx-webpanel")
+    local services=("stunnel4" "dropbear" "mx-proxy" "badvpn" "mx-slowdns" "udp-custom" "hysteria" "ws-epro" "sshd" "ssh" "mx-webpanel" "hcr-server")
     for srv in "${services[@]}"; do
         echo -e "    - Limpiando $srv..."
         systemctl stop "$srv" 2>/dev/null
@@ -680,14 +680,14 @@ purgar_sistema_total() {
 
     # 2. Matar procesos por socket (Puertos críticos)
     echo -e "${CYAN}[+] Cerrando sockets ocupados...${NC}"
-    local ports=("443/udp" "7300/udp" "36712/udp" "80/tcp" "443/tcp" "8080/tcp" "8082/tcp")
+    local ports=("443/udp" "7300/udp" "36712/udp" "8888/tcp" "80/tcp" "443/tcp" "8080/tcp" "8082/tcp")
     for p in "${ports[@]}"; do
         fuser -k -n "$p" 2>/dev/null
     done
 
     # 3. Matar procesos por nombre (Fuerza bruta)
     echo -e "${CYAN}[+] Matando procesos remanentes...${NC}"
-    local binaries=("stunnel4" "dropbear" "python3" "badvpn-udpgw" "udp-custom" "hysteria" "slowdns")
+    local binaries=("stunnel4" "dropbear" "python3" "badvpn-udpgw" "udp-custom" "hysteria" "slowdns" "hcr-server")
     for bin in "${binaries[@]}"; do
         pkill -9 "$bin" 2>/dev/null
         killall -9 "$bin" 2>/dev/null
@@ -695,7 +695,7 @@ purgar_sistema_total() {
 
     # 4. Eliminar Binarios de Rutas Globales
     echo -e "${CYAN}[+] Eliminando binarios del sistema...${NC}"
-    rm -f /usr/local/bin/badvpn-udpgw /usr/bin/badvpn-udpgw /usr/bin/hysteria /usr/local/bin/udp-custom /usr/local/bin/MX /usr/local/bin/menu /usr/local/bin/MENU 2>/dev/null
+    rm -f /usr/local/bin/badvpn-udpgw /usr/bin/badvpn-udpgw /usr/bin/hysteria /usr/local/bin/udp-custom /usr/local/bin/hcr-server /usr/local/bin/MX /usr/local/bin/menu /usr/local/bin/MENU 2>/dev/null
 
     # 5. Limpiar Firewall UFW
     echo -e "${CYAN}[+] Limpiando reglas de Firewall...${NC}"
@@ -1417,6 +1417,16 @@ menu_protocolos() {
             st_v2ray="${RED}[ OFF ]${NC}"
         fi
 
+        # HCR SERVER (HTTP CUSTOM RELAY)
+        if systemctl is-active --quiet hcr-server 2>/dev/null; then
+            hcr_p=$(ss -tlnp 2>/dev/null | grep hcr-server | awk '{print $4}' | awk -F':' '{print $NF}' | head -n1)
+            [ -z "$hcr_p" ] && [ -f /etc/MaximusVpsMx/hcr/port.conf ] && hcr_p=$(cat /etc/MaximusVpsMx/hcr/port.conf 2>/dev/null)
+            [ -z "$hcr_p" ] && hcr_p="8888"
+            st_hcr="${GREEN}[ ACTIVO : $hcr_p ]${NC}"
+        else
+            st_hcr="${RED}[ OFF ]${NC}"
+        fi
+
         ui_header "MENU DE PROTOCOLOS"
         active_tcp_ports=$(ss -tlnp 2>/dev/null | awk 'NR>1 {print $4}' | awk -F':' '{print $NF}' | grep -E '^[0-9]+$' | sort -u -n | tr '\n' ' ')
         [ -z "$active_tcp_ports" ] && active_tcp_ports="Ninguno"
@@ -1443,6 +1453,7 @@ menu_protocolos() {
         echo -e "  ${CYAN}[16] >${WHITE} PROXY PRIVADO ------------------- $st_ppriv"
         echo -e "  ${CYAN}[17] >${WHITE} PANEL X-UI (WEB UI) ------------- $st_xui"
         echo -e "  ${CYAN}[18] >${WHITE} V2RAY / XRAY NATIVO (TERMINAL) -- $st_v2ray"
+        echo -e "  ${CYAN}[19] >${WHITE} HCR RELAY (HTTP CUSTOM) ---------- $st_hcr"
         ui_hr
         echo -e "  ${WHITE}[0] VOLVER AL MENÚ PRINCIPAL${NC}"
         ui_hr
@@ -1467,6 +1478,7 @@ menu_protocolos() {
             16) bash /etc/MaximusVpsMx/modules/mx-proxies.sh 16 ;;
             17) sub_xui ;;
             18) bash /etc/MaximusVpsMx/modules/mx-v2ray.sh ;;
+            19) bash /etc/MaximusVpsMx/modules/mx-hcr.sh ;;
             0) return ;;
             *) continue ;;
         esac
