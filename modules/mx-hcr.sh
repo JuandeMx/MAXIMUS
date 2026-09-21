@@ -118,6 +118,17 @@ instalar_hcr() {
         n_port="8888"
     fi
 
+    # Validar si el puerto ya está ocupado por otro servicio
+    local port_busy=$(ss -tlnp 2>/dev/null | grep -E ":${n_port}\b" | grep -v "hcr-server")
+    if [ -n "$port_busy" ]; then
+        echo -e "\n${RED}❌ Error: El puerto $n_port ya está ocupado por otro servicio en el VPS.${NC}"
+        local proc_name=$(echo "$port_busy" | awk '{print $NF}' | tr -d '"')
+        [ -n "$proc_name" ] && echo -e "   ${YELLOW}En uso por:${NC} $proc_name"
+        echo -e "   ${CYAN}Por favor elige un puerto libre (por ejemplo 8888, 8088 o 8443).${NC}"
+        ui_pause
+        return
+    fi
+
     # 2. Modo de transporte
     local old_trans="auto"
     [ -f "$CONF_TRANS" ] && old_trans=$(cat "$CONF_TRANS")
