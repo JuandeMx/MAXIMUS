@@ -271,7 +271,7 @@ except:
 # Config
 LISTENING_ADDR = '0.0.0.0'
 LISTENING_PORT = ${PROXY_PORT}
-BUFLEN = 16384
+BUFLEN = 65536
 TIMEOUT = 60
 DEFAULT_HOST = '127.0.0.1:${DROPBEAR_PORT}'
 
@@ -292,7 +292,7 @@ STATUS_CODE = "${STATUS_CODE}"
 
 # Responses based on user status configuration
 RESPONSE_WS = ('HTTP/1.1 101 ' + STATUS_TEXT + '\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n').encode('utf-8', errors='ignore')
-RESPONSE_STD = ('HTTP/1.1 ' + STATUS_CODE + ' ' + STATUS_TEXT + '\r\nContent-length: 0\r\n\r\n').encode('utf-8', errors='ignore')
+RESPONSE_STD = ('HTTP/1.1 ' + STATUS_CODE + ' ' + STATUS_TEXT + '\r\nConnection: Keep-Alive\r\n\r\n').encode('utf-8', errors='ignore')
 RESPONSE_CONTINUE = b'HTTP/1.1 100 Continue\r\n\r\n'
 
 def configure_socket(sock):
@@ -457,18 +457,32 @@ class ConnectionHandler(threading.Thread):
                     leftover = client_buffer[header_end:]
                     if leftover: target.sendall(leftover)
 
-            # Relay loop con timeout de 300s para limpiar conexiones zombi
-            sockets = [self.client, target]
-            while True:
-                r, _, e = select.select(sockets, [], sockets, 300)
-                if not r or e: break
-                for sock in r:
-                    data = sock.recv(BUFLEN)
-                    if not data: return
-                    out = target if sock is self.client else self.client
-                    out.sendall(data)
+            # Retransmisión bidireccional asíncrona (Dual-Thread Anti-Deadlock 4G/LTE)
+            def forward(src, dst):
+                try:
+                    while True:
+                        data = src.recv(BUFLEN)
+                        if not data:
+                            break
+                        dst.sendall(data)
+                except Exception:
+                    pass
+                finally:
+                    try:
+                        dst.shutdown(socket.SHUT_WR)
+                    except Exception:
+                        pass
 
-        except:
+            t_up = threading.Thread(target=forward, args=(self.client, target))
+            t_down = threading.Thread(target=forward, args=(target, self.client))
+            t_up.daemon = True
+            t_down.daemon = True
+            t_up.start()
+            t_down.start()
+            t_up.join()
+            t_down.join()
+
+        except Exception:
             pass
         finally:
             try:

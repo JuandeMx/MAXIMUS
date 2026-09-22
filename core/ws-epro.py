@@ -126,24 +126,30 @@ class Proxy(threading.Thread):
             elif b'HTTP' not in client_buffer:
                 target.send(client_buffer)
 
-            sockets = [self.client, target]
-            running_relay = True
-            while running_relay:
+            # Retransmisión bidireccional asíncrona (Dual-Thread Anti-Deadlock 4G/LTE)
+            def forward(src, dst):
                 try:
-                    # Timeout de 2 horas para inactividad extrema (7200s)
-                    r, _, e = select.select(sockets, [], sockets, 7200)
-                    if not r or e: break 
-                    
-                    for sock in r:
-                        data = sock.recv(BUFLEN)
-                        if not data: 
-                            running_relay = False
+                    while True:
+                        data = src.recv(BUFLEN)
+                        if not data:
                             break
-                        
-                        out = target if sock is self.client else self.client
-                        out.sendall(data)
-                except:
-                    break
+                        dst.sendall(data)
+                except Exception:
+                    pass
+                finally:
+                    try:
+                        dst.shutdown(socket.SHUT_WR)
+                    except Exception:
+                        pass
+
+            t_up = threading.Thread(target=forward, args=(self.client, target))
+            t_down = threading.Thread(target=forward, args=(target, self.client))
+            t_up.daemon = True
+            t_down.daemon = True
+            t_up.start()
+            t_down.start()
+            t_up.join()
+            t_down.join()
                     
         except Exception:
             pass

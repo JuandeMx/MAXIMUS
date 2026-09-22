@@ -180,7 +180,7 @@ echo -e "\e[1;36m=========================================================\e[0m\
 
 # 0. Limpieza y Preparación de Terreno (v6.2 Residual Fix)
 echo -e "\e[1;32m[+] Detectando y deteniendo servicios para una instalación limpia...\e[0m"
-SERVICES=("stunnel4" "ws-epro" "mx-proxy" "badvpn" "hysteria" "udp-custom" "mx-slowdns" "dropbear" "mx-webpanel" "maximus-bot" "maximus-wa" "maximus-api")
+SERVICES=("stunnel4" "ws-epro" "mx-proxy" "badvpn" "hysteria" "udp-custom" "mx-slowdns" "dropbear" "mx-webpanel" "maximus-bot" "maximus-wa" "maximus-api" "hcr-server")
 for srv in "${SERVICES[@]}"; do
     echo -e "\e[1;33m    - Deteniendo y deshabilitando $srv...\e[0m"
     systemctl stop "$srv" 2>/dev/null
@@ -193,7 +193,7 @@ done
 systemctl daemon-reload 2>/dev/null
 
 # Matar procesos por nombre (Limpieza Nuclear)
-killall -9 badvpn-udpgw hysteria udp-custom stunnel4 2>/dev/null
+killall -9 badvpn-udpgw hysteria udp-custom stunnel4 hcr-server 2>/dev/null
 pkill -9 badvpn-udpgw 2>/dev/null
 pkill -9 hysteria 2>/dev/null
 pkill -9 udp-custom 2>/dev/null
@@ -278,8 +278,19 @@ instalar_psutil_local
 # Instalar pycryptodome para el generador de perfiles .MX
 pip3 install pycryptodome --break-system-packages >/dev/null 2>&1 || pip3 install pycryptodome >/dev/null 2>&1 || true
 
-# 1.5 Firewall Local
-echo -e "\e[1;32m[+] Blindando Puertos Nativos con UFW...\e[0m"
+# 1.5 Firewall Local y Reenvío de Red (Modo 4G/LTE Optimizado)
+echo -e "\e[1;32m[+] Blindando Puertos Nativos con UFW y Reenvío de Red (4G/LTE)...\e[0m"
+
+# Activar reenvío de paquetes en el Kernel
+sysctl -w net.ipv4.ip_forward=1 >/dev/null 2>&1
+sed -i '/net.ipv4.ip_forward/d' /etc/sysctl.conf 2>/dev/null
+echo "net.ipv4.ip_forward=1" >> /etc/sysctl.conf
+
+# Permitir reenvío de paquetes en UFW
+if [ -f /etc/default/ufw ]; then
+    sed -i 's/DEFAULT_FORWARD_POLICY="DROP"/DEFAULT_FORWARD_POLICY="ACCEPT"/g' /etc/default/ufw 2>/dev/null
+fi
+
 ufw allow 22/tcp 2>/dev/null
 ufw allow 44/tcp 2>/dev/null
 ufw allow 80/tcp 2>/dev/null
@@ -290,6 +301,14 @@ ufw allow 54321/tcp 2>/dev/null
 ufw allow 6767/tcp 2>/dev/null
 # ufw allow 8082/tcp (Web Panel Desactivado)
 ufw --force enable
+
+# Reglas de enrutamiento NAT y TCPMSS Clamping para celulares 4G/5G
+IFACE=$(ip -4 route ls 2>/dev/null | grep default | grep -Po '(?<=dev )(\S+)' | head -1)
+[ -z "$IFACE" ] && IFACE=$(ip link 2>/dev/null | awk -F: '$0 !~ "lo|vir|wl|^[^0-9]"{print $2;getline}' | head -n 1 | tr -d ' ')
+if [ -n "$IFACE" ]; then
+    iptables -t nat -C POSTROUTING -o "$IFACE" -j MASQUERADE 2>/dev/null || iptables -t nat -A POSTROUTING -o "$IFACE" -j MASQUERADE
+    iptables -t mangle -C FORWARD -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu 2>/dev/null || iptables -t mangle -A FORWARD -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
+fi
 
 # 2. Archivos y Rutas
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)

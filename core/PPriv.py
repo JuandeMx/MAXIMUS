@@ -31,10 +31,10 @@ if len(sys.argv) > 3:
 else:
     ALLOWED_SERVER = "127.0.0.1"
 
-BUFLEN = 16384
+BUFLEN = 65536
 TIMEOUT = 60
 
-RESPONSE_OK = f'HTTP/1.1 200 {STATUS_TEXT}\r\nConnection: close\r\n\r\n'.encode('utf-8')
+RESPONSE_OK = f'HTTP/1.1 200 {STATUS_TEXT}\r\nConnection: Keep-Alive\r\n\r\n'.encode('utf-8')
 RESPONSE_FORBIDDEN = b'HTTP/1.1 403 Server Forbidden\r\nConnection: close\r\nContent-length: 16\r\n\r\nServer Forbidden'
 
 def configure_socket(sock):
@@ -141,7 +141,7 @@ class ConnectionHandler(threading.Thread):
 
             client_buffer = collect_headers(self.client, client_buffer, 5)
 
-            # Parse target from CONNECT line or Host header
+            # Parse host from CONNECT line or Host header for security validation
             hostPort = self.findHeader(client_buffer, 'Host')
             if not hostPort:
                 try:
@@ -157,13 +157,11 @@ class ConnectionHandler(threading.Thread):
 
             i = hostPort.find(':')
             if i != -1:
-                port = int(hostPort[i+1:])
                 host = hostPort[:i]
             else:
-                host = '127.0.0.1'
-                port = 22
+                host = hostPort
 
-            # Private security check: host must match ALLOWED_SERVER or loopback
+            # Verificación privada: el host solicitado debe coincidir con ALLOWED_SERVER o loopback
             is_allowed = False
             if host in ['127.0.0.1', 'localhost', '::1']:
                 is_allowed = True
@@ -174,27 +172,62 @@ class ConnectionHandler(threading.Thread):
                 self.client.sendall(RESPONSE_FORBIDDEN)
                 return
 
-            if host == 'localhost':
-                host = '127.0.0.1'
+            # Destino SSH local directo (127.0.0.1:22 / fallback 44) para evitar bucle recursivo
+            target = None
+            ports_to_try = [22, 44]
+            for pt in ports_to_try:
+                try:
+                    target = socket.create_connection(('127.0.0.1', pt), timeout=3)
+                    break
+                except:
+                    target = None
 
-            target = socket.create_connection((host, port), timeout=3)
+            if not target:
+                return
+
             configure_socket(target)
 
-            # Respond success to client
+            # Responder éxito al cliente (Keep-Alive)
             self.client.sendall(RESPONSE_OK)
 
-            # Relay loop con timeout de 300s para limpiar conexiones zombi
-            sockets = [self.client, target]
-            while True:
-                r, _, e = select.select(sockets, [], sockets, 300)
-                if not r or e: break
-                for sock in r:
-                    data = sock.recv(BUFLEN)
-                    if not data: return
-                    out = target if sock is self.client else self.client
-                    out.sendall(data)
+            # Reenviar remanente de datos tras cabeceras si existe
+            header_end = -1
+            if b'\r\n\r\n' in client_buffer:
+                header_end = client_buffer.find(b'\r\n\r\n') + 4
+            elif b'\n\n' in client_buffer:
+                header_end = client_buffer.find(b'\n\n') + 2
 
-        except:
+            if header_end != -1 and len(client_buffer) > header_end:
+                leftover = client_buffer[header_end:]
+                if leftover:
+                    target.sendall(leftover)
+
+            # Retransmisión bidireccional asíncrona (Dual-Thread Anti-Deadlock 4G/LTE)
+            def forward(src, dst):
+                try:
+                    while True:
+                        data = src.recv(BUFLEN)
+                        if not data:
+                            break
+                        dst.sendall(data)
+                except Exception:
+                    pass
+                finally:
+                    try:
+                        dst.shutdown(socket.SHUT_WR)
+                    except Exception:
+                        pass
+
+            t_up = threading.Thread(target=forward, args=(self.client, target))
+            t_down = threading.Thread(target=forward, args=(target, self.client))
+            t_up.daemon = True
+            t_down.daemon = True
+            t_up.start()
+            t_down.start()
+            t_up.join()
+            t_down.join()
+
+        except Exception:
             pass
         finally:
             try:
