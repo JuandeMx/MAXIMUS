@@ -125,7 +125,15 @@ ssl_stunel() {
     
     mkdir -p /etc/stunnel
     cat <<EOF >/etc/stunnel/stunnel.conf
+pid = /var/run/stunnel4.pid
 client = no
+socket = l:TCP_NODELAY=1
+socket = r:TCP_NODELAY=1
+socket = l:SO_KEEPALIVE=1
+socket = r:SO_KEEPALIVE=1
+TIMEOUTclose = 0
+TIMEOUTidle = 86400
+
 [SSL]
 cert = /etc/stunnel/stunnel.pem
 accept = ${SSLPORT}

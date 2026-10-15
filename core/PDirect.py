@@ -207,9 +207,10 @@ class ConnectionHandler(threading.Thread):
                     if leftover: target.sendall(leftover)
 
             # Retransmisión bidireccional asíncrona (Dual-Thread Anti-Deadlock 4G/LTE)
+            closed_event = threading.Event()
             def forward(src, dst):
                 try:
-                    while True:
+                    while not closed_event.is_set():
                         data = src.recv(BUFLEN)
                         if not data:
                             break
@@ -217,8 +218,17 @@ class ConnectionHandler(threading.Thread):
                 except Exception:
                     pass
                 finally:
+                    closed_event.set()
                     try:
                         dst.shutdown(socket.SHUT_WR)
+                    except Exception:
+                        pass
+                    try:
+                        src.close()
+                    except Exception:
+                        pass
+                    try:
+                        dst.close()
                     except Exception:
                         pass
 
@@ -228,8 +238,7 @@ class ConnectionHandler(threading.Thread):
             t_down.daemon = True
             t_up.start()
             t_down.start()
-            t_up.join()
-            t_down.join()
+            closed_event.wait()
 
         except Exception:
             pass
