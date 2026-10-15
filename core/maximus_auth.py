@@ -38,8 +38,11 @@ def get_user_by_hwid(target_hwid):
     global _last_cache_update, _user_cache
     # Forzamos actualización de caché si está vieja llamando a get_user_info con un dummy
     get_user_info("dummy_trigger")
+    clean_target = str(target_hwid).strip().lower()
     for username, info in _user_cache.items():
-        if info["hwid"] == target_hwid and info["pass"] == "HWID_INV":
+        hwid_clean = str(info.get("hwid", "")).strip().lower()
+        user_clean = str(info.get("user", "")).strip().lower()
+        if (hwid_clean == clean_target or user_clean == clean_target) and info.get("pass") == "HWID_INV":
             return info
     return None
 
@@ -64,7 +67,10 @@ def verify_hwid(username, sent_hwid, db_hwid):
     if db_hwid == "OFF":
         return True, "HUID Disabled"
     
-    if db_hwid == "NONE":
+    clean_sent = str(sent_hwid).strip().lower()
+    clean_db = str(db_hwid).strip().lower()
+
+    if clean_db in ["none", ""]:
         # Bloqueo Automático (Primera conexión)
         try:
             # Actualizar la DB con el nuevo HUID
@@ -82,34 +88,46 @@ def verify_hwid(username, sent_hwid, db_hwid):
         except:
             return False, "DB Error"
             
-    if sent_hwid == db_hwid:
+    if clean_sent == clean_db:
         return True, "Match"
     else:
         return False, "HWID Mismatch"
 
 def authenticate_elite(headers):
-    # Extraer Usuario y HUID de los headers HTTP
+    # Extraer Usuario y HUID de los headers HTTP de forma flexible e insensible a mayúsculas
     user = None
     huid = "NONE"
     
-    for line in headers.split("\n"):
-        if "X-User:" in line:
-            user = line.split("X-User:")[1].strip()
-        if "X-HUID:" in line:
-            huid = line.split("X-HUID:")[1].strip()
+    for raw_line in headers.split("\n"):
+        line_str = raw_line.strip()
+        if not line_str or ":" not in line_str:
+            continue
+        h_name, h_val = line_str.split(":", 1)
+        h_name = h_name.strip().lower()
+        h_val = h_val.strip()
+
+        if h_name in ["x-user", "user"]:
+            user = h_val
+        elif h_name in ["x-huid", "x-hwid", "huid", "hwid", "x-device-id", "device-id"]:
+            huid = h_val
             
     if not user:
         # Si no hay usuario en los headers, permitimos pasar (Auth interna de SSH)
         # pero no aplicamos HUID ni Límites.
         return True, "No Headers"
 
-    # Si el cliente usa el usuario universal invisible
+    # Si el cliente usa el usuario universal invisible mxhwid
     is_invisible = False
-    if user == "mxhwid":
+    if user.lower() == "mxhwid":
         info = get_user_by_hwid(huid)
         is_invisible = True
     else:
         info = get_user_info(user)
+        # Fallback: si el usuario envió su HWID como username
+        if not info:
+            info = get_user_by_hwid(user)
+            if info:
+                is_invisible = True
         
     if not info:
         return False, "User not in Database"

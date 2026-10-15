@@ -855,26 +855,51 @@ class MasterWebHandler(BaseHTTPRequestHandler):
         # POST /api/client/validate (VALIDACIÓN DE CREDENCIALES PARA LA APP)
         # ----------------------------------------------------------------------
         if parsed.path == "/api/client/validate":
-            username = payload.get("username", "").strip().upper()
+            username = payload.get("username", "").strip()
             password = payload.get("password", "").strip()
+            hwid_val = payload.get("hwid", "").strip() or payload.get("huid", "").strip()
 
-            if not username or not password:
-                self._send_json(400, {"valid": False, "message": "Usuario y contraseña requeridos."})
+            # Si mandó solo HWID o mandó username como HWID
+            if not username and hwid_val:
+                username = hwid_val
+                password = hwid_val
+            elif username and not password and not hwid_val:
+                # Login rápido por HWID
+                password = username
+
+            if not username:
+                self._send_json(400, {"valid": False, "message": "Usuario o HWID requerido."})
                 return
 
             valid = False
             exp_date = ""
             days_left = 0
+            display_name = username
 
             if os.path.exists(USERS_DB):
                 with open(USERS_DB, "r") as f:
                     for line in f:
                         parts = line.strip().split(":")
                         if len(parts) >= 3:
-                            db_user = parts[0].upper()
-                            db_pass = parts[1]
-                            db_exp = parts[2]
-                            if db_user == username and db_pass == password:
+                            db_user = parts[0].strip()
+                            db_pass = parts[1].strip()
+                            db_exp = parts[2].strip()
+                            db_hwid = parts[3].strip() if len(parts) > 3 else ""
+                            db_alias = parts[5].strip() if len(parts) > 5 else db_user
+
+                            is_match = False
+                            # 1. Validación clásica (Usuario + Password estándar)
+                            if db_user.upper() == username.upper() and db_pass == password:
+                                is_match = True
+                                display_name = db_user
+                            # 2. Validación HWID (Cuentas tipo HWID_INV)
+                            elif db_pass == "HWID_INV":
+                                req_hwid = (hwid_val or password or username).strip().lower()
+                                if db_user.lower() == req_hwid or db_hwid.lower() == req_hwid:
+                                    is_match = True
+                                    display_name = db_alias or db_user
+
+                            if is_match:
                                 # Verificar que no esté vencido (soporta YYYY-MM-DD HH:MM:SS y YYYY-MM-DD)
                                 try:
                                     now = datetime.datetime.now()
@@ -895,7 +920,7 @@ class MasterWebHandler(BaseHTTPRequestHandler):
             if valid:
                 self._send_json(200, {
                     "valid": True,
-                    "username": username,
+                    "username": display_name,
                     "exp_date": exp_date,
                     "days_left": days_left,
                     "message": "Acceso concedido."

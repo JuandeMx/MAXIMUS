@@ -7,11 +7,18 @@ username="$PAM_USER"
 # Si no hay usuario, salir silenciosamente
 [ -z "$username" ] && exit 0
 
-# Excepción para el root y usuarios administradores (sudoers) -> salir silenciosamente para no salir en el log de consola SSH
-if [ "$username" == "root" ] || id -nG "$username" 2>/dev/null | grep -qw "sudo"; then
+# Excepción para el root, mxhwid y administradores (sudoers) -> salir silenciosamente
+if [ "$username" == "root" ] || [ "$username" == "mxhwid" ] || id -nG "$username" 2>/dev/null | grep -qw "sudo"; then
     exit 0
 else
-    db_line=$(grep "^${username}:" /etc/MaximusVpsMx/users.db 2>/dev/null)
+    # Buscar el usuario de forma insensible a mayúsculas/minúsculas
+    db_line=$(grep -i "^${username}:" /etc/MaximusVpsMx/users.db 2>/dev/null)
+    
+    # Fallback: buscar por HWID o Alias en minúsculas
+    if [ -z "$db_line" ]; then
+        u_lower=$(echo "$username" | tr '[:upper:]' '[:lower:]')
+        db_line=$(awk -F: -v u="$u_lower" '$1 == u || tolower($4) == u {print $0; exit}' /etc/MaximusVpsMx/users.db 2>/dev/null)
+    fi
     
     # SI NO ESTÁ EN LA DB, ES UN USUARIO FANTASMA (Orphan) -> DESCONECTAR INMEDIATAMENTE
     if [ -z "$db_line" ]; then
