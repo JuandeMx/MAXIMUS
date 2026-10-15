@@ -114,6 +114,7 @@ class Proxy(threading.Thread):
                 return
 
             self.client.setblocking(1)
+            target.setblocking(1)
 
             # Extraer y enviar el cuerpo remanente si existiera
             body_start = client_buffer.find(b'\r\n\r\n')
@@ -131,7 +132,10 @@ class Proxy(threading.Thread):
             def forward(src, dst):
                 try:
                     while not closed_event.is_set():
-                        data = src.recv(BUFLEN)
+                        try:
+                            data = src.recv(BUFLEN)
+                        except (socket.timeout, TimeoutError):
+                            continue
                         if not data:
                             break
                         dst.sendall(data)

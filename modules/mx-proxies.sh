@@ -123,14 +123,16 @@ RESPONSE_CONTINUE = b'HTTP/1.1 100 Continue\r\n\r\n'
 
 def configure_socket(sock):
     try:
+        sock.settimeout(None)
+        sock.setblocking(True)
         sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
         if hasattr(socket, 'TCP_KEEPIDLE'):
-            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, 20)
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, 30)
         if hasattr(socket, 'TCP_KEEPINTVL'):
             sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 10)
         if hasattr(socket, 'TCP_KEEPCNT'):
-            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 3)
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 5)
     except:
         pass
 
@@ -266,7 +268,9 @@ class ConnectionHandler(threading.Thread):
             if host == 'localhost':
                 host = '127.0.0.1'
 
-            target = socket.create_connection((host, port), timeout=3)
+            target = socket.create_connection((host, port), timeout=5)
+            target.settimeout(None)
+            target.setblocking(True)
             configure_socket(target)
 
             # Send initial data to backend
@@ -288,7 +292,10 @@ class ConnectionHandler(threading.Thread):
             def forward(src, dst):
                 try:
                     while not closed_event.is_set():
-                        data = src.recv(BUFLEN)
+                        try:
+                            data = src.recv(BUFLEN)
+                        except (socket.timeout, TimeoutError):
+                            continue
                         if not data:
                             break
                         dst.sendall(data)
